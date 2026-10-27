@@ -1,0 +1,24 @@
+* text=auto
+
+# Unity 텍스트 에셋
+*.cs text diff=csharp
+*.unity text
+*.prefab text
+*.mat text
+*.asset text
+*.meta text
+*.controller text
+*.anim text
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.psd binary
+*.fbx binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.ttf binary
+*.otf binary

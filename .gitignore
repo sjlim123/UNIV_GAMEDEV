@@ -1,0 +1,45 @@
+# Unity 자동 생성 폴더 (커밋하지 않음)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# IDE / 솔루션 파일
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# 빌드 결과물 (실행 파일은 GitHub Releases에 올린다)
+*.apk
+*.aab
+*.unitypackage
+*_BurstDebugInformation_DoNotShip/
+crashlytics-buildid.txt
+sysinfo.txt
+
+# 개인 도구 설정
+.mcp.json
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
