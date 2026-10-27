@@ -17,7 +17,10 @@ public partial class UIManager : MonoBehaviour
     public static readonly Color PanelFill = new Color(0.05f, 0.055f, 0.05f, 0.72f);
     public static readonly Color FrameColor = new Color(0.9f, 0.8f, 0.55f, 0.32f);
 
+    // Pretendard (SIL OFL 1.1) — Assets/Resources/Fonts. 본문 Regular, 버튼·제목 SemiBold, 큰 제목 Bold
     public static Font Font { get; private set; }
+    public static Font FontSemiBold { get; private set; }
+    public static Font FontBold { get; private set; }
 
     RectTransform root;
     GameObject hud;
@@ -51,7 +54,10 @@ public partial class UIManager : MonoBehaviour
 
     void Awake()
     {
-        Font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 32);
+        var fallback = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 32);
+        Font = Resources.Load<Font>("Fonts/Pretendard-Regular") ?? fallback;
+        FontSemiBold = Resources.Load<Font>("Fonts/Pretendard-SemiBold") ?? Font;
+        FontBold = Resources.Load<Font>("Fonts/Pretendard-Bold") ?? FontSemiBold;
 
         var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
         es.transform.SetParent(transform);
@@ -115,7 +121,7 @@ public partial class UIManager : MonoBehaviour
         // 오른쪽 위: 턴·시간·전력
         var info = Box(h, "Info", PanelFill, FrameColor);
         Place(info, new Vector2(1, 1), new Vector2(-24, -24), new Vector2(270, 90));
-        infoText = NewText(info, "", 28, TextAnchor.MiddleRight, Text);
+        infoText = NewText(info, "", 28, TextAnchor.MiddleRight, Text, FontSemiBold);
         Stretch(infoText.rectTransform, 18, 8);
 
         // 오른쪽 아래: 손전등
@@ -149,7 +155,7 @@ public partial class UIManager : MonoBehaviour
             slotIcons.Add(icon);
             var key = NewText(s, (i + 1).ToString(), 13, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.45f));
             Stretch(key.rectTransform, 6, 3);
-            var count = NewText(s, "", 17, TextAnchor.LowerRight, Text);
+            var count = NewText(s, "", 17, TextAnchor.LowerRight, Text, FontSemiBold);
             Stretch(count.rectTransform, 6, 3);
             count.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
             slotCounts.Add(count);
@@ -369,7 +375,7 @@ public partial class UIManager : MonoBehaviour
         var box = Box(p, "Box", new Color(0.05f, 0.05f, 0.045f, 0.9f), FrameColor);
         Place(box, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 740));
 
-        panelTitle = NewText(box, "", 32, TextAnchor.MiddleLeft, Accent);
+        panelTitle = NewText(box, "", 32, TextAnchor.MiddleLeft, Accent, FontBold);
         panelTitle.rectTransform.anchorMin = new Vector2(0, 1);
         panelTitle.rectTransform.anchorMax = new Vector2(1, 1);
         panelTitle.rectTransform.pivot = new Vector2(0.5f, 1);
@@ -567,7 +573,7 @@ public partial class UIManager : MonoBehaviour
         b.navigation = new Navigation { mode = Navigation.Mode.None };
         b.interactable = interactable;
         b.onClick.AddListener(() => onClick());
-        var t = NewText(rt, label, fontSize, TextAnchor.MiddleCenter, interactable ? Text : new Color(0.45f, 0.44f, 0.4f));
+        var t = NewText(rt, label, fontSize, TextAnchor.MiddleCenter, interactable ? Text : new Color(0.45f, 0.44f, 0.4f), FontSemiBold);
         Stretch(t.rectTransform);
         return b;
     }
@@ -599,11 +605,11 @@ public partial class UIManager : MonoBehaviour
         return (RectTransform)go.transform;
     }
 
-    static UnityEngine.UI.Text NewText(Transform parent, string text, int size, TextAnchor anchor, Color color)
+    static UnityEngine.UI.Text NewText(Transform parent, string text, int size, TextAnchor anchor, Color color, Font font = null)
     {
         var rt = NewRect("Text", parent);
         var t = rt.gameObject.AddComponent<UnityEngine.UI.Text>();
-        t.font = Font;
+        t.font = font != null ? font : Font;
         t.fontSize = size;
         t.alignment = anchor;
         t.color = color;

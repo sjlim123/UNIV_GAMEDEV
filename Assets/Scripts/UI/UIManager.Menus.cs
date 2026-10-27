@@ -46,11 +46,10 @@ public partial class UIManager
         shade.rectTransform.anchorMax = new Vector2(0.62f, 1);
         shade.rectTransform.offsetMin = shade.rectTransform.offsetMax = Vector2.zero;
 
-        var title = NewText(m, GameTitle, 88, TextAnchor.LowerLeft, Text);
-        title.fontStyle = FontStyle.Bold;
+        var title = NewText(m, GameTitle, 88, TextAnchor.LowerLeft, Text, FontBold);
         title.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -96), new Vector2(1000, 120));
-        var sub = NewText(m, GameSubtitle, 22, TextAnchor.UpperLeft, Accent);
+        var sub = NewText(m, GameSubtitle, 22, TextAnchor.UpperLeft, Accent, FontSemiBold);
         Place(sub.rectTransform, new Vector2(0, 1), new Vector2(110, -222), new Vector2(900, 34));
         var line = NewRect("Line", m);
         Place(line, new Vector2(0, 1), new Vector2(110, -266), new Vector2(140, 3));
@@ -67,7 +66,7 @@ public partial class UIManager
         // 오른쪽: 업데이트 노트
         var notes = Box(m, "Notes", new Color(0.04f, 0.045f, 0.04f, 0.72f), FrameColor);
         Place(notes, new Vector2(1, 0.5f), new Vector2(-90, 20), new Vector2(560, 470));
-        var head = NewText(notes, "업데이트 노트", 28, TextAnchor.UpperLeft, Accent);
+        var head = NewText(notes, "업데이트 노트", 28, TextAnchor.UpperLeft, Accent, FontBold);
         Place(head.rectTransform, new Vector2(0, 1), new Vector2(28, -24), new Vector2(300, 40));
         var ver = NewText(notes, "Ver " + Application.version, 18, TextAnchor.UpperRight, Dim);
         Place(ver.rectTransform, new Vector2(1, 1), new Vector2(-28, -30), new Vector2(200, 30));
@@ -98,8 +97,7 @@ public partial class UIManager
         shade.rectTransform.anchorMax = new Vector2(0.55f, 1);
         shade.rectTransform.offsetMin = shade.rectTransform.offsetMax = Vector2.zero;
 
-        var title = NewText(p, "일시정지", 64, TextAnchor.LowerLeft, Text);
-        title.fontStyle = FontStyle.Bold;
+        var title = NewText(p, "일시정지", 64, TextAnchor.LowerLeft, Text, FontBold);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -150), new Vector2(800, 90));
         var line = NewRect("Line", p);
         Place(line, new Vector2(0, 1), new Vector2(110, -256), new Vector2(110, 3));
@@ -146,7 +144,7 @@ public partial class UIManager
         barImg.color = interactable ? new Color(Accent.r, Accent.g, Accent.b, 0.7f) : new Color(1, 1, 1, 0.15f);
         barImg.raycastTarget = false;
 
-        var t = NewText(rt, label, 30, TextAnchor.MiddleLeft, interactable ? Text : new Color(1, 1, 1, 0.35f));
+        var t = NewText(rt, label, 30, TextAnchor.MiddleLeft, interactable ? Text : new Color(1, 1, 1, 0.35f), FontSemiBold);
         Stretch(t.rectTransform, 24, 0);
         t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
         if (tag != null)
@@ -277,6 +275,7 @@ public partial class UIManager
             Line(c, "사용한 무료 에셋", 22, Accent);
             Line(c, "· 텍스처: Poly Haven (CC0) — 콘크리트, 아스팔트, 녹슨 금속, 벽돌, 나무");
             Line(c, "· 효과음: 코드로 합성한 소리 (외부 에셋 없음)");
+            Line(c, "· 폰트: Pretendard (SIL Open Font License 1.1) — Kil Hyung-jin");
             Line(c, "· 엔진: Unity 6 (URP)");
         }, "credits");
     }

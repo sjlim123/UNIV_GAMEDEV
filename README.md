@@ -53,4 +53,5 @@
 ## 사용한 에셋
 
 - 텍스처: [Poly Haven](https://polyhaven.com) (CC0)
+- 폰트: [Pretendard](https://github.com/orioncactus/pretendard) v1.3.9 (SIL Open Font License 1.1) — `Assets/Resources/Fonts`, 라이선스 전문은 `Pretendard-LICENSE.txt`
 - 효과음: 코드로 합성 (외부 에셋 없음)
