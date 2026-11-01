@@ -50,7 +50,7 @@ public partial class UIManager : MonoBehaviour
 
     public bool IsPanelOpen => panel != null && panel.activeSelf;
     // 창이나 일시정지 메뉴가 열려 있으면 플레이어 조작을 막는다
-    public bool IsBlocking => IsPanelOpen || IsPaused;
+    public bool IsBlocking => IsPanelOpen || IsPaused || IsPatchNotesOpen;
 
     void Awake()
     {
@@ -98,6 +98,7 @@ public partial class UIManager : MonoBehaviour
     public void OnSceneLoaded(string sceneName)
     {
         SetPaused(false);
+        ClosePatchNotes();
         if (sceneName == GameManager.MenuScene) ShowMainMenu();
         else HideMainMenu();
         hotbarSignature = null;
@@ -242,6 +243,7 @@ public partial class UIManager : MonoBehaviour
             fpsTimer = 0;
         }
 
+        if (IsPatchNotesOpen) UpdatePatchBlur();
         HandleKeys(gm);
 
         bool needCursor = IsBlocking || gm.IsGameOver || PlayerController.Instance == null;
@@ -301,7 +303,7 @@ public partial class UIManager : MonoBehaviour
         if (selected >= 0 && selected < items.Count)
         {
             var def = ItemDatabase.Get(items[selected].Key);
-            string action = def.IsConsumable ? "우클릭: 사용" : def.Id == "club" ? "좌클릭: 휘두르기" : def.Id == "flashlight" ? "Q: 켜기/끄기" : "방공호 제작대 재료";
+            string action = def.IsConsumable ? "우클릭: 사용" : def.Id == "club" ? "좌클릭: 휘두르기" : def.Id == "flashlight" ? "Q: 켜기/끄기" : def.Id == "fuel" ? "방공호 발전기 연료" : "방공호 제작대 재료";
             itemNameText.text = $"{def.Name} x{items[selected].Value}   <size=17><color=#a8a294>{action}</color></size>";
         }
         else itemNameText.text = items.Count > SlotCount ? $"<size=17><color=#a8a294>+{items.Count - SlotCount}개 더 (Tab)</color></size>" : "";
@@ -315,7 +317,8 @@ public partial class UIManager : MonoBehaviour
 
         if (kb.escapeKey.wasPressedThisFrame)
         {
-            if (IsPanelOpen) { if (panelCloseButton.activeSelf) ClosePanel(); }
+            if (IsPatchNotesOpen) ClosePatchNotes();
+            else if (IsPanelOpen) { if (panelCloseButton.activeSelf) ClosePanel(); }
             else if (inGame) SetPaused(!IsPaused);
         }
         else if (kb.tabKey.wasPressedThisFrame && inGame && !IsPaused)

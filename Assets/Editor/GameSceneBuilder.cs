@@ -771,22 +771,34 @@ public static class GameSceneBuilder
     static Transform BuildShelf(Transform parent, Vector3 pos, float yaw, bool stocked)
     {
         var g = Group("Shelf", parent, pos, yaw);
-        Box("SideL", g, new Vector3(-0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, false);
-        Box("SideR", g, new Vector3(0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, false);
+        // 판자마다 콜라이더를 둔다. 선반 전체를 감싸는 상자 하나로 두면 선반 위 아이템이
+        // 바닥 찾기 Raycast(시작점이 상자 안이라 감지 못함)에 걸려 맨 아래 판자 밑으로 떨어져 숨는다.
+        Box("SideL", g, new Vector3(-0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, true);
+        Box("SideR", g, new Vector3(0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, true);
         foreach (var y in new[] { 0.1f, 0.6f, 1.1f, 1.6f })
-            Box("Board", g, new Vector3(0, y, 0), new Vector3(1.6f, 0.03f, 0.45f), M["wood"], 1f, false);
+            Box("Board", g, new Vector3(0, y, 0), new Vector3(1.6f, 0.03f, 0.45f), M["wood"], 1f, true);
+        // 뒤판: 좀비 시야(Linecast)가 판자 사이로 선반을 뚫고 지나가지 않게 막는다
+        Box("Back", g, new Vector3(0, 0.9f, -0.215f), new Vector3(1.52f, 1.8f, 0.02f), M["metal"], 1f, true);
         if (stocked)
             foreach (var y in new[] { 0.6f, 1.1f, 1.6f })
                 for (int i = 0; i < 5; i++)
                 {
                     if (Chance(0.35)) continue;
                     float x = -0.6f + i * 0.3f + R(-0.05f, 0.05f);
-                    if (Chance(0.5)) Prim(PrimitiveType.Cylinder, "Can", g, new Vector3(x, y + 0.08f, R(-0.1f, 0.1f)), new Vector3(0.09f, 0.065f, 0.09f), M["metal"]);
-                    else Box("Box", g, new Vector3(x, y + 0.12f, R(-0.1f, 0.1f)), new Vector3(0.22f, 0.2f, 0.18f), M["cloth"], 1f, false, new Vector3(0, R(-20, 20), 0));
+                    // 아이템이 생기는 자리(0.6 판 왼쪽, 1.1 판 오른쪽)는 장식을 비워 아이템이 상자 속에 묻히지 않게 한다.
+                    // 난수는 그대로 소비해서 나머지 배치는 바뀌지 않게 한다.
+                    bool keep = !(y == 0.6f && i == 1) && !(y == 1.1f && i == 3);
+                    if (Chance(0.5))
+                    {
+                        float z = R(-0.1f, 0.1f);
+                        if (keep) Prim(PrimitiveType.Cylinder, "Can", g, new Vector3(x, y + 0.08f, z), new Vector3(0.09f, 0.065f, 0.09f), M["metal"]);
+                    }
+                    else
+                    {
+                        float z = R(-0.1f, 0.1f), turn = R(-20, 20);
+                        if (keep) Box("Box", g, new Vector3(x, y + 0.12f, z), new Vector3(0.22f, 0.2f, 0.18f), M["cloth"], 1f, false, new Vector3(0, turn, 0));
+                    }
                 }
-        var col = g.gameObject.AddComponent<BoxCollider>();
-        col.center = new Vector3(0, 0.9f, 0);
-        col.size = new Vector3(1.6f, 1.8f, 0.45f);
         GameObjectUtility.SetStaticEditorFlags(g.gameObject, StaticEditorFlags.BatchingStatic);
         return g;
     }

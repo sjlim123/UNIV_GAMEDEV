@@ -1,0 +1,85 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="Inventory.uss" />
+    <ui:VisualElement name="inv-root" class="inv-root">
+        <ui:VisualElement name="panel" class="panel">
+
+            <ui:VisualElement class="header">
+                <ui:Label text="소지품" class="title" />
+                <ui:Label name="slot-count" text="0 / 24칸" class="header-meta" />
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="sort-button" text="정렬" class="btn" />
+                <ui:Button name="close-button" text="닫기" class="btn" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="tabs" class="tabs" />
+
+            <ui:VisualElement class="body">
+                <ui:VisualElement name="grid" class="grid" />
+
+                <ui:VisualElement name="detail" class="detail">
+                    <ui:Label name="detail-empty" text="칸을 눌러 아이템을 확인하세요" class="detail-empty" />
+
+                    <ui:VisualElement name="detail-content" class="detail-content">
+                        <ui:VisualElement class="detail-head">
+                            <ui:VisualElement name="detail-icon" class="detail-icon">
+                                <ui:VisualElement name="detail-art" class="art" picking-mode="Ignore" />
+                                <ui:Label name="detail-abbr" class="detail-abbr" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="detail-title">
+                                <ui:Label name="detail-name" class="detail-name" />
+                                <ui:VisualElement class="chips">
+                                    <ui:Label name="detail-rarity" class="chip" />
+                                    <ui:Label name="detail-category" class="chip chip--muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:Label name="detail-desc" class="detail-desc" />
+
+                        <ui:VisualElement class="stat-row">
+                            <ui:Label text="수량" class="stat-key" />
+                            <ui:Label name="stat-count" class="stat-val" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stat-row">
+                            <ui:Label text="무게" class="stat-key" />
+                            <ui:Label name="stat-weight" class="stat-val" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stat-row">
+                            <ui:Label text="한 칸에" class="stat-key" />
+                            <ui:Label name="stat-stack" class="stat-val" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="flex-spacer" />
+
+                        <ui:VisualElement class="detail-actions">
+                            <ui:Button name="use-button" text="사용" class="btn btn--primary" />
+                            <ui:Button name="drop-button" text="1개 버리기" class="btn btn--danger" />
+                            <ui:Button name="drop-all-button" text="모두 버리기" class="btn btn--danger" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="footer">
+                <ui:VisualElement name="weight" class="weight">
+                    <ui:VisualElement class="weight-head">
+                        <ui:Label text="짐 무게" class="stat-key" />
+                        <ui:Label name="weight-label" class="stat-val" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="weight-track">
+                        <ui:VisualElement name="weight-fill" class="weight-fill" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="끌어서 옮기기   우클릭으로 사용   I / Tab 열기·닫기" class="hint" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:Label name="toast" class="toast" picking-mode="Ignore" />
+
+        <ui:VisualElement name="drag-ghost" class="drag-ghost" picking-mode="Ignore">
+            <ui:VisualElement name="ghost-art" class="art" picking-mode="Ignore" />
+            <ui:Label name="ghost-abbr" class="slot__abbr" picking-mode="Ignore" />
+            <ui:Label name="ghost-count" class="slot__count" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

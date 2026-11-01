@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a733f975e8a416e488d33ec5fb4c18e4, type: 3}
+  m_Name: bag
+  m_EditorClassIdentifier: Assembly-CSharp::SurvivalInventory.ItemData
+  id: bag
+  displayName: "\uAC00\uBC29"
+  description: "\uB4F1\uC5D0 \uBA54\uB294 \uCC9C \uAC00\uBC29. \uBA54\uBA74 \uB354
+    \uB9CE\uC740 \uC9D0\uC744 \uB4E4 \uC218 \uC788\uB2E4."
+  category: 4
+  rarity: 1
+  icon: {fileID: 21300000, guid: e417212941683e8468a3c2ba8f72eec3, type: 3}
+  shortLabel: "\uAC00\uBC29"
+  maxStack: 1
+  weight: 1.2
+  usable: 1
+  consumeOnUse: 0
+  useLabel: "\uBA54\uAE30"

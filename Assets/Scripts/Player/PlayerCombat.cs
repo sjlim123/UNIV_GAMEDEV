@@ -36,7 +36,7 @@ public class PlayerCombat : MonoBehaviour
         PlayerController.Instance.MakeNoise(1.2f);
 
         float range = club ? 2.3f : 1.6f;
-        if (Physics.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, out var hit, range, ~0, QueryTriggerInteraction.Ignore))
+        if (PlayerRaycast.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var hit))
         {
             var target = hit.collider.GetComponentInParent<IDamageable>();
             if (target != null)

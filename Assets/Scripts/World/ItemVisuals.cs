@@ -31,8 +31,16 @@ public static class ItemVisuals
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.05f, 0.12f, 0.03f), new Vector3(0.8f, 0.08f, 0.12f), new Color(0.38f, 0.27f, 0.16f), 0.1f, new Vector3(0, 15, 0));
                 break;
             case "metal":
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.05f, 0), new Vector3(0.35f, 0.04f, 0.25f), new Color(0.45f, 0.42f, 0.4f), 0.6f, new Vector3(0, 0, 8));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.1f, 0.03f, 0.1f), new Vector3(0.04f, 0.25f, 0.04f), new Color(0.35f, 0.25f, 0.2f), 0.5f, new Vector3(90, 30, 0));
+                // 고철: 꺾인 철판 브래킷 + 녹슨 파이프 + 너트 (SurvivalInventory 아이콘과 같은 모양)
+                var steel = new Color(0.6f, 0.6f, 0.63f);
+                var rust = new Color(0.55f, 0.28f, 0.12f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.05f, 0.0125f, 0.05f), new Vector3(0.3f, 0.025f, 0.09f), steel, 0.45f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.19f, 0.075f, 0.05f), new Vector3(0.22f, 0.025f, 0.09f), steel, 0.45f, new Vector3(0, 0, 35));
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.11f, 0.014f, 0.04f), new Vector3(0.05f, 0.026f, 0.04f), rust, 0.1f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.17f, 0.064f, 0.06f), new Vector3(0.04f, 0.026f, 0.035f), rust, 0.1f, new Vector3(0, 0, 35));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.04f, -0.09f), new Vector3(0.08f, 0.15f, 0.08f), new Color(0.5f, 0.5f, 0.53f), 0.5f, new Vector3(0, 0, 90));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.06f, 0.04f, -0.09f), new Vector3(0.083f, 0.03f, 0.083f), rust, 0.1f, new Vector3(0, 0, 90));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.21f, 0.012f, -0.12f), new Vector3(0.05f, 0.012f, 0.05f), new Color(0.3f, 0.3f, 0.32f), 0.5f);
                 break;
             case "wire":
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.04f, 0), new Vector3(0.22f, 0.04f, 0.22f), new Color(0.75f, 0.4f, 0.2f), 0.7f);

@@ -55,6 +55,7 @@ public class PlayerHotbar : MonoBehaviour
         else if (def.Id == "flashlight") gm.UI.ShowMessage("손전등은 Q로 켜고 끈다.");
         else if (def.Id == "club") gm.UI.ShowMessage("둔기는 좌클릭으로 휘두른다.");
         else if (def.Id == "backpack") gm.UI.ShowMessage("가방을 메고 있으면 더 많이 들 수 있다.");
+        else if (def.Id == "fuel") gm.UI.ShowMessage("연료통은 방공호 발전기에 넣는다 (F).");
         else gm.UI.ShowMessage($"{def.Name}: 방공호 제작대에서 쓰는 재료다.");
     }
 

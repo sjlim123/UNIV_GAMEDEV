@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+ <radialGradient id="glow" cx="0.5" cy="0.6" r="0.62">
+  <stop offset="0" stop-color="#d18a2a" stop-opacity="0.85"/>
+  <stop offset="0.5" stop-color="#d18a2a" stop-opacity="0.35"/>
+  <stop offset="1" stop-color="#d18a2a" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+  <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0.75"/>
+ </radialGradient>
+ <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+  <stop offset="0" stop-color="#000" stop-opacity="0.7"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+ </radialGradient>
+</defs>
+<rect width="256" height="256" rx="14" fill="#16150f"/>
+<rect width="256" height="256" rx="14" fill="url(#glow)"/>
+<rect width="256" height="256" rx="14" fill="url(#vig)"/>
+<g transform="translate(128 134) scale(1.2) translate(-128 -134)"><ellipse cx="134" cy="216" rx="92" ry="16" fill="url(#shadow)"/>
+<linearGradient id="ff" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9493a"/><stop offset="1" stop-color="#7a1a12"/></linearGradient>
+<linearGradient id="fs" x1="0" x2="1"><stop offset="0" stop-color="#7d1b13"/><stop offset="1" stop-color="#4e0f0a"/></linearGradient>
+<path d="M88 64 L96 44 L148 44 L156 64" fill="none" stroke="#1a140d" stroke-width="15" stroke-linejoin="round"/>
+<path d="M88 64 L96 44 L148 44 L156 64" fill="none" stroke="#9a2a1e" stroke-width="9" stroke-linejoin="round"/>
+<path d="M98 50 L146 50" stroke="#e06a58" stroke-width="2.5"/>
+<polygon points="58,74 172,74 198,62 84,62" fill="#c23a2c" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+<polygon points="172,74 198,62 198,200 172,214" fill="url(#fs)" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+<rect x="58" y="74" width="114" height="140" rx="6" fill="url(#ff)" stroke="#1a140d" stroke-width="3.5"/>
+<rect x="68" y="84" width="94" height="120" rx="4" fill="none" stroke="#5e130d" stroke-width="3"/>
+<rect x="69" y="85" width="92" height="118" rx="4" fill="none" stroke="#ec6b5a" stroke-opacity="0.5" stroke-width="1.5"/>
+<g stroke-linecap="round">
+ <path d="M76 92 L154 196 M154 92 L76 196" stroke="#5e130d" stroke-width="10"/>
+ <path d="M76 90 L154 194 M154 90 L76 194" stroke="#d9493a" stroke-width="6"/>
+ <path d="M78 90 L114 138 M152 90 L118 134" stroke="#f08473" stroke-width="2" opacity="0.8"/>
+</g>
+<rect x="176" y="40" width="20" height="24" rx="3" fill="#3a3d40" stroke="#1a140d" stroke-width="3"/>
+<ellipse cx="186" cy="40" rx="10" ry="4" fill="#6d7377" stroke="#1a140d" stroke-width="2.5"/>
+<rect x="179" y="48" width="14" height="4" fill="#d9a43a"/>
+<path d="M63 82 L63 206" stroke="#f3917f" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+<g stroke="#f3b3a6" stroke-width="1.5" opacity="0.6" stroke-linecap="round">
+ <line x1="138" y1="170" x2="150" y2="166"/><line x1="90" y1="186" x2="98" y2="188"/><line x1="122" y1="104" x2="130" y2="100"/>
+</g>
+<path d="M180 120 Q182 140 178 150" stroke="#2d2a24" stroke-width="3" fill="none" opacity="0.5"/>
+</g>
+<rect x="1" y="1" width="254" height="254" rx="13" fill="none" stroke="#000" stroke-opacity="0.6" stroke-width="2"/>
+</svg>

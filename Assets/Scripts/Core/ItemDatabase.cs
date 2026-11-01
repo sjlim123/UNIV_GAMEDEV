@@ -51,12 +51,12 @@ public static class ItemDatabase
         Add("flashlight", "손전등", ItemCategory.Equipment, 0.4f, "Q로 켜고 끈다. 배터리를 쓴다");
         Add("club", "둔기", ItemCategory.Equipment, 1.5f, "좌클릭 공격력이 크게 오른다");
         Add("backpack", "가방", ItemCategory.Equipment, 0.8f, "들 수 있는 무게 +8kg");
-        Add("metal", "금속", ItemCategory.Material, 1.0f, "조합 재료");
+        Add("metal", "고철", ItemCategory.Material, 1.0f, "녹슨 금속 조각. 조합 재료");
         Add("cloth", "천", ItemCategory.Material, 0.2f, "조합 재료");
         Add("wood", "목재", ItemCategory.Material, 0.8f, "조합 재료");
         Add("wire", "전선", ItemCategory.Material, 0.3f, "조합 재료");
         Add("battery", "배터리", ItemCategory.Material, 0.2f, "손전등 배터리, 조합 재료");
-        Add("fuel", "연료", ItemCategory.Material, 2.0f, "발전기에 넣으면 전력 +35%");
+        Add("fuel", "연료통", ItemCategory.Material, 2.0f, "발전기에 넣으면 전력 +35%");
 
         AddRecipe("bandage", 1, ("cloth", 2));
         AddRecipe("club", 1, ("wood", 1), ("metal", 1));
