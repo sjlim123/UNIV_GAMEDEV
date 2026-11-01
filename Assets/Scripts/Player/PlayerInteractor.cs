@@ -12,7 +12,7 @@ public class PlayerInteractor : MonoBehaviour
         var gm = GameManager.Instance;
         Interactable current = null;
         if (!PlayerController.Instance.InputBlocked &&
-            Physics.Raycast(cam.transform.position, cam.transform.forward, out var hit, range, ~0, QueryTriggerInteraction.Collide))
+            PlayerRaycast.Raycast(cam.transform.position, cam.transform.forward, range, transform, QueryTriggerInteraction.Collide, out var hit))
         {
             current = hit.collider.GetComponentInParent<Interactable>();
             if (current != null && !current.CanInteract) current = null;

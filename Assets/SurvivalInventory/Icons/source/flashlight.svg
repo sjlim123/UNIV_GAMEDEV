@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+ <radialGradient id="glow" cx="0.5" cy="0.6" r="0.62">
+  <stop offset="0" stop-color="#cfb63e" stop-opacity="0.85"/>
+  <stop offset="0.5" stop-color="#cfb63e" stop-opacity="0.35"/>
+  <stop offset="1" stop-color="#cfb63e" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+  <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0.75"/>
+ </radialGradient>
+ <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+  <stop offset="0" stop-color="#000" stop-opacity="0.7"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+ </radialGradient>
+</defs>
+<rect width="256" height="256" rx="14" fill="#16150f"/>
+<rect width="256" height="256" rx="14" fill="url(#glow)"/>
+<rect width="256" height="256" rx="14" fill="url(#vig)"/>
+<g transform="translate(128 134) scale(1.2) translate(-128 -134)"><ellipse cx="128" cy="206" rx="96" ry="16" fill="url(#shadow)"/>
+<linearGradient id="fb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14171a"/><stop offset="0.28" stop-color="#78828b"/><stop offset="0.5" stop-color="#2b3035"/><stop offset="1" stop-color="#0f1113"/></linearGradient>
+<radialGradient id="lens" cx="0.4" cy="0.4" r="0.7"><stop offset="0" stop-color="#ffffff"/><stop offset="0.4" stop-color="#fff2a8"/><stop offset="1" stop-color="#d9a43a"/></radialGradient>
+<linearGradient id="beam" x1="0" x2="1"><stop offset="0" stop-color="#ffeb8a" stop-opacity="0.75"/><stop offset="1" stop-color="#ffeb8a" stop-opacity="0"/></linearGradient>
+<g transform="translate(118 146) rotate(-32)">
+ <polygon points="76,-26 150,-56 150,56 76,26" fill="url(#beam)"/>
+ <rect x="-98" y="-17" width="16" height="34" rx="5" fill="url(#fb)" stroke="#1a140d" stroke-width="3.5"/>
+ <rect x="-84" y="-18" width="118" height="36" fill="url(#fb)" stroke="#1a140d" stroke-width="3.5"/>
+ <g stroke="#0c0e10" stroke-width="2.5">
+  <line x1="-70" y1="-18" x2="-70" y2="18"/><line x1="-62" y1="-18" x2="-62" y2="18"/><line x1="-54" y1="-18" x2="-54" y2="18"/>
+  <line x1="-46" y1="-18" x2="-46" y2="18"/><line x1="-38" y1="-18" x2="-38" y2="18"/><line x1="-30" y1="-18" x2="-30" y2="18"/>
+  <line x1="-22" y1="-18" x2="-22" y2="18"/>
+ </g>
+ <rect x="4" y="-25" width="16" height="9" rx="2" fill="#d9792a" stroke="#1a140d" stroke-width="2.5"/>
+ <polygon points="34,-18 62,-28 62,28 34,18" fill="url(#fb)" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+ <rect x="60" y="-31" width="16" height="62" rx="3" fill="url(#fb)" stroke="#1a140d" stroke-width="3.5"/>
+ <ellipse cx="77" cy="0" rx="7" ry="28" fill="url(#lens)" stroke="#1a140d" stroke-width="3"/>
+ <path d="M-80 -9 L30 -9" stroke="#c9d2da" stroke-opacity="0.5" stroke-width="2.5"/>
+ <path d="M64 -24 L72 -24" stroke="#c9d2da" stroke-opacity="0.7" stroke-width="2.5"/>
+</g>
+</g>
+<rect x="1" y="1" width="254" height="254" rx="13" fill="none" stroke="#000" stroke-opacity="0.6" stroke-width="2"/>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+ <radialGradient id="glow" cx="0.5" cy="0.6" r="0.62">
+  <stop offset="0" stop-color="#a07c45" stop-opacity="0.85"/>
+  <stop offset="0.5" stop-color="#a07c45" stop-opacity="0.35"/>
+  <stop offset="1" stop-color="#a07c45" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+  <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0.75"/>
+ </radialGradient>
+ <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+  <stop offset="0" stop-color="#000" stop-opacity="0.7"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+ </radialGradient>
+</defs>
+<rect width="256" height="256" rx="14" fill="#16150f"/>
+<rect width="256" height="256" rx="14" fill="url(#glow)"/>
+<rect width="256" height="256" rx="14" fill="url(#vig)"/>
+<g transform="translate(128 134) scale(1.2) translate(-128 -134)"><ellipse cx="130" cy="210" rx="96" ry="18" fill="url(#shadow)"/><pattern id="weave" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-10)">
+<path d="M0 3 H6 M3 0 V6" stroke="#3b2f1f" stroke-width="0.8"/></pattern>
+<linearGradient id="c1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bba778"/><stop offset="1" stop-color="#7d6c47"/></linearGradient>
+<path d="M 44 150 Q 60.2 170.9 82 186 Q 75 192.5 82 199 Q 60.2 183.9 44 163 Q 37 156.5 44 150 Z" fill="#5f5236" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 82 186 Q 147.2 169.1 214 160 L 214 173 Q 147.2 182.1 82 199 Z" fill="#5f5236" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 44 150 Q 109.3 135.1 176 128 Q 192.4 147.1 214 160 Q 147.2 169.1 82 186 Q 60.2 170.9 44 150 Z" fill="url(#c1)" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 44 150 Q 109.3 135.1 176 128 Q 192.4 147.1 214 160 Q 147.2 169.1 82 186 Q 60.2 170.9 44 150 Z" fill="url(#weave)" opacity="0.35"/>
+
+<linearGradient id="c2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fb0b6"/><stop offset="1" stop-color="#5d6d75"/></linearGradient>
+<path d="M 52 120 Q 65.2 138.8 84 152 Q 77 158.0 84 164 Q 65.2 150.8 52 132 Q 45 126.0 52 120 Z" fill="#46535a" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 84 152 Q 146.3 136.1 210 128 L 210 140 Q 146.3 148.1 84 164 Z" fill="#46535a" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 52 120 Q 114.3 105.1 178 98 Q 191.3 115.9 210 128 Q 146.3 136.1 84 152 Q 65.2 138.8 52 120 Z" fill="url(#c2)" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 52 120 Q 114.3 105.1 178 98 Q 191.3 115.9 210 128 Q 146.3 136.1 84 152 Q 65.2 138.8 52 120 Z" fill="url(#weave)" opacity="0.35"/>
+
+<linearGradient id="c3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0e4c8"/><stop offset="1" stop-color="#bfa97f"/></linearGradient>
+<path d="M 62 90 Q 73.4 109.4 92 122 Q 85 127.5 92 133 Q 73.4 120.4 62 101 Q 55 95.5 62 90 Z" fill="#8c7a58" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 92 122 Q 143.0 106.1 196 100 L 196 111 Q 143.0 117.1 92 133 Z" fill="#8c7a58" stroke="#1a140d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M 62 90 Q 113.1 76.1 166 72 Q 177.6 89.7 196 100 Q 143.0 106.1 92 122 Q 73.4 109.4 62 90 Z" fill="url(#c3)" stroke="#1a140d" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 62 90 Q 113.1 76.1 166 72 Q 177.6 89.7 196 100 Q 143.0 106.1 92 122 Q 73.4 109.4 62 90 Z" fill="url(#weave)" opacity="0.35"/>
+
+<path d="M74 92 Q120 82 168 76" stroke="#fffaf0" stroke-opacity="0.6" stroke-width="2.5" fill="none"/>
+<path d="M100 114 Q140 106 184 100" stroke="#8c7a58" stroke-opacity="0.7" stroke-width="2" stroke-dasharray="6 5" fill="none"/>
+<path d="M118 80 Q136 94 146 112" stroke="#a8916a" stroke-width="2.5" fill="none" opacity="0.8"/>
+<path d="M140 78 Q150 88 152 98" stroke="#fff4dc" stroke-width="2" fill="none" opacity="0.6"/>
+<path d="M150 114 Q164 124 170 140" stroke="#3e4a50" stroke-width="2.5" fill="none" opacity="0.7"/>
+<g stroke-linecap="round" stroke-width="2">
+ <g stroke="#e8d9b6"><line x1="195" y1="101" x2="204" y2="98"/><line x1="198" y1="107" x2="206" y2="109"/><line x1="194" y1="113" x2="200" y2="118"/></g>
+ <g stroke="#9fb0b6"><line x1="210" y1="128" x2="219" y2="125"/><line x1="212" y1="134" x2="220" y2="137"/></g>
+ <g stroke="#bba778"><line x1="214" y1="160" x2="224" y2="157"/><line x1="216" y1="166" x2="224" y2="170"/><line x1="212" y1="172" x2="218" y2="178"/></g>
+</g>
+</g>
+<rect x="1" y="1" width="254" height="254" rx="13" fill="none" stroke="#000" stroke-opacity="0.6" stroke-width="2"/>
+</svg>

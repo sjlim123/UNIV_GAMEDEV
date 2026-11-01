@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+ <radialGradient id="glow" cx="0.5" cy="0.6" r="0.62">
+  <stop offset="0" stop-color="#2f9f78" stop-opacity="0.85"/>
+  <stop offset="0.5" stop-color="#2f9f78" stop-opacity="0.35"/>
+  <stop offset="1" stop-color="#2f9f78" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+  <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0.75"/>
+ </radialGradient>
+ <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+  <stop offset="0" stop-color="#000" stop-opacity="0.7"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+ </radialGradient>
+</defs>
+<rect width="256" height="256" rx="14" fill="#16150f"/>
+<rect width="256" height="256" rx="14" fill="url(#glow)"/>
+<rect width="256" height="256" rx="14" fill="url(#vig)"/>
+<g transform="translate(128 134) scale(1.2) translate(-128 -134)"><ellipse cx="132" cy="210" rx="92" ry="16" fill="url(#shadow)"/>
+<linearGradient id="bv" x1="0" x2="1"><stop offset="0" stop-color="#151514"/><stop offset="0.3" stop-color="#5a5a55"/><stop offset="0.45" stop-color="#2c2c2a"/><stop offset="1" stop-color="#121211"/></linearGradient>
+<linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#1d5a34"/><stop offset="0.3" stop-color="#5fd38a"/><stop offset="0.45" stop-color="#2f9a58"/><stop offset="1" stop-color="#174a2b"/></linearGradient>
+<linearGradient id="bvh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151514"/><stop offset="0.3" stop-color="#5a5a55"/><stop offset="0.45" stop-color="#2c2c2a"/><stop offset="1" stop-color="#121211"/></linearGradient>
+<linearGradient id="bgh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d5a34"/><stop offset="0.3" stop-color="#5fd38a"/><stop offset="0.45" stop-color="#2f9a58"/><stop offset="1" stop-color="#174a2b"/></linearGradient>
+<linearGradient id="cap" x1="0" x2="1"><stop offset="0" stop-color="#7d8287"/><stop offset="0.4" stop-color="#e6e9ec"/><stop offset="1" stop-color="#6b7075"/></linearGradient>
+<!-- 세워둔 배터리 -->
+<path d="M70 70 L70 196 A26 9 0 0 0 122 196 L122 70 Z" fill="url(#bv)" stroke="#1a140d" stroke-width="3.5"/>
+<path d="M70 70 L70 118 A26 9 0 0 0 122 118 L122 70 Z" fill="url(#bg)" stroke="#1a140d" stroke-width="3"/>
+<ellipse cx="96" cy="70" rx="26" ry="9" fill="#9aa0a5" stroke="#1a140d" stroke-width="3"/>
+<path d="M88 56 L88 68 A8 3 0 0 0 104 68 L104 56 Z" fill="url(#cap)" stroke="#1a140d" stroke-width="2.5"/>
+<ellipse cx="96" cy="56" rx="8" ry="3" fill="#eef0f2" stroke="#1a140d" stroke-width="2"/>
+<text x="96" y="104" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="bold" font-size="22" fill="#e9fff0">+</text>
+<path d="M80 78 L80 188" stroke="#fff" stroke-opacity="0.18" stroke-width="3"/>
+<!-- 누운 배터리 -->
+<g transform="translate(150 178) rotate(-22)">
+ <rect x="-62" y="-21" width="112" height="42" fill="url(#bvh)" stroke="#1a140d" stroke-width="3.5"/>
+ <rect x="10" y="-21" width="40" height="42" fill="url(#bgh)" stroke="#1a140d" stroke-width="3"/>
+ <ellipse cx="-62" cy="0" rx="7" ry="21" fill="#2a2a28" stroke="#1a140d" stroke-width="3"/>
+ <ellipse cx="50" cy="0" rx="7" ry="21" fill="#9aa0a5" stroke="#1a140d" stroke-width="3"/>
+ <rect x="50" y="-7" width="11" height="14" fill="url(#cap)" stroke="#1a140d" stroke-width="2.5"/>
+ <ellipse cx="61" cy="0" rx="3" ry="7" fill="#eef0f2" stroke="#1a140d" stroke-width="2"/>
+ <path d="M-56 -10 L44 -10" stroke="#fff" stroke-opacity="0.25" stroke-width="3"/>
+</g>
+</g>
+<rect x="1" y="1" width="254" height="254" rx="13" fill="none" stroke="#000" stroke-opacity="0.6" stroke-width="2"/>
+</svg>

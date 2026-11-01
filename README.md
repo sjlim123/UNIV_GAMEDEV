@@ -4,7 +4,7 @@
 
 - 엔진: Unity 6.3 (6000.3.x) · URP · Input System
 - 플랫폼: PC (Windows)
-- 현재 버전: **26.0.0.2** — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md)
+- 현재 버전: **26.0.0.3** (베타) — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md), 게임 안에서는 메인 메뉴 맨 아래 **패치노트**
 
 ## 바로 플레이하기
 
@@ -42,13 +42,15 @@
 | `Assets/Scripts/Audio` | 코드로 합성하는 효과음 |
 | `Assets/Editor/GameSceneBuilder.cs` | 씬·프리팹·머티리얼 자동 생성 도구 |
 | `Assets/Resources/GameBalance.asset` | **밸런스 수치** (인스펙터에서 수정) |
+| `Assets/Resources/PatchNotes.json` | 게임 안 패치노트 (버전별 추가·수정·패치 사항) |
+| `Assets/SurvivalInventory` | 등급·아이콘이 있는 새 인벤토리 UI (UI Toolkit). 지금은 `Demo/InventoryDemo` 씬에서만 사용, 자세한 내용은 폴더 안 README |
 
 ## 자주 하는 작업
 
 - **밸런스 조정**: `Assets/Resources/GameBalance.asset`을 선택하고 인스펙터에서 숫자를 바꿉니다.
 - **아이템·조합법·거래 추가**: `Assets/Scripts/Core/ItemDatabase.cs` (도시에 떨어지게 하려면 같은 파일의 `LootWeights`에도 추가). 새 아이템의 모양은 `Assets/Scripts/World/ItemVisuals.cs`에 추가하며, 없으면 회색 상자로 보입니다.
 - **씬 다시 만들기**: 메뉴 `Tools > 핵폭발 생존 > 게임 씬 전체 생성` — MainMenu·Shelter·City 씬과 함께 `Assets/Prefabs`(Player·Zombie·Dog), `Assets/Materials/Game`, `Assets/Settings`의 포스트 프로세싱 프로필, `Assets/Generated` 메시·내비메시, URP 설정, Build Settings 씬 목록을 새로 만듭니다. 이것들을 손으로 고친 내용은 사라지므로, 바꾸고 싶으면 `Assets/Editor/GameSceneBuilder.cs`를 고치세요. (`GameBalance.asset`은 없을 때만 만들어서 팀이 고친 값은 유지됩니다)
-- **버전 올리기**: `Edit > Project Settings > Player > Version`을 바꾸고, `Assets/Scripts/UI/UIManager.Menus.cs`의 업데이트 노트와 `PATCH_NOTES.md`를 고친 뒤 빌드합니다.
+- **버전 올리기**: `Edit > Project Settings > Player > Version`을 바꾸고, `Assets/Resources/PatchNotes.json` 맨 위에 그 버전 항목(`added` 추가사항 · `changed` 수정사항 · `patched` 패치사항)을 추가한 뒤 빌드합니다. 메인 메뉴의 패치노트 화면이 이 파일을 읽습니다. GitHub용 `PATCH_NOTES.md`도 같은 내용으로 맞춥니다.
 
 ## 사용한 에셋
 

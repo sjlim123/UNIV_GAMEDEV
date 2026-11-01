@@ -3,23 +3,11 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 메인 메뉴, 일시정지 메뉴, 설정·조작법·제작진 창
-// 배치: 왼쪽 위 제목 + 왼쪽 세로 메뉴(리썰 컴퍼니·오버워치), 오른쪽 공지 패널(CS2·오버워치), 오른쪽 아래 버전
+// 배치: 왼쪽 위 제목 + 왼쪽 세로 메뉴(리썰 컴퍼니·오버워치), 맨 아래 패치노트, 오른쪽 아래 버전
 public partial class UIManager
 {
     const string GameTitle = "핵폭발 생존";
     const string GameSubtitle = "NUCLEAR  SURVIVAL   ·   가제";
-    static readonly string[] UpdateNotes =
-    {
-        "메인 메뉴 · 일시정지(Esc) · 설정 화면 추가",
-        "방공호·도시 밝기 상향, 설정에 밝기 조절 추가",
-        "1인칭 손 모델과 손에 든 아이템 표시",
-        "핫바(1~8·휠) 선택, 우클릭 사용, G 버리기",
-        "반투명 + 테두리 UI로 가독성 개선",
-        "그래픽 품질·해상도 배율·FPS 제한 등 최적화 옵션",
-        "밸런스 조정: 좀비 수·속도·피해, 배고픔·갈증 소모량",
-        "게임 창을 내리면 자동 일시정지",
-    };
-
     GameObject mainMenuRoot, pauseRoot;
     int settingsTab;
 
@@ -62,22 +50,7 @@ public partial class UIManager
         MenuButton(m, "조작법", new Vector2(92, y -= step), OpenControls);
         MenuButton(m, "제작진", new Vector2(92, y -= step), OpenCredits);
         MenuButton(m, "게임 종료", new Vector2(92, y -= step), () => GameManager.Instance.QuitGame());
-
-        // 오른쪽: 업데이트 노트
-        var notes = Box(m, "Notes", new Color(0.04f, 0.045f, 0.04f, 0.72f), FrameColor);
-        Place(notes, new Vector2(1, 0.5f), new Vector2(-90, 20), new Vector2(560, 470));
-        var head = NewText(notes, "업데이트 노트", 28, TextAnchor.UpperLeft, Accent, FontBold);
-        Place(head.rectTransform, new Vector2(0, 1), new Vector2(28, -24), new Vector2(300, 40));
-        var ver = NewText(notes, "Ver " + Application.version, 18, TextAnchor.UpperRight, Dim);
-        Place(ver.rectTransform, new Vector2(1, 1), new Vector2(-28, -30), new Vector2(200, 30));
-        var div = NewRect("Line", notes);
-        Place(div, new Vector2(0.5f, 1), new Vector2(0, -74), new Vector2(504, 2));
-        div.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.12f);
-        var body = NewText(notes, "· " + string.Join("\n· ", UpdateNotes), 19, TextAnchor.UpperLeft, Text);
-        body.lineSpacing = 1.35f;
-        Place(body.rectTransform, new Vector2(0, 1), new Vector2(28, -92), new Vector2(504, 330));
-        var foot = NewText(notes, "버그와 의견은 팀 채널에 남겨 주세요.", 16, TextAnchor.LowerLeft, Dim);
-        Place(foot.rectTransform, new Vector2(0, 0), new Vector2(28, 20), new Vector2(504, 26));
+        MenuButton(m, "패치노트", new Vector2(92, y -= step + 16), OpenPatchNotes);
 
         var credit = NewText(m, "Team_31   ·   Made with Unity 6", 16, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.4f));
         Place(credit.rectTransform, new Vector2(0, 0), new Vector2(110, 24), new Vector2(600, 26));
