@@ -798,19 +798,23 @@ public static partial class GameSceneBuilder
 
     static void WreckedCar(Transform parent, Vector3 pos, float yaw, bool flipped)
     {
+        // 바로 선 차를 만든 뒤, 뒤집힌 차는 통째로 180° 굴려 지붕(높이 1.675m)이 바닥에 닿게 내려놓는다
+        // (예전에는 높이를 거꾸로 적은 채 또 뒤집어서 1m쯤 떠 있었다)
         var g = Group("WreckedCar", parent, pos, yaw);
         var body = Group("Body", g, Vector3.zero);
-        if (flipped) body.localRotation = Quaternion.Euler(0, 0, 180);
-        float yBase = flipped ? 0.95f : 0.35f;
         var paint = Pick(M["metal"], M["paintRed"], M["paintBlue"]);
-        Box("Chassis", body, new Vector3(0, flipped ? -0.6f : 0.65f, 0), new Vector3(1.8f, 0.8f, 4.3f), paint, 1.5f);
-        Box("Cabin", body, new Vector3(0, flipped ? -1.3f : 1.35f, -0.25f), new Vector3(1.65f, 0.65f, 2.2f), paint, 1.5f);
-        Box("Windshield", body, new Vector3(0, flipped ? -1.3f : 1.35f, 0.86f), new Vector3(1.55f, 0.55f, 0.02f), M["glass"], 1f, false);
+        Box("Chassis", body, new Vector3(0, 0.65f, 0), new Vector3(1.8f, 0.8f, 4.3f), paint, 1.5f);
+        Box("Cabin", body, new Vector3(0, 1.35f, -0.25f), new Vector3(1.65f, 0.65f, 2.2f), paint, 1.5f);
+        Box("Windshield", body, new Vector3(0, 1.35f, 0.86f), new Vector3(1.55f, 0.55f, 0.02f), M["glass"], 1f, false);
         foreach (var x in new[] { -0.85f, 0.85f })
             foreach (var z in new[] { -1.4f, 1.4f })
                 if (!Chance(0.15))
-                    Prim(PrimitiveType.Cylinder, "Wheel", body, new Vector3(x, flipped ? -0.05f : 0.35f, z), new Vector3(0.65f, 0.12f, 0.65f), M["tire"], new Vector3(0, 0, 90));
-        if (flipped) g.localPosition += Vector3.up * yBase;
+                    Prim(PrimitiveType.Cylinder, "Wheel", body, new Vector3(x, 0.33f, z), new Vector3(0.65f, 0.12f, 0.65f), M["tire"], new Vector3(0, 0, 90));
+        if (flipped)
+        {
+            body.localRotation = Quaternion.Euler(0, 0, 180);
+            body.localPosition = Vector3.up * 1.66f; // 지붕이 바닥에 살짝 눌린다
+        }
     }
 
     // 건물 주위 바닥(인도·건물 사이 골목)에 아이템 자리를 더 둔다. 따로 난수를 써서 도시의 다른 배치는 바뀌지 않는다.

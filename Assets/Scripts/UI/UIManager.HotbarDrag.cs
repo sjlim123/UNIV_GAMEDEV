@@ -23,8 +23,11 @@ public partial class UIManager
     {
         var head = NewText(glass, "핫바", 20, TextAnchor.MiddleLeft, Accent, FontSemiBold);
         Place(head.rectTransform, new Vector2(0, 0), new Vector2(gridX, 36 + InvBarSlot + 8), new Vector2(80, 28));
-        var tip = NewText(glass, "아이템을 끌어다 칸에 놓기 · 칸 밖으로 끌면 빠짐", 15, TextAnchor.MiddleRight, Dim);
-        Place(tip.rectTransform, new Vector2(0, 0), new Vector2(gridX + InvGridWidth - 420, 36 + InvBarSlot + 8), new Vector2(420, 28));
+        if (!CompactItemCards)
+        {
+            var tip = NewText(glass, "아이템을 끌어다 칸에 놓기 · 칸 밖으로 끌면 빠짐", 15, TextAnchor.MiddleRight, Dim);
+            Place(tip.rectTransform, new Vector2(0, 0), new Vector2(gridX + InvGridWidth - 420, 36 + InvBarSlot + 8), new Vector2(420, 28));
+        }
         for (int i = 0; i < GameState.HotbarSlots; i++)
         {
             var v = NewItemSlot(glass, "BarSlot" + i, 6);

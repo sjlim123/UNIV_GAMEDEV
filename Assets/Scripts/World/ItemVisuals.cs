@@ -45,7 +45,7 @@ public static class ItemVisuals
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.04f, 0), new Vector3(0.24f, 0.04f, 0.24f), hemp, 0.05f);
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.025f, 0), new Vector3(0.245f, 0.01f, 0.245f), hempDark, 0.05f);
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.055f, 0), new Vector3(0.245f, 0.01f, 0.245f), hempDark, 0.05f);
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.041f, 0), new Vector3(0.1f, 0.041f, 0.1f), new Color(0.12f, 0.1f, 0.08f), 0.05f);
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.04f, 0), new Vector3(0.1f, 0.042f, 0.1f), new Color(0.12f, 0.1f, 0.08f), 0.05f);
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.145f, 0.012f, -0.078f), new Vector3(0.024f, 0.09f, 0.024f), hemp, 0.05f, new Vector3(90, 150, 0));
                 break;
             case "copper_wire":
@@ -87,16 +87,28 @@ public static class ItemVisuals
                 RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(0.09f, 0.03f, 0.05f), new Vector3(0.08f, 0.06f, 0.07f), new Color(0.37f, 0.36f, 0.34f), 0.15f, new Vector3(10, -20, 0));
                 break;
             case "battery":
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.035f, 0), new Vector3(0.05f, 0.07f, 0.05f), new Color(0.15f, 0.15f, 0.15f), 0.6f, new Vector3(0, 0, 90));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.07f, 0.035f, 0), new Vector3(0.05f, 0.012f, 0.05f), new Color(0.8f, 0.6f, 0.1f), 0.6f, new Vector3(0, 0, 90));
+                // 검은 몸통 + 금색 띠 + 볼록한 + 극. 몸통과 띠는 맞닿기만 하고 겹치지 않는다 (같은 옆면이 겹치면 깨져 보인다)
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(-0.0075f, 0.035f, 0), new Vector3(0.05f, 0.0625f, 0.05f), new Color(0.15f, 0.15f, 0.15f), 0.6f, new Vector3(0, 0, 90));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.065f, 0.035f, 0), new Vector3(0.05f, 0.01f, 0.05f), new Color(0.8f, 0.6f, 0.1f), 0.6f, new Vector3(0, 0, 90));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.079f, 0.035f, 0), new Vector3(0.018f, 0.004f, 0.018f), new Color(0.72f, 0.72f, 0.74f), 0.8f, new Vector3(0, 0, 90));
                 break;
             case "fuel":
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.22f, 0), new Vector3(0.18f, 0.44f, 0.34f), new Color(0.55f, 0.1f, 0.08f), 0.5f);
+                // 연료통: 빨간 몸통 + 주둥이 마개 + 위쪽 손잡이 (손에 들 때 손가락을 건다)
+                var can = new Color(0.55f, 0.1f, 0.08f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.22f, 0), new Vector3(0.18f, 0.44f, 0.34f), can, 0.5f);
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.47f, 0.1f), new Vector3(0.05f, 0.04f, 0.05f), new Color(0.2f, 0.2f, 0.2f));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.49f, -0.02f), new Vector3(0.02f, 0.07f, 0.02f), can, 0.5f, new Vector3(90, 0, 0));
+                foreach (var z in new[] { -0.08f, 0.04f })
+                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.462f, z), new Vector3(0.016f, 0.026f, 0.016f), can, 0.5f);
                 break;
             case "flashlight":
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.03f, 0), new Vector3(0.05f, 0.12f, 0.05f), new Color(0.1f, 0.1f, 0.1f), 0.6f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.03f, 0.13f), new Vector3(0.07f, 0.03f, 0.07f), new Color(0.15f, 0.15f, 0.15f), 0.6f, new Vector3(90, 0, 0));
+                // 손전등: 검은 몸통 + 넓은 머리 + 렌즈 + 꽁무니 마개 + 위쪽 고무 버튼 (+z가 빛 나가는 쪽)
+                var body = new Color(0.09f, 0.09f, 0.1f);
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0), new Vector3(0.04f, 0.08f, 0.04f), body, 0.55f, new Vector3(90, 0, 0));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0.095f), new Vector3(0.056f, 0.025f, 0.056f), new Color(0.14f, 0.14f, 0.15f), 0.65f, new Vector3(90, 0, 0));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0.1205f), new Vector3(0.048f, 0.0015f, 0.048f), new Color(1f, 0.95f, 0.8f), 0.95f, new Vector3(90, 0, 0));
+                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, -0.084f), new Vector3(0.043f, 0.006f, 0.043f), new Color(0.16f, 0.16f, 0.17f), 0.4f, new Vector3(90, 0, 0));
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.0475f, 0.03f), new Vector3(0.012f, 0.006f, 0.018f), new Color(0.25f, 0.08f, 0.06f), 0.2f);
                 break;
             case "raw_meat":
                 Meat(t, new Color(0.52f, 0.1f, 0.09f), new Color(0.86f, 0.74f, 0.66f), false);
@@ -263,7 +275,8 @@ public static class ItemVisuals
         RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, y, -0.33f), new Vector3(0.056f, 0.012f, 0.056f), body, 0.3f, new Vector3(90, 0, 0));
         RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, y, -0.2f), new Vector3(0.038f, 0.12f, 0.038f), grip, 0.2f, new Vector3(90, 0, 0));
         RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, y, -0.02f), new Vector3(0.042f, 0.08f, 0.042f), body, 0.3f, new Vector3(90, 0, 0));
-        RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, y, 0.27f), new Vector3(0.068f, 0.2f, 0.068f), body, 0.3f, new Vector3(90, 0, 0));
+        // 굵은 몸통은 손잡이 쪽 토막 끝(0.06)에 겹쳐 이어 붙인다 (예전에는 1cm 틈이 벌어져 끊겨 보였다)
+        RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, y, 0.2625f), new Vector3(0.068f, 0.2075f, 0.068f), body, 0.3f, new Vector3(90, 0, 0));
         RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(0, y, 0.47f), new Vector3(0.068f, 0.068f, 0.03f), body, 0.3f);
     }
 
@@ -287,6 +300,11 @@ public static class ItemVisuals
         RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.2f, 0) * size, new Vector3(0.35f, 0.4f, 0.2f) * size, cloth, 0.1f);
         RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.12f, -0.11f) * size, new Vector3(0.25f, 0.15f, 0.06f) * size, dark, 0.1f);
         RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.37f, -0.02f) * size, new Vector3(0.36f, 0.08f, 0.22f) * size, dark, 0.1f);
+        // 위쪽 손잡이 고리 (손에 들 때 손가락을 건다)
+        var strap = new Color(0.13f, 0.13f, 0.12f);
+        RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.445f, -0.01f) * size, new Vector3(0.014f, 0.05f, 0.014f) * size, strap, 0.2f, new Vector3(0, 0, 90));
+        foreach (var x in new[] { -0.05f, 0.05f })
+            RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(x, 0.425f, -0.01f) * size, new Vector3(0.012f, 0.02f, 0.012f) * size, strap, 0.2f);
         if (!big) return;
         foreach (var x in new[] { -1f, 1f })
             RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(x * 0.2f, 0.16f, 0) * size, new Vector3(0.06f, 0.2f, 0.14f) * size, dark, 0.1f);
@@ -371,8 +389,8 @@ public static class ItemVisuals
         RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(0, 0.135f, -0.074f), new Vector3(0.37f, 0.03f, 0.02f), strap, 0.15f);
         RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(-0.09f, 0.07f, -0.085f), new Vector3(0.1f, 0.08f, 0.04f), fabricDark, 0.1f);
         RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(0.09f, 0.07f, -0.085f), new Vector3(0.1f, 0.08f, 0.04f), fabricDark, 0.1f);
-        RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(-0.09f, 0.105f, -0.1f), new Vector3(0.1f, 0.018f, 0.012f), strap, 0.15f);
-        RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(0.09f, 0.105f, -0.1f), new Vector3(0.1f, 0.018f, 0.012f), strap, 0.15f);
+        RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(-0.09f, 0.105f, -0.1f), new Vector3(0.104f, 0.018f, 0.012f), strap, 0.15f);
+        RuntimeVisuals.Part(PrimitiveType.Cube, vest, new Vector3(0.09f, 0.105f, -0.1f), new Vector3(0.104f, 0.018f, 0.012f), strap, 0.15f);
     }
 
     // 타이어: 원통 토막을 둥글게 이어 붙인 고무 고리 (세워 둔다, 축은 z). 토막마다 색을 번갈아 트레드처럼 보이게 한다

@@ -22,7 +22,9 @@ public static class RuntimeVisuals
     public static GameObject Part(PrimitiveType type, Transform parent, Vector3 localPos, Vector3 scale, Color color, float smoothness = 0.25f, Vector3? euler = null)
     {
         var go = GameObject.CreatePrimitive(type);
-        Object.Destroy(go.GetComponent<Collider>());
+        // 편집기(미리보기·검사 도구)에서 부를 때는 Destroy를 쓸 수 없다
+        if (Application.isPlaying) Object.Destroy(go.GetComponent<Collider>());
+        else Object.DestroyImmediate(go.GetComponent<Collider>());
         go.transform.SetParent(parent, false);
         go.transform.localPosition = localPos;
         go.transform.localScale = scale;

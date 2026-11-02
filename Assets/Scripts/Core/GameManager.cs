@@ -170,7 +170,7 @@ public class GameManager : MonoBehaviour
         s.Thirst = Mathf.Min(100, s.Thirst + def.Thirst);
         UI.ShowMessage($"{def.Name} 사용 ({def.Description})");
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.5f);
-        if (PlayerHands.Instance != null) PlayerHands.Instance.PlayUse();
+        if (PlayerHands.Instance != null) PlayerHands.Instance.PlayUse(id);
         return true;
     }
 

@@ -11,8 +11,13 @@ using UnityEngine.UI;
 public partial class UIManager
 {
     const float InventoryBlurInterval = 0.1f;
+    // 간단히 보기: 소지품·제작대 목록 카드에는 아이템 그림과 이름만 두고, 수치·무게·안내는 고른 것의 오른쪽 큰 상세 칸에만 보인다.
+    // false로 바꾸면 예전처럼 카드마다 무게·등급·제작 가능 여부와 안내 문구가 다시 보인다
+    static readonly bool CompactItemCards = true;
+
     const int InvColumns = 4;
-    const float InvCellW = 118, InvCellH = 156, InvGap = 14;
+    const float InvCellW = 118, InvGap = 14;
+    static readonly float InvCellH = CompactItemCards ? 140 : 156;
     const float InvGridWidth = InvColumns * InvCellW + (InvColumns - 1) * InvGap;
     const float InvDoubleClick = 0.35f;
 
@@ -120,8 +125,11 @@ public partial class UIManager
 
         var title = NewText(glass, "소지품", 38, TextAnchor.MiddleLeft, Text, FontBold);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(170, 56));
-        var sub = NewText(glass, "메고 입은 장비는 무게에 들지 않는다. 핫바에서 가방·방어구를 우클릭해도 장착된다.", 19, TextAnchor.MiddleLeft, Dim);
-        Place(sub.rectTransform, new Vector2(0, 1), new Vector2(184, -34), new Vector2(900, 40));
+        if (!CompactItemCards)
+        {
+            var sub = NewText(glass, "메고 입은 장비는 무게에 들지 않는다. 핫바에서 가방·방어구를 우클릭해도 장착된다.", 19, TextAnchor.MiddleLeft, Dim);
+            Place(sub.rectTransform, new Vector2(0, 1), new Vector2(184, -34), new Vector2(900, 40));
+        }
         var close = MakeButton(glass, "닫기 (Esc)", CloseInventory, true);
         Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(170, 46));
         var line = NewRect("Line", glass);
@@ -223,7 +231,7 @@ public partial class UIManager
 
         int total = 0;
         foreach (var kv in items) total += kv.Value;
-        invCount.text = items.Count > 0 ? $"{items.Count}종  ·  {total}개" : "";
+        invCount.text = items.Count > 0 && !CompactItemCards ? $"{items.Count}종  ·  {total}개" : "";
         invEmpty.gameObject.SetActive(items.Count == 0);
 
         var hb = PlayerHotbar.Instance;
@@ -282,8 +290,11 @@ public partial class UIManager
 
         var head = NewText(p, "장비", 22, TextAnchor.MiddleLeft, Accent, FontSemiBold);
         Place(head.rectTransform, new Vector2(0, 1), Vector2.zero, new Vector2(120, 34));
-        var note = NewText(p, "장비는 무게 0 kg", 16, TextAnchor.MiddleRight, Dim);
-        Place(note.rectTransform, new Vector2(1, 1), Vector2.zero, new Vector2(240, 34));
+        if (!CompactItemCards)
+        {
+            var note = NewText(p, "장비는 무게 0 kg", 16, TextAnchor.MiddleRight, Dim);
+            Place(note.rectTransform, new Vector2(1, 1), Vector2.zero, new Vector2(240, 34));
+        }
 
         EquipCard(p, s, EquipSlot.Backpack, -44);
         EquipCard(p, s, EquipSlot.Armor, -206);
@@ -325,16 +336,21 @@ public partial class UIManager
         string capText = s.EquippedBackpack != null
             ? $"기본 {b.carryCapacity:0.#} kg + {ItemDatabase.Name(s.EquippedBackpack)} {ItemDatabase.Get(s.EquippedBackpack).CarryBonus:0.#} kg"
             : $"기본 {b.carryCapacity:0.#} kg  ·  가방을 메면 {InvBonusRange(EquipSlot.Backpack)} kg";
-        var wsub = NewText(p, capText, 16, TextAnchor.MiddleLeft, Dim);
-        Place(wsub.rectTransform, new Vector2(0, 1), new Vector2(0, -450), new Vector2(380, 26));
+        if (!CompactItemCards)
+        {
+            var wsub = NewText(p, capText, 16, TextAnchor.MiddleLeft, Dim);
+            Place(wsub.rectTransform, new Vector2(0, 1), new Vector2(0, -450), new Vector2(380, 26));
+        }
 
         // 최대 체력: 방어구를 입으면 늘어난다
         bool armor = s.HasArmor;
         int bonus = armor ? ItemDatabase.Get(s.EquippedArmor).HealthBonus : 0;
+        float healthY = CompactItemCards ? -470 : -494;
         var al = NewText(p, "최대 체력", 20, TextAnchor.MiddleLeft, Accent, FontSemiBold);
-        Place(al.rectTransform, new Vector2(0, 1), new Vector2(0, -494), new Vector2(160, 34));
+        Place(al.rectTransform, new Vector2(0, 1), new Vector2(0, healthY), new Vector2(160, 34));
         var av = NewText(p, armor ? $"{s.MaxHealth:0}  (+{bonus})" : $"{s.MaxHealth:0}", 22, TextAnchor.MiddleRight, armor ? AddedColor : Dim, FontSemiBold);
-        Place(av.rectTransform, new Vector2(1, 1), new Vector2(0, -494), new Vector2(240, 34));
+        Place(av.rectTransform, new Vector2(1, 1), new Vector2(0, healthY), new Vector2(240, 34));
+        if (CompactItemCards) return;
         var asub = NewText(p, armor ? $"기본 {b.playerMaxHealth:0} + {ItemDatabase.Name(s.EquippedArmor)} {bonus}" : $"방어구를 입으면 최대 체력 {InvBonusRange(EquipSlot.Armor)}", 16, TextAnchor.MiddleLeft, Dim);
         Place(asub.rectTransform, new Vector2(0, 1), new Vector2(0, -530), new Vector2(380, 26));
 
@@ -360,6 +376,13 @@ public partial class UIManager
         SetItemSlot(v, id);
         if (!has) EmptyEquipSlot(v, slot, 16, 30);
 
+        if (CompactItemCards)
+        {
+            // 그림과 이름만 (칸 이름은 빈 칸 그림 안에 보인다. 효과·장착 안내는 오른쪽 상세 칸에)
+            var shortName = NewText(rt, has ? def.Name : "비어 있음", 26, TextAnchor.MiddleLeft, has ? rc : new Color(Dim.r, Dim.g, Dim.b, 0.75f), has ? FontBold : FontSemiBold);
+            Place(shortName.rectTransform, new Vector2(0, 0.5f), new Vector2(154, 0), new Vector2(214, 40));
+            return;
+        }
         var label = NewText(rt, InvSlotName(slot) + " 칸", 16, TextAnchor.MiddleLeft, Dim);
         Place(label.rectTransform, new Vector2(0, 1), new Vector2(154, -14), new Vector2(150, 22));
         if (has)
@@ -431,17 +454,19 @@ public partial class UIManager
         Place(slot.Rect, new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(94, 94));
         SetItemSlot(slot, id);
         if (count > 1) InvBadge(slot.Rect, "x" + count, 17, TextAnchor.LowerRight, Text);
-        // 핫바 칸에 놓인 아이템은 그 칸 번호를 단다 (손에 든 것은 금색)
+        // 핫바 칸에 놓인 아이템은 그 칸 번호를 단다 (손에 든 것은 금색). 간단히 보기에서는 아래 핫바 줄과 상세 칸에서 본다
         int bar = GameManager.Instance.State.HotbarIndex(id);
-        if (bar >= 0)
+        if (bar >= 0 && !CompactItemCards)
             InvBadge(slot.Rect, (bar + 1).ToString(), 14, TextAnchor.UpperLeft, held ? Accent : new Color(1, 1, 1, 0.5f));
 
         var name = NewText(rt, def.Name, 18, TextAnchor.MiddleCenter, rc, FontSemiBold);
-        // 긴 이름(부싯돌과 라이터 등)은 한 줄에 들어가게 글자를 줄인다
+        // 긴 이름(부싯돌과 라이터 등)은 한 줄에 들어가게 글자를 줄인다 (넘침을 허용하면 두 줄로 그림 위까지 올라온다)
+        name.verticalOverflow = VerticalWrapMode.Truncate;
         name.resizeTextForBestFit = true;
         name.resizeTextMinSize = 11;
         name.resizeTextMaxSize = 18;
         Place(name.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -108), new Vector2(InvCellW - 8, 24));
+        if (CompactItemCards) return;
         var kg = NewText(rt, $"{GameManager.Instance.State.Carried.UnitWeight(id) * count:0.0} kg", 14, TextAnchor.MiddleCenter, Dim);
         Place(kg.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -132), new Vector2(InvCellW - 8, 18));
     }

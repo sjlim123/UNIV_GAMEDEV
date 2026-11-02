@@ -236,7 +236,9 @@ public partial class UIManager
             workbenchSub.text = ready ? "재료는 창고와 소지품에서 함께 쓴다." : "전력이 없어 작업등과 공구를 쓸 수 없다. 발전기에 연료를 넣자.";
             workbenchSub.color = ready ? Dim : Danger;
         }
-        workbenchWeight.text = $"소지품  {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg";
+        // 간단히 보기: 문제가 있을 때(전력 없음·라이터 없음)만 안내하고, 무게는 오른쪽 상세 칸에만 보인다
+        if (CompactItemCards && ready) workbenchSub.text = "";
+        workbenchWeight.text = CompactItemCards ? "" : $"소지품  {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg";
 
         ClearChildren(workbenchList);
         ClearChildren(workbenchDetail);
@@ -280,6 +282,7 @@ public partial class UIManager
         bar.gameObject.AddComponent<Image>().color = rc;
         var name = NewText(rt, ItemRarityInfo.Name(rarity), 20, TextAnchor.MiddleLeft, rc, FontBold);
         Place(name.rectTransform, new Vector2(0, 0), new Vector2(16, 2), new Vector2(160, 30));
+        if (CompactItemCards) return;
         string canText = $"<color=#{ColorUtility.ToHtmlStringRGB(AddedColor)}>만들 수 있음 {can}</color>  ·  {total}개";
         var count = NewText(rt, can > 0 ? canText : $"{total}개", 16, TextAnchor.MiddleRight, Dim);
         Place(count.rectTransform, new Vector2(1, 0), new Vector2(-8, 2), new Vector2(240, 30));
@@ -324,6 +327,12 @@ public partial class UIManager
         if (recipe.ResultCount > 1) SlotBadge(slot, "x" + recipe.ResultCount, 16);
 
         var name = NewText(body, def.Name, 24, TextAnchor.MiddleLeft, rc, FontSemiBold);
+        if (CompactItemCards)
+        {
+            // 그림과 이름만. 만들 수 없는 것은 흐리게 (등급·재료·상태는 오른쪽 상세 칸에)
+            Place(name.rectTransform, new Vector2(0, 0.5f), new Vector2(96, 0), new Vector2(330, 40));
+            return;
+        }
         Place(name.rectTransform, new Vector2(0, 1), new Vector2(96, -14), new Vector2(210, 34));
         var tag = NewText(body, ItemRarityInfo.Name(def.Rarity), 15, TextAnchor.MiddleRight, rc, FontSemiBold);
         Place(tag.rectTransform, new Vector2(1, 1), new Vector2(-16, -18), new Vector2(90, 24));
