@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
-// 1인칭 손: 낡은 야상 소매 + 가죽 작업 장갑을 낀 손. 손가락 마디 셋이 손잡이를 감아쥔다 (ProcMesh·ProcTex로 짓는다).
-// 왼손은 손전등(손잡이 축이 앞), 오른손은 핫바에서 고른 아이템(손잡이 축이 위)을 든다.
+// 1인칭 손 (HandRig 두 개): 왼손은 손전등, 오른손은 핫바에서 고른 아이템을 아이템마다 다른 모양(HeldItems)으로 쥔다.
+// 손가락은 쥔 물건 표면에 닿을 때까지 감는다(HandRig.Wrap). 바꿔 들 때는 손을 내렸다 올리며 펴진 손가락을 오므려 쥔다.
+// 주먹·찌르기·휘두르기·새총·먹기·마시기·붕대 감기·구급상자·라이터 켜기·손전등 딸깍 같은 몸짓은 기본 자세 위에 얹는다.
 // 그림자 전용 몸통도 만들어서 조명 아래 플레이어 그림자가 보이게 한다.
 public class PlayerHands : MonoBehaviour
 {
@@ -11,21 +12,45 @@ public class PlayerHands : MonoBehaviour
 
     static readonly Color Sleeve = new Color(0.24f, 0.26f, 0.21f); // 낡은 야상
     static readonly Color Cuff = new Color(0.15f, 0.16f, 0.13f);
-    static readonly Color Skin = new Color(0.72f, 0.56f, 0.46f);
-    static readonly Vector3 RightBase = new Vector3(0.19f, -0.2f, 0.42f);
-    static readonly Vector3 LeftBase = new Vector3(-0.2f, -0.21f, 0.42f);
+
+    // 손잡이를 쥔 손 안의 손잡이 축 (손 좌표): 새끼 쪽 손목 가까이에서 검지 뿌리 쪽으로 비스듬히 지난다
+    static readonly Vector3 PowerAxis = new Vector3(0, 1f, 0.4f).normalized;
 
     PlayerController pc;
     PlayerFlashlight flashlight;
     PlayerHotbar hotbar;
     CharacterController cc;
-    Transform handsRoot, rightArm, leftArm, rightHeld, leftHeld, shadowBody;
-    GameObject heldVisual;
+    Transform handsRoot, shadowBody;
+    HandRig right, left;
+
+    // 오른손
     string heldId;
+    GameObject heldModel;
+    HeldSpec heldSpec;
+    GameObject lighterFlame;
+    readonly float[] gripPose = new float[HandRig.PoseLength]; // 쥔 손가락 (빈손이면 힘 뺀 손)
+    readonly float[] fingers = new float[HandRig.PoseLength];  // 지금 손가락
+    readonly float[] target = new float[HandRig.PoseLength];
+    float lower = 1f; // 바꿔 들며 손을 내린 정도 (1 = 화면 아래)
+    float grab = 1f;  // 올라오며 손가락을 오므린 정도
+    bool flickPending;
+
+    // 몸짓
+    enum Move { None, Punch, Stab, Swing, Shoot, Use, Flick }
+    Move move;
+    float moveT = 1f, moveTime = 1f;
+    UseGesture useKind;
+    string useItem; // 쓰는 몸짓 동안 손에 보일 아이템 (소지품 창에서 쓴 것도 손에 들려 보인다)
+    bool useQueued;
+
+    // 왼손 (손전등)
+    readonly float[] leftGrip = new float[HandRig.PoseLength];
+    readonly float[] leftFingers = new float[HandRig.PoseLength];
+    float lowerLeft = 1f, clickT = 1f;
+    bool wasOn;
+
     Vector3 sway;
-    float bobPhase, lowerLeft = 1f, lowerRight;
-    float actionT = 1f, actionTime = 1f;
-    int action; // 1 주먹·찌르기, 2 휘두르기, 3 사용, 4 새총 쏘기
+    float bobPhase, run;
 
     void Awake() => Instance = this;
 
@@ -40,157 +65,39 @@ public class PlayerHands : MonoBehaviour
         flashlight = GetComponent<PlayerFlashlight>();
         hotbar = GetComponent<PlayerHotbar>();
         cc = GetComponent<CharacterController>();
+        Init(pc.cameraRoot);
+        BuildShadowBody();
+    }
 
+    // 손 둘과 손전등을 만든다 (편집기 미리보기에서도 부른다)
+    public void Init(Transform cameraRoot)
+    {
         handsRoot = new GameObject("Hands").transform;
-        handsRoot.SetParent(pc.cameraRoot, false);
-        // 오른손: 손잡이를 세워 쥔다 (방망이·단검·아이템). 왼손: 손전등을 앞으로 겨눠 쥔다
-        rightArm = BuildArm("RightArm", RightBase, 1, new Vector3(0, 0.95f, 0.3f), new Vector3(0.2f, -0.3f, 0.93f), out rightHeld);
-        leftArm = BuildArm("LeftArm", LeftBase, -1, new Vector3(0, 0, 1f), new Vector3(-0.55f, 0.83f, 0), out leftHeld);
+        handsRoot.SetParent(cameraRoot, false);
+        right = new HandRig(handsRoot, "RightArm", 1);
+        left = new HandRig(handsRoot, "LeftArm", -1);
+        System.Array.Copy(HandRig.Relaxed, gripPose, HandRig.PoseLength);
+        System.Array.Copy(HandRig.Open, fingers, HandRig.PoseLength);
 
-        // 왼손 손전등. 실제 불빛(Spot Light)도 손전등 끝으로 옮겨 손을 따라 흔들린다
+        // 왼손 손전등. 실제 불빛(Spot Light)도 렌즈 앞으로 옮겨 손을 따라 흔들린다
         var model = new GameObject("FlashlightModel").transform;
-        model.SetParent(leftHeld, false);
-        RuntimeVisuals.Part(PrimitiveType.Cylinder, model, new Vector3(0, 0, 0.03f), new Vector3(0.036f, 0.075f, 0.036f), new Color(0.08f, 0.08f, 0.08f), 0.6f, new Vector3(90, 0, 0));
-        RuntimeVisuals.Part(PrimitiveType.Cylinder, model, new Vector3(0, 0, 0.12f), new Vector3(0.05f, 0.022f, 0.05f), new Color(0.12f, 0.12f, 0.12f), 0.7f, new Vector3(90, 0, 0));
-        RuntimeVisuals.Part(PrimitiveType.Cylinder, model, new Vector3(0, 0, 0.143f), new Vector3(0.042f, 0.003f, 0.042f), new Color(1f, 0.95f, 0.8f), 0.95f, new Vector3(90, 0, 0));
+        ItemVisuals.Build("flashlight", model);
+        var spec = HeldItems.Get("flashlight");
+        Attach(left, model, spec);
+        ComputeGrip(left, model, spec, leftGrip);
+        System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
+        left.Apply(leftFingers);
         var tip = new GameObject("Tip").transform;
         tip.SetParent(model, false);
-        tip.localPosition = new Vector3(0, 0, 0.16f);
+        tip.localPosition = new Vector3(0, 0.028f, 0.125f);
         if (flashlight != null && flashlight.spot != null)
         {
             flashlight.spot.transform.SetParent(tip, false);
             flashlight.spot.transform.localPosition = Vector3.zero;
             flashlight.spot.transform.localRotation = Quaternion.identity;
         }
-
         foreach (var r in handsRoot.GetComponentsInChildren<Renderer>())
             r.shadowCastingMode = ShadowCastingMode.Off;
-        BuildShadowBody();
-    }
-
-    static readonly Vector3 HeldPoint = new Vector3(0, -0.012f, 0.12f);
-
-    // 팔 하나: 손목(pivot) 아래에 쥔 손과 팔꿈치 쪽으로 뻗은 소매.
-    // gripAxis = 손잡이 축 방향, knuckleDir = 주먹 마디가 향하는 쪽. 손잡이 가운데가 held 자리에 오게 손목을 놓는다
-    Transform BuildArm(string name, Vector3 basePos, float side, Vector3 gripAxis, Vector3 knuckleDir, out Transform held)
-    {
-        var pivot = new GameObject(name).transform;
-        pivot.SetParent(handsRoot, false);
-        pivot.localPosition = basePos;
-        held = new GameObject("Held").transform;
-        held.SetParent(pivot, false);
-        held.localPosition = HeldPoint;
-
-        // 주먹 좌표: +y = 손잡이 축, +z = 마디 쪽, 손바닥은 -x(오른손) 쪽. 손잡이 가운데는 손목에서 (-0.016, 0, 0.1)
-        var rot = Quaternion.LookRotation(knuckleDir, gripAxis);
-        var gripCenter = new Vector3(-0.016f * side, 0, 0.1f);
-        var wrist = new GameObject("Wrist").transform;
-        wrist.SetParent(pivot, false);
-        wrist.localRotation = rot;
-        wrist.localPosition = HeldPoint - rot * gripCenter;
-        BuildFist(wrist, side);
-
-        // 소매: 팔꿈치(화면 아래 뒤쪽)에서 손목까지
-        var elbow = new Vector3(side * 0.06f, -0.24f, -0.34f);
-        var toWrist = wrist.localPosition - elbow;
-        var sleeve = new GameObject("Sleeve").transform;
-        sleeve.SetParent(pivot, false);
-        sleeve.localPosition = wrist.localPosition;
-        sleeve.localRotation = Quaternion.FromToRotation(Vector3.up, toWrist.normalized);
-        float L = toWrist.magnitude + 0.08f;
-        var jacket = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.3f, 0.32f, 0.24f), 402, 0, 0.55f, new Color(0.2f, 0.21f, 0.16f));
-        var cuffMat = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.24f, 0.25f, 0.19f), 403, 0, 0.6f);
-        // 팔뚝 굵기가 줄어들며 군데군데 주름(굵기 들쭉날쭉)
-        var sleeveMesh = ProcMesh.Tube("fp_sleeve" + side, 2, 18,
-            -L, 0.058f, 0.054f, 0f,
-            -L * 0.8f, 0.056f, 0.053f, 0.002f,
-            -L * 0.62f, 0.052f, 0.05f, 0f,
-            -L * 0.55f, 0.055f, 0.052f, 0.003f,
-            -L * 0.4f, 0.05f, 0.048f, 0f,
-            -L * 0.3f, 0.052f, 0.05f, 0.002f,
-            -0.07f, 0.047f, 0.045f, 0f,
-            -0.045f, 0.046f, 0.044f, 0f);
-        Part(sleeve, sleeveMesh, jacket, Vector3.zero, Quaternion.identity);
-        // 접어 올린 소맷단
-        Part(sleeve, ProcMesh.Tube("fp_cuff", 2, 18, -0.075f, 0.053f, 0.051f, 0f, -0.06f, 0.056f, 0.054f, 0f, -0.035f, 0.055f, 0.053f, 0f, -0.025f, 0.05f, 0.048f, 0f), cuffMat, Vector3.zero, Quaternion.identity);
-        return pivot;
-    }
-
-    // 장갑 낀 주먹 (오른손 기준, side = -1이면 왼손으로 뒤집는다). 손잡이를 감아쥔 모양
-    void BuildFist(Transform wrist, float side)
-    {
-        // 길든 가죽 장갑: 가까이서 보므로 잔주름 대신 매끈한 결(피부 무늬)에 손때를 입힌다
-        var glove = ProcTex.Get(ProcTex.Kind.Skin, new Color(0.44f, 0.32f, 0.21f), 401, 0, 0.5f, new Color(0.3f, 0.21f, 0.13f));
-        var seam = ProcTex.Get(ProcTex.Kind.Skin, new Color(0.3f, 0.21f, 0.13f), 404, 0, 0.5f, new Color(0.2f, 0.14f, 0.09f));
-        var along = Quaternion.Euler(90, 0, 0); // 관(+y)을 앞(+z)으로 눕힌다
-        // 손등·손바닥 (손목 → 마디)
-        Part(wrist, ProcMesh.Tube("fp_palm", 3, 16,
-            -0.012f, 0.021f, 0.029f, 0f,
-            0.02f, 0.022f, 0.035f, 0f,
-            0.05f, 0.02f, 0.04f, 0f,
-            0.075f, 0.018f, 0.042f, 0f,
-            0.09f, 0.012f, 0.036f, 0f), glove, new Vector3(side * 0.012f, 0, 0), along);
-        // 엄지 뿌리 근육
-        Part(wrist, ProcMesh.Ellipsoid("fp_thenar", 0.017f, 0.02f, 0.03f), glove, new Vector3(-side * 0.004f, 0.022f, 0.03f), Quaternion.Euler(0, side * 20, 0));
-        // 장갑 손목띠 (손목 뒤로 소매 속까지)
-        Part(wrist, ProcMesh.Tube("fp_glovecuff", 2, 16, -0.06f, 0.033f, 0.038f, 0f, -0.02f, 0.031f, 0.036f, 0f, 0.0f, 0.027f, 0.033f, 0f), seam, new Vector3(side * 0.01f, 0, 0), along);
-
-        // 손가락 넷: 위(검지)부터 아래(새끼)로. 마디마다 손잡이 쪽(-x)으로 굽는다
-        float[] ys = { 0.027f, 0.009f, -0.009f, -0.027f };
-        float[] scale = { 1f, 1.06f, 1f, 0.84f };
-        for (int i = 0; i < 4; i++)
-        {
-            float k = scale[i], r = 0.0098f * (i == 3 ? 0.88f : 1f);
-            var knuckle = Joint(wrist, new Vector3(side * 0.012f, ys[i], 0.086f), Quaternion.Euler(0, -side * 30, 0));
-            Part(wrist, ProcMesh.Ellipsoid("fp_knuckle", 0.011f, 0.0095f, 0.01f), glove, new Vector3(side * 0.022f, ys[i], 0.083f), Quaternion.identity);
-            var seg1 = FingerSegment(knuckle, 0.04f * k, r, glove);
-            var mid = Joint(knuckle, new Vector3(0, 0, 0.04f * k), Quaternion.Euler(0, -side * 80, 0));
-            FingerSegment(mid, 0.026f * k, r * 0.93f, glove);
-            var tip = Joint(mid, new Vector3(0, 0, 0.026f * k), Quaternion.Euler(0, -side * 55, 0));
-            FingerSegment(tip, 0.022f * k, r * 0.86f, glove);
-            // 손가락 등의 장갑 박음질
-            Part(seg1, ProcMesh.Box("fp_stitch", 0.002f, 0.0025f, 0.03f), seam, new Vector3(side * r * 0.95f, 0, 0.02f * k), Quaternion.identity);
-        }
-        // 엄지: 손잡이 위를 넘어 앞으로 감는다
-        var thumb = Joint(wrist, new Vector3(-side * 0.004f, 0.036f, 0.036f), Quaternion.Euler(-12, -side * 42, 0));
-        FingerSegment(thumb, 0.034f, 0.0115f, glove);
-        var thumbTip = Joint(thumb, new Vector3(0, 0, 0.034f), Quaternion.Euler(6, -side * 40, 0));
-        FingerSegment(thumbTip, 0.027f, 0.01f, glove);
-    }
-
-    // 손가락 한 마디 (+z로 길이 len, 끝이 둥글다). 다음 마디를 달 수 있게 자기 Transform을 돌려준다
-    Transform FingerSegment(Transform joint, float len, float r, Material mat)
-    {
-        var mesh = ProcMesh.Tube($"fp_seg_{len:0.000}_{r:0.0000}", 2, 10,
-            -r * 0.55f, r * 0.7f, r * 0.7f, 0f,
-            -r * 0.2f, r, r, 0f,
-            len * 0.55f, r * 0.97f, r * 0.94f, 0f,
-            len, r * 0.9f, r * 0.88f, 0f,
-            len + r * 0.6f, r * 0.55f, r * 0.55f, 0f);
-        Part(joint, mesh, mat, Vector3.zero, Quaternion.Euler(90, 0, 0));
-        return joint;
-    }
-
-    static Transform Joint(Transform parent, Vector3 pos, Quaternion rot)
-    {
-        var t = new GameObject("Joint").transform;
-        t.SetParent(parent, false);
-        t.localPosition = pos;
-        t.localRotation = rot;
-        return t;
-    }
-
-    static Transform Part(Transform parent, Mesh mesh, Material mat, Vector3 pos, Quaternion rot)
-    {
-        var go = new GameObject(mesh.name);
-        go.transform.SetParent(parent, false);
-        go.transform.localPosition = pos;
-        go.transform.localRotation = rot;
-        go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        var r = go.AddComponent<MeshRenderer>();
-        r.sharedMaterial = mat;
-        r.shadowCastingMode = ShadowCastingMode.Off;
-        return go.transform;
     }
 
     void BuildShadowBody()
@@ -198,7 +105,7 @@ public class PlayerHands : MonoBehaviour
         shadowBody = new GameObject("ShadowBody").transform;
         shadowBody.SetParent(transform, false);
         RuntimeVisuals.Part(PrimitiveType.Capsule, shadowBody, new Vector3(0, 1.15f, 0), new Vector3(0.48f, 0.38f, 0.3f), Sleeve);
-        RuntimeVisuals.Part(PrimitiveType.Sphere, shadowBody, new Vector3(0, 1.68f, 0), new Vector3(0.23f, 0.26f, 0.24f), Skin);
+        RuntimeVisuals.Part(PrimitiveType.Sphere, shadowBody, new Vector3(0, 1.68f, 0), new Vector3(0.23f, 0.26f, 0.24f), HandRig.SkinColor);
         RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(-0.11f, 0.42f, 0), new Vector3(0.17f, 0.84f, 0.2f), Cuff);
         RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(0.11f, 0.42f, 0), new Vector3(0.17f, 0.84f, 0.2f), Cuff);
         RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(-0.31f, 1.1f, 0), new Vector3(0.11f, 0.6f, 0.11f), Sleeve);
@@ -207,17 +114,32 @@ public class PlayerHands : MonoBehaviour
             r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
     }
 
-    public void PlayPunch() => Play(1, 0.3f);
-    public void PlaySwing() => Play(2, 0.5f);
-    public void PlayUse() => Play(3, 0.7f);
-    public void PlayShoot() => Play(4, 0.35f);
+    // ---------- 몸짓 시작 (다른 스크립트가 부른다) ----------
 
-    void Play(int a, float time)
+    // 공격 키: 빈손이면 주먹, 무언가 들었으면 그것으로 찌르듯 내민다 (단검·라이터)
+    public void PlayPunch() => StartMove(heldId == null ? Move.Punch : Move.Stab, heldId == null ? 0.3f : 0.34f);
+    public void PlaySwing() => StartMove(Move.Swing, 0.5f);
+    public void PlayShoot() => StartMove(Move.Shoot, 0.35f);
+
+    // 아이템을 쓴다: 그 아이템을 손에 들고(핫바에 없어도) 아이템마다 다른 몸짓을 한다
+    public void PlayUse(string id)
     {
-        action = a;
-        actionTime = time;
-        actionT = 0;
+        useKind = HeldItems.Get(id).Use;
+        useItem = id;
+        useQueued = true;
     }
+
+    void StartMove(Move m, float seconds)
+    {
+        move = m;
+        moveTime = seconds;
+        moveT = 0;
+    }
+
+    static float UseSeconds(UseGesture g) =>
+        g == UseGesture.Drink ? 1.5f : g == UseGesture.Eat ? 1.3f : g == UseGesture.Bandage ? 1.4f : g == UseGesture.Medkit ? 1.1f : 0.8f;
+
+    // ---------- 매 프레임 ----------
 
     void Update()
     {
@@ -225,149 +147,440 @@ public class PlayerHands : MonoBehaviour
         if (dt <= 0 || handsRoot == null) return;
         var s = GameManager.Instance.State;
 
-        UpdateHeldItem();
         // 침대에 누우면 손을 감춘다
         bool asleep = pc.SleepBlend > 0.05f;
         if (handsRoot.gameObject.activeSelf == asleep) handsRoot.gameObject.SetActive(!asleep);
-        leftArm.gameObject.SetActive(s.Carried.Count("flashlight") > 0);
         if (shadowBody != null) shadowBody.localScale = new Vector3(1, cc.height / 1.8f, 1);
 
-        // 마우스를 돌리면 손이 살짝 늦게 따라온다
-        Vector2 md = Mouse.current != null && !pc.InputBlocked ? Mouse.current.delta.ReadValue() : Vector2.zero;
-        var targetSway = Vector3.ClampMagnitude(new Vector3(-md.x, -md.y, 0) * 0.0004f, 0.03f);
-        sway = Vector3.Lerp(sway, targetSway, dt * 8);
+        string want = hotbar != null ? hotbar.SelectedId : null;
+        if (want == "flashlight") want = null; // 손전등은 왼손 담당
+        Vector2 look = Mouse.current != null && !pc.InputBlocked ? Mouse.current.delta.ReadValue() : Vector2.zero;
+        Drive(dt, want, s.Carried.Count("flashlight") > 0, flashlight != null && flashlight.IsOn, pc.IsRunning, pc.HorizontalSpeed, look);
+    }
 
-        // 걸을 때 흔들림과 숨쉬기
-        float speed = pc.HorizontalSpeed;
+    void Drive(float dt, string want, bool hasLight, bool lightOn, bool running, float speed, Vector2 look)
+    {
+        if (useItem != null) want = useItem;
+        UpdateSwap(dt, want);
+
+        // 마우스를 돌리면 손이 살짝 늦게 따라오고, 걸으면 흔들리고, 가만히 있으면 숨쉬듯 오르내린다
+        var targetSway = Vector3.ClampMagnitude(new Vector3(-look.x, -look.y, 0) * 0.0004f, 0.03f);
+        sway = Vector3.Lerp(sway, targetSway, dt * 8);
         bobPhase += dt * speed * 2.4f;
         float moveAmount = Mathf.Clamp01(speed / 3f);
         var bob = new Vector3(Mathf.Cos(bobPhase * 0.5f) * 0.012f, -Mathf.Abs(Mathf.Sin(bobPhase * 0.5f)) * 0.014f, 0) * moveAmount;
         handsRoot.localPosition = sway + bob + new Vector3(0, Mathf.Sin(Time.time * 1.6f) * 0.003f, 0);
+        run = Mathf.MoveTowards(run, running ? 1f : 0f, dt * 4);
 
-        // 달릴 때는 팔을 내리고, 손전등을 끄면 왼손을 내린다
-        float run = pc.IsRunning ? 1f : 0f;
-        lowerRight = Mathf.MoveTowards(lowerRight, run, dt * 4);
-        lowerLeft = Mathf.MoveTowards(lowerLeft, flashlight != null && flashlight.IsOn ? run * 0.5f : 1f, dt * 4);
-
-        actionT = Mathf.Min(1f, actionT + dt / actionTime);
-        var rPos = RightBase + new Vector3(0, -0.06f, -0.03f) * lowerRight;
-        var rRot = Quaternion.Euler(-14 + 30 * lowerRight, -6, 0);
-        if (actionT < 1f)
+        if (moveT < 1f)
         {
-            float k = actionT;
-            if (action == 1)
+            float before = moveT;
+            moveT = Mathf.Min(1f, moveT + dt / moveTime);
+            // 라이터: 엄지로 휠을 긁는 순간 불이 붙는다
+            if (move == Move.Flick && before < 0.45f && moveT >= 0.45f && lighterFlame != null)
             {
-                float p = Mathf.Sin(k * Mathf.PI);
-                rPos += new Vector3(-0.07f, 0.05f, 0.2f) * p;
-                rRot *= Quaternion.Euler(-10 * p, -12 * p, 0);
+                lighterFlame.SetActive(true);
+                ProceduralAudio.Play2D(ProceduralAudio.Ignite(), 0.35f, 1.3f);
             }
-            else if (action == 2)
-            {
-                float windUp = k < 0.3f ? k / 0.3f : 1 - (k - 0.3f) / 0.7f;
-                float strike = k < 0.3f ? 0 : Mathf.Sin((k - 0.3f) / 0.7f * Mathf.PI);
-                rPos += new Vector3(-0.06f * strike, 0.09f * windUp - 0.05f * strike, 0.12f * strike);
-                rRot *= Quaternion.Euler(-35 * windUp + 65 * strike, -25 * strike, 30 * strike);
-            }
-            else if (action == 3)
-            {
-                float p = Mathf.Sin(k * Mathf.PI);
-                rPos = Vector3.Lerp(rPos, new Vector3(0.04f, -0.1f, 0.3f), p);
-                rRot *= Quaternion.Euler(-40 * p, -30 * p, 0);
-            }
-            else if (action == 4)
-            {
-                // 고무줄을 놓는 순간 손이 앞으로 튕겼다가 돌아온다
-                float p = Mathf.Sin(k * Mathf.PI) * (1 - k);
-                rPos += new Vector3(0, 0.02f, 0.06f) * p;
-                rRot *= Quaternion.Euler(-12 * p, 0, 0);
-            }
+            if (moveT >= 1f && move == Move.Use) useItem = null; // 다 쓰면 원래 들던 것으로 돌아간다
         }
-        rightArm.localPosition = rPos;
-        rightArm.localRotation = rRot;
-        leftArm.localPosition = LeftBase + new Vector3(0, -0.13f, -0.06f) * lowerLeft;
-        leftArm.localRotation = Quaternion.Euler(-12 + 45 * lowerLeft, 3, 0);
+
+        PoseRight(dt);
+        PoseLeft(dt, hasLight, lightOn);
     }
 
-    // 핫바에서 고른 아이템을 오른손에 쥔다 (손전등은 왼손 담당)
-    void UpdateHeldItem()
+    // 손에 든 것이 바뀌면 손을 화면 아래로 내렸다가 새 물건을 들고 올라온다
+    void UpdateSwap(float dt, string want)
     {
-        string id = hotbar != null ? hotbar.SelectedId : null;
-        if (id == "flashlight") id = null;
-        if (id == heldId) return;
+        if (want != heldId)
+        {
+            lower = Mathf.MoveTowards(lower, 1f, dt / 0.14f);
+            if (lower >= 1f) SetHeld(want);
+            return;
+        }
+        lower = Mathf.MoveTowards(lower, 0f, dt / 0.24f);
+        grab = Mathf.MoveTowards(grab, 1f, dt / 0.3f);
+        if (lower > 0.05f) return;
+        if (useQueued && useItem == heldId)
+        {
+            useQueued = false;
+            StartMove(Move.Use, UseSeconds(useKind));
+        }
+        else if (flickPending && moveT >= 1f)
+        {
+            flickPending = false;
+            StartMove(Move.Flick, 0.4f);
+        }
+    }
+
+    void SetHeld(string id)
+    {
+        if (heldModel != null) Kill(heldModel);
+        heldModel = null;
+        lighterFlame = null;
+        flickPending = false;
         heldId = id;
-        if (heldVisual != null) Destroy(heldVisual);
-        if (id == null) return;
-
-        heldVisual = new GameObject("Held_" + id);
-        var t = heldVisual.transform;
-        t.SetParent(rightHeld, false);
-        ItemVisuals.Build(id, t);
-
-        var weapon = ItemDatabase.Get(id).Weapon;
-        // 방망이류는 손잡이를 쥐고 위로 세워 든다 (모양은 +z 방향으로 길게 만든다)
-        if (weapon == WeaponKind.Swing)
-        {
-            t.localRotation = Quaternion.Euler(-72, 0, 0);
-            t.localScale = Vector3.one * 0.85f;
-            t.localPosition = t.localRotation * new Vector3(0, -0.04f, 0.17f);
-        }
-        // 단검: 실제 크기(날 약 20cm)로 손잡이를 쥐고 칼끝을 앞으로, 날을 세워 든다
-        else if (weapon == WeaponKind.Stab)
-        {
-            t.localRotation = Quaternion.Euler(-14, -4, 90);
-            t.localScale = Vector3.one * 1.05f;
-            t.localPosition = new Vector3(0.005f, 0.0f, -0.03f);
-        }
-        // 새총: 실제 크기로 갈래를 위로 세워 든다
-        else if (weapon == WeaponKind.Sling)
-        {
-            t.localRotation = Quaternion.Euler(-8, 10, 0);
-            t.localScale = Vector3.one;
-            t.localPosition = new Vector3(0, -0.06f, 0.02f);
-        }
+        heldSpec = id != null ? HeldItems.Get(id) : null;
+        if (id == null) System.Array.Copy(HandRig.Relaxed, gripPose, HandRig.PoseLength);
         else
         {
-            // 크기가 제각각인 아이템을 손바닥 크기에 맞춘다
-            var bounds = new Bounds();
-            bool first = true;
-            foreach (var r in t.GetComponentsInChildren<Renderer>())
+            var model = new GameObject("Held_" + id).transform;
+            ItemVisuals.Build(id, model);
+            Attach(right, model, heldSpec);
+            ComputeGrip(right, model, heldSpec, gripPose);
+            heldModel = model.gameObject;
+            // 라이터는 들고 나서 엄지로 켠다
+            if (id == ItemDatabase.LighterId)
             {
-                var lb = new Bounds(t.InverseTransformPoint(r.bounds.center), t.InverseTransformVector(r.bounds.size));
-                if (first) { bounds = lb; first = false; }
-                else bounds.Encapsulate(lb);
+                lighterFlame = AddLighterFlame(model);
+                lighterFlame.SetActive(false);
+                flickPending = true;
             }
-            float size = Mathf.Max(Mathf.Abs(bounds.size.x), Mathf.Abs(bounds.size.y), Mathf.Abs(bounds.size.z), 0.01f);
-            float scale = Mathf.Clamp(0.14f / size, 0.25f, 1.2f);
-            t.localScale = Vector3.one * scale;
-            t.localRotation = Quaternion.Euler(0, 25, 0);
-            t.localPosition = new Vector3(0, 0.035f, 0.02f) - t.localRotation * (bounds.center * scale);
         }
-        // 라이터는 불을 켜 든다 (일렁이는 불꽃 + 작은 불빛)
-        if (id == ItemDatabase.LighterId) AddLighterFlame(t);
-        foreach (var r in heldVisual.GetComponentsInChildren<Renderer>())
-            r.shadowCastingMode = ShadowCastingMode.Off;
+        // 펴진 손으로 올라오며 쥔다
+        grab = 0;
+        System.Array.Copy(HandRig.Open, fingers, HandRig.PoseLength);
+        right.Apply(fingers);
     }
 
-    void AddLighterFlame(Transform lighter)
+    static void Kill(Object o)
+    {
+        if (Application.isPlaying) Destroy(o);
+        else DestroyImmediate(o);
+    }
+
+    // ---------- 쥐기 ----------
+
+    // 아이템을 손에 놓는다: HeldSpec의 손잡이(또는 바닥)를 손 안의 쥐는 자리에 맞춘다
+    static void Attach(HandRig rig, Transform model, HeldSpec spec)
+    {
+        float side = rig.Side;
+        var point = spec.Point;
+        if (spec.AutoPoint)
+        {
+            // 아이템 바닥(Axis 반대쪽 끝)의 내 쪽 가장자리를 손바닥에 올린다. 아이템은 손가락 너머 앞으로 뻗어 손이 가려지지 않는다
+            var b = LocalBounds(model);
+            var up = spec.Axis.normalized;
+            var fwd = Vector3.ProjectOnPlane(spec.Second, up).normalized;
+            point = b.center - up * Support(b, up) - fwd * Support(b, fwd) * 0.8f;
+        }
+        float r = spec.Radius * spec.Scale;
+        Vector3 at, axis, second;
+        switch (spec.Grip)
+        {
+            case GripKind.Power: // 손바닥과 손가락 사이 홈
+                at = new Vector3(-side * (0.012f + r), 0, 0.07f);
+                axis = PowerAxis;
+                second = Vector3.forward;
+                break;
+            case GripKind.Hook: // 손잡이를 주먹으로 쥐고, 물건은 화면에서 똑바로 아래로 매달린다
+            {
+                at = new Vector3(-side * (0.012f + r), 0, 0.07f);
+                axis = PowerAxis;
+                BasePose(HoldPose.Hook, out _, out var arm, out var wristBend);
+                second = Quaternion.Inverse(arm * wristBend) * Vector3.up;
+                break;
+            }
+            default: // 손바닥 위 (손가락 뿌리 가까이)
+                at = new Vector3(-side * 0.012f, 0, 0.062f);
+                axis = new Vector3(-side, 0, 0);
+                second = Vector3.forward;
+                break;
+        }
+        var rot = Quaternion.LookRotation(axis, second) * Quaternion.Inverse(Quaternion.LookRotation(spec.Axis, spec.Second));
+        model.SetParent(rig.Wrist, false);
+        model.localScale = Vector3.one * spec.Scale;
+        model.localRotation = rot;
+        model.localPosition = at - rot * (point * spec.Scale);
+        if (spec.Hide != null)
+            foreach (int i in spec.Hide)
+                if (i < model.childCount) model.GetChild(i).gameObject.SetActive(false);
+        foreach (var rd in model.GetComponentsInChildren<Renderer>())
+            rd.shadowCastingMode = ShadowCastingMode.Off;
+    }
+
+    // 경계 상자가 dir 쪽으로 가운데에서 뻗은 길이
+    static float Support(Bounds b, Vector3 dir) => Mathf.Abs(dir.x) * b.extents.x + Mathf.Abs(dir.y) * b.extents.y + Mathf.Abs(dir.z) * b.extents.z;
+
+    // 아이템 좌표의 경계 상자 (아직 아무 데도 붙이지 않은 원점의 아이템)
+    static Bounds LocalBounds(Transform model)
+    {
+        var b = new Bounds();
+        bool first = true;
+        foreach (var r in model.GetComponentsInChildren<Renderer>())
+        {
+            if (first) { b = r.bounds; first = false; }
+            else b.Encapsulate(r.bounds);
+        }
+        return b;
+    }
+
+    // 쥐는 모양마다 손가락 시작 자세와 최대로 굽히는 자세 (손가락마다 벌림, 뿌리, 가운데, 끝)
+    static readonly float[] PowerStart = { 22, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, -6, 0, 0, 0 };
+    static readonly float[] PowerMax = { 22, 40, 45, 55, 3, 100, 110, 80, 0, 100, 110, 80, -3, 100, 110, 80, -6, 100, 110, 80 };
+    // 손바닥: 손가락은 받치듯 살짝 굽히고, 엄지는 아이템 위를 누른다
+    static readonly float[] PalmStart = { 8, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, -4, 0, 0, 0, -9, 0, 0, 0 };
+    static readonly float[] PalmMax = { 8, 40, 45, 45, 5, 38, 46, 34, 0, 40, 48, 34, -4, 42, 50, 36, -9, 44, 52, 38 };
+
+    static void ComputeGrip(HandRig rig, Transform model, HeldSpec spec, float[] pose)
+    {
+        var shapes = HandRig.ShapesOf(model);
+        float[] start = PalmStart, max = PalmMax;
+        int mask = 0b11111;
+        if (spec.Grip == GripKind.Power) { start = PowerStart; max = PowerMax; }
+        else if (spec.Grip == GripKind.Hook) { start = PowerStart; max = PowerMax; }
+        System.Array.Copy(start, pose, HandRig.PoseLength);
+        rig.Wrap(pose, max, shapes, mask);
+    }
+
+    // ---------- 자세 ----------
+
+    // 오른손 기준 자세 (화면 좌표: 손목 자리, 팔뚝 방향, 손목 꺾임). 왼손은 좌우를 뒤집어 쓴다
+    static void BasePose(HoldPose pose, out Vector3 wrist, out Quaternion rot, out Quaternion bend)
+    {
+        bend = Quaternion.identity;
+        switch (pose)
+        {
+            case HoldPose.Upright:
+                // 손잡이를 세우고 끝을 살짝 어깨 뒤로 젖힌다 (팔뚝은 오른쪽 아래에서 앞으로)
+                wrist = new Vector3(0.21f, -0.165f, 0.4f);
+                rot = Aim(new Vector3(0.2f, 0.85f, -0.35f), new Vector3(-0.3f, 0.3f, 0.9f));
+                break;
+            case HoldPose.Hold:
+                // 똑바로 세워 든다 (팔뚝은 오른쪽 아래에서 앞으로)
+                wrist = new Vector3(0.2f, -0.185f, 0.4f);
+                rot = Aim(new Vector3(0.02f, 1f, 0.08f), new Vector3(-0.3f, 0.3f, 0.9f));
+                break;
+            case HoldPose.Forward:
+                // 손잡이 축이 화면 가운데(앞)를 겨눈다. 팔뚝은 아래에서 올라온다
+                wrist = new Vector3(0.2f, -0.17f, 0.42f);
+                rot = Aim(new Vector3(-0.03f, 0.04f, 1f), new Vector3(-0.45f, 0.85f, 0.2f));
+                break;
+            case HoldPose.Palm:
+                // 손바닥을 위로, 조금 내 쪽으로 기울여 내민다
+                wrist = new Vector3(0.16f, -0.2f, 0.36f);
+                rot = HandRig.Look(new Vector3(-0.3f, 0.2f, 0.93f), new Vector3(0.92f, -0.1f, 0.35f));
+                break;
+            case HoldPose.Hook:
+                // 양동이 들 듯: 가로로 누운 손잡이를 주먹으로 쥐고 앞으로 내밀어, 물건이 주먹 아래로 매달린다
+                wrist = new Vector3(0.19f, -0.09f, 0.5f);
+                rot = Aim(new Vector3(-1f, 0.05f, 0.25f), new Vector3(-0.25f, 0.4f, 0.88f));
+                break;
+            default: // Ready: 힘을 뺀 빈손 (느슨한 주먹, 손등이 바깥)
+                wrist = new Vector3(0.2f, -0.195f, 0.38f);
+                rot = HandRig.Look(new Vector3(-0.25f, 0.5f, 0.83f), new Vector3(0.15f, 0.85f, -0.5f));
+                break;
+        }
+    }
+
+    // 손잡이를 쥔 손을 놓는다: 손 안의 손잡이 축(PowerAxis)이 grip 방향을, 팔뚝이 forearm 방향을 향하게
+    static Quaternion Aim(Vector3 grip, Vector3 forearm) =>
+        Quaternion.LookRotation(grip, forearm) * Quaternion.Inverse(Quaternion.LookRotation(PowerAxis, Vector3.forward));
+
+    static Vector3 Mirror(Vector3 v) => new Vector3(-v.x, v.y, v.z);
+    static Quaternion Mirror(Quaternion q) => HandRig.Look(Mirror(q * Vector3.forward), Mirror(q * Vector3.up));
+    static float Ease(float t) => t * t * (3 - 2 * t);
+
+    // 몸짓의 돌림(화면 좌표) 가운데 팔뚝이 맡는 몫. 나머지는 손목이 꺾여 맡는다 (팔뚝이 크게 돌면 소매가 화면을 가로지른다)
+    const float ArmShare = 0.55f;
+
+    void PoseRight(float dt)
+    {
+        BasePose(heldSpec != null ? heldSpec.Pose : HoldPose.Ready, out var wrist, out var rot, out var bend);
+        if (heldSpec != null)
+        {
+            wrist += heldSpec.Offset;
+            rot = Quaternion.Euler(heldSpec.Euler) * rot;
+        }
+        HandRig.Blend(HandRig.Open, gripPose, Ease(grab), target);
+        var turn = Quaternion.identity;
+        if (moveT < 1f) ApplyMove(ref wrist, ref turn);
+
+        // 달리면 팔을 내리고, 바꿔 들 때는 화면 아래로 내린다
+        float l = Ease(lower);
+        wrist += new Vector3(0, -0.06f, -0.03f) * run + new Vector3(0.03f, -0.2f, -0.08f) * l;
+        rot = Quaternion.Euler(22 * run + 45 * l, 0, 0) * rot;
+        // 손은 turn만큼 돌고, 팔뚝은 그 일부만 돈다
+        var forearm = Quaternion.Slerp(Quaternion.identity, turn, ArmShare) * rot;
+        right.Place(wrist, forearm, Quaternion.Inverse(forearm) * turn * rot * bend);
+
+        float k = 1 - Mathf.Exp(-dt * 28);
+        for (int i = 0; i < HandRig.PoseLength; i++) fingers[i] = Mathf.Lerp(fingers[i], target[i], k);
+        right.Apply(fingers);
+    }
+
+    // 몸짓을 기본 자세 위에 얹는다 (손목을 화면 좌표로 옮기고, 손을 turn만큼 돌린다)
+    void ApplyMove(ref Vector3 wrist, ref Quaternion turn)
+    {
+        float t = moveT;
+        float p = Mathf.Sin(t * Mathf.PI);
+        // 빨리 나갔다가 천천히 돌아오는 곡선
+        float thrust = t < 0.3f ? Ease(t / 0.3f) : 1 - Ease((t - 0.3f) / 0.7f);
+        Vector3 d = Vector3.zero, e = Vector3.zero;
+        switch (move)
+        {
+            case Move.Punch:
+                d = new Vector3(-0.08f, 0.06f, 0.24f) * thrust;
+                e = new Vector3(-10, -15, 0) * thrust;
+                HandRig.Blend(target, HandRig.Fist, Mathf.Clamp01(p * 3), target);
+                break;
+            case Move.Stab:
+                d = new Vector3(-0.06f, 0.04f, 0.22f) * thrust;
+                e = new Vector3(-6, -8, 0) * thrust;
+                break;
+            case Move.Swing:
+            {
+                // 오른쪽 위로 젖혔다가 왼쪽 아래로 크게 휘두른다
+                float w = t < 0.3f ? Ease(t / 0.3f) : 1 - Ease((t - 0.3f) / 0.7f);
+                float s = t < 0.3f ? 0 : Mathf.Sin((t - 0.3f) / 0.7f * Mathf.PI);
+                d = new Vector3(0.05f * w - 0.25f * s, 0.06f * w - 0.08f * s, -0.02f * w + 0.08f * s);
+                e = new Vector3(-20 * w + 45 * s, 0, -20 * w + 75 * s);
+                break;
+            }
+            case Move.Shoot:
+            {
+                // 고무줄을 놓는 순간 손이 앞으로 튕겼다가 돌아온다
+                float k = p * (1 - t);
+                d = new Vector3(0, 0.02f, 0.06f) * k;
+                e = new Vector3(-12 * k, 0, 0);
+                break;
+            }
+            case Move.Flick:
+                // 엄지로 라이터 휠을 긁어 내린다
+                target[1] += 30 * p;
+                target[2] += 40 * p;
+                target[3] += 45 * p;
+                e = new Vector3(0, 0, 5 * p);
+                break;
+            case Move.Use:
+                UseMove(t, ref d, ref e);
+                break;
+        }
+        wrist += d;
+        turn = Quaternion.Euler(e);
+    }
+
+    // 쓰는 몸짓: 입·팔목 쪽으로 가져가서(r) 아이템마다 다른 동작을 하고 돌아온다
+    void UseMove(float t, ref Vector3 d, ref Vector3 e)
+    {
+        float r = t < 0.25f ? Ease(t / 0.25f) : t > 0.8f ? 1 - Ease((t - 0.8f) / 0.2f) : 1f;
+        float hold = Mathf.Clamp01((t - 0.25f) / 0.55f);
+        float during = hold > 0 && hold < 1 ? 1f : 0f;
+        switch (useKind)
+        {
+            case UseGesture.Drink:
+            {
+                // 병을 입에 대고 뒤로 기울여 꿀꺽꿀꺽
+                float gulp = Mathf.Sin(hold * Mathf.PI * 6) * 4 * during;
+                d = new Vector3(-0.11f, 0.13f, -0.15f) * r;
+                e = new Vector3(-75 * r + gulp, 0, 15 * r);
+                break;
+            }
+            case UseGesture.Eat:
+            {
+                // 입으로 가져가 세 번 베어 문다
+                float bite = Mathf.Abs(Mathf.Sin(hold * Mathf.PI * 3)) * during;
+                d = new Vector3(-0.11f, 0.1f, -0.14f) * r + new Vector3(0, 0.012f, 0.015f) * bite;
+                e = new Vector3(-40 * r - 8 * bite, 0, 15 * r);
+                break;
+            }
+            case UseGesture.Bandage:
+            {
+                // 왼팔에 붕대를 두 번 돌려 감는다
+                float a = hold * Mathf.PI * 4;
+                d = new Vector3(-0.18f, 0.07f, -0.06f) * r + new Vector3(Mathf.Cos(a) * 0.035f, Mathf.Sin(a) * 0.03f, 0) * during;
+                e = new Vector3(-15 * r, 0, 50 * r + Mathf.Sin(a) * 25 * during);
+                break;
+            }
+            case UseGesture.Medkit:
+            {
+                // 구급상자를 들어 올려 흔들어 연다
+                float shake = Mathf.Sin(hold * Mathf.PI * 8) * during;
+                d = new Vector3(-0.09f, 0.08f, -0.06f) * r + new Vector3(0, 0.006f, 0) * shake;
+                e = new Vector3(-25 * r, 0, 6 * shake);
+                break;
+            }
+            default:
+                d = new Vector3(-0.12f, 0.1f, -0.12f) * r;
+                e = new Vector3(-35 * r, -20 * r, 0);
+                break;
+        }
+    }
+
+    // 왼손: 손전등을 켜면 들어 올리고, 끄면 내린다. 켜고 끌 때 엄지로 버튼을 딸깍 누른다
+    void PoseLeft(float dt, bool hasLight, bool on)
+    {
+        if (left.Elbow.gameObject.activeSelf != hasLight) left.Elbow.gameObject.SetActive(hasLight);
+        if (!hasLight) return;
+        if (on != wasOn)
+        {
+            wasOn = on;
+            clickT = 0;
+        }
+        lowerLeft = Mathf.MoveTowards(lowerLeft, on ? run * 0.5f : 1f, dt * 4);
+        clickT = Mathf.Min(1f, clickT + dt / 0.22f);
+
+        BasePose(HoldPose.Forward, out var wrist, out var rot, out _);
+        wrist = Mirror(wrist) + new Vector3(-0.01f, 0.02f, 0.02f);
+        rot = Mirror(rot);
+        float l = Ease(lowerLeft);
+        float c = clickT < 1f ? Mathf.Sin(clickT * Mathf.PI) : 0;
+        wrist += new Vector3(-0.02f, -0.15f, -0.07f) * l + new Vector3(0, -0.006f, 0) * c;
+        rot = Quaternion.Euler(45 * l, 0, 0) * rot;
+        left.Place(wrist, rot, Quaternion.identity);
+
+        System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
+        leftFingers[2] += 25 * c;
+        leftFingers[3] += 30 * c;
+        left.Apply(leftFingers);
+    }
+
+    GameObject AddLighterFlame(Transform lighter)
     {
         var flame = new GameObject("Flame").transform;
         flame.SetParent(lighter, false);
-        flame.localPosition = new Vector3(0.012f, 0.15f, 0);
+        flame.localPosition = new Vector3(0.012f, 0.142f, 0);
         var outer = RuntimeVisuals.Part(PrimitiveType.Sphere, flame, Vector3.zero, new Vector3(0.022f, 0.05f, 0.022f), Color.white);
         outer.GetComponent<Renderer>().sharedMaterial = ProcTex.Glow(new Color(1f, 0.55f, 0.15f), new Color(3.2f, 1.3f, 0.25f));
         var inner = RuntimeVisuals.Part(PrimitiveType.Sphere, flame, new Vector3(0, -0.006f, 0), new Vector3(0.011f, 0.028f, 0.011f), Color.white);
         inner.GetComponent<Renderer>().sharedMaterial = ProcTex.Glow(new Color(1f, 0.95f, 0.7f), new Color(4f, 3.4f, 1.8f));
+        foreach (var r in flame.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
         var lg = new GameObject("FlameLight").AddComponent<Light>();
         lg.transform.SetParent(flame, false);
         lg.type = LightType.Point;
         lg.color = new Color(1f, 0.6f, 0.25f);
-        lg.range = 3.5f;
-        lg.intensity = 1.2f;
+        lg.range = 2.8f;
+        lg.intensity = 0.45f;
         lg.shadows = LightShadows.None;
         var flicker = lg.gameObject.AddComponent<FlickerLight>();
-        flicker.baseIntensity = 1.2f;
+        flicker.baseIntensity = 0.45f;
         flicker.flickerAmount = 0.35f;
         flicker.speed = 14f;
         flame.gameObject.AddComponent<FlameWobble>();
+        return flame.gameObject;
+    }
+
+    // ---------- 편집기 미리보기 (손 모양을 맞추는 도구에서 쓴다) ----------
+
+    // 카메라 아래에 손을 만들고 id를 든 채 몸짓(move 0 없음, 1 주먹, 2 찌르기, 3 휘두르기, 4 새총, 5 쓰기, 6 라이터)을 t(0~1)만큼 진행한 모습으로 멈춘다
+    public void Preview(string id, int moveIndex, float t, bool lightOn)
+    {
+        if (id == "flashlight") id = null;
+        if (id != heldId) SetHeld(id);
+        lower = 0;
+        grab = 1;
+        run = 0;
+        move = (Move)moveIndex;
+        if (move == Move.Use && id != null) useKind = HeldItems.Get(id).Use;
+        moveT = move == Move.None ? 1f : t;
+        if (lighterFlame != null) lighterFlame.SetActive(move != Move.Flick || t >= 0.45f);
+        lowerLeft = lightOn ? 0 : 1;
+        wasOn = lightOn;
+        clickT = 1;
+        handsRoot.localPosition = Vector3.zero;
+        PoseRight(10f);
+        PoseLeft(10f, true, lightOn);
+        lowerLeft = lightOn ? 0 : 1;
+        PoseLeft(0.0001f, true, lightOn);
     }
 }

@@ -40,6 +40,7 @@ public class Zombie : MonoBehaviour, IDamageable
     float health, lostSightTimer, attackTimer, groanTimer, wanderTimer, lookTimer, staggerTimer, repathTimer, doorTimer, animPhase, lunge;
     float windup, windupLength, stepDistance, baseAttackRange, size = 1f;
     float hitReact, mouth; // 맞아서 움찔한 정도, 입을 벌린 정도 (0~1, 저절로 줄어든다)
+    float hitStun, hitSlow; // 맞고 굳은 시간, 그 뒤 느려지는 시간 (GameBalance.enemyHit*)
     bool shooting, backpedal, guarding, configured;
     CharacterRig rig;
     HitFlash flash;
@@ -141,6 +142,13 @@ public class Zombie : MonoBehaviour, IDamageable
         if (player == null || GameManager.Instance.IsGameOver || !agent.isOnNavMesh) { Animate(); return; }
 
         float dt = Time.deltaTime;
+        // 맞고 굳은 동안은 움직임·공격 준비·공격 간격·몸짓이 모두 멈춘다 (맞은 자세 그대로)
+        if (hitStun > 0)
+        {
+            hitStun -= dt;
+            agent.isStopped = true;
+            return;
+        }
         float danger = CityDirector.Instance != null ? CityDirector.Instance.Danger : 0;
         Vector3 playerPos = player.transform.position;
         float dist = Vector3.Distance(transform.position, playerPos);
@@ -227,6 +235,13 @@ public class Zombie : MonoBehaviour, IDamageable
             default:
                 Wander(dt);
                 break;
+        }
+
+        // 굳었다 풀린 뒤 다시 움직일 때 잠깐 느리다
+        if (hitSlow > 0 && staggerTimer <= 0)
+        {
+            hitSlow -= dt;
+            agent.speed *= balance.enemyHitSlow;
         }
 
         // 원거리 좀비가 뒷걸음질칠 때는 플레이어를 노려본 채 물러난다
@@ -543,6 +558,9 @@ public class Zombie : MonoBehaviour, IDamageable
             bool heavy = Kind == ZombieKind.Heavy;
             staggerTimer = heavy ? 0.2f : 0.5f;
             hitReact = heavy ? 0.5f : 1f;
+            hitStun = balance.enemyHitStun;
+            hitSlow = balance.enemyHitSlowSeconds;
+            if (agent.isOnNavMesh) agent.velocity = Vector3.zero;
             if (!heavy)
             {
                 // 맞으면 공격 준비가 끊긴다 (거대 좀비는 버틴다). 당기던 새총 고무줄은 놓쳐서 튕겨 돌아간다

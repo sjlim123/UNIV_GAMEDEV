@@ -1,6 +1,34 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-8991816284922221725
+--- !u!114 &-8315600428778966282
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66f335fb1ffd8684294ad653bf1c7564, type: 3}
+  m_Name: ColorAdjustments
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ColorAdjustments
+  active: 1
+  postExposure:
+    m_OverrideState: 1
+    m_Value: 1.4
+  contrast:
+    m_OverrideState: 1
+    m_Value: 10
+  colorFilter:
+    m_OverrideState: 1
+    m_Value: {r: 0.92, g: 1, b: 0.95, a: 1}
+  hueShift:
+    m_OverrideState: 1
+    m_Value: 0
+  saturation:
+    m_OverrideState: 1
+    m_Value: -35
+--- !u!114 &-1237922519337842982
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -25,7 +53,42 @@ MonoBehaviour:
   texture:
     m_OverrideState: 1
     m_Value: {fileID: 0}
---- !u!114 &-8162699529707835263
+--- !u!114 &-692748723055374499
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81180773991d8724ab7f2d216912b564, type: 3}
+  m_Name: ChromaticAberration
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ChromaticAberration
+  active: 1
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.18
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: CityProfile
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.VolumeProfile
+  components:
+  - {fileID: 3545999558869207155}
+  - {fileID: -8315600428778966282}
+  - {fileID: 4018641363221822369}
+  - {fileID: -1237922519337842982}
+  - {fileID: 8226859780312773091}
+  - {fileID: -692748723055374499}
+--- !u!114 &3545999558869207155
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -65,35 +128,7 @@ MonoBehaviour:
   maxNits:
     m_OverrideState: 1
     m_Value: 1000
---- !u!114 &-7156722534172847778
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66f335fb1ffd8684294ad653bf1c7564, type: 3}
-  m_Name: ColorAdjustments
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ColorAdjustments
-  active: 1
-  postExposure:
-    m_OverrideState: 1
-    m_Value: 1.4
-  contrast:
-    m_OverrideState: 1
-    m_Value: 10
-  colorFilter:
-    m_OverrideState: 1
-    m_Value: {r: 0.92, g: 1, b: 0.95, a: 1}
-  hueShift:
-    m_OverrideState: 1
-    m_Value: 0
-  saturation:
-    m_OverrideState: 1
-    m_Value: -35
---- !u!114 &-3168247348896008038
+--- !u!114 &4018641363221822369
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -121,26 +156,7 @@ MonoBehaviour:
   rounded:
     m_OverrideState: 1
     m_Value: 0
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
-  m_Name: CityProfile
-  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.VolumeProfile
-  components:
-  - {fileID: -8162699529707835263}
-  - {fileID: -7156722534172847778}
-  - {fileID: -3168247348896008038}
-  - {fileID: -8991816284922221725}
-  - {fileID: 469388070348209134}
-  - {fileID: 7618897058906435362}
---- !u!114 &469388070348209134
+--- !u!114 &8226859780312773091
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -190,19 +206,3 @@ MonoBehaviour:
   dirtIntensity:
     m_OverrideState: 1
     m_Value: 0
---- !u!114 &7618897058906435362
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81180773991d8724ab7f2d216912b564, type: 3}
-  m_Name: ChromaticAberration
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ChromaticAberration
-  active: 1
-  intensity:
-    m_OverrideState: 1
-    m_Value: 0.18

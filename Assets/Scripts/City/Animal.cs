@@ -36,6 +36,7 @@ public class Animal : MonoBehaviour, IDamageable
     PlayerFlashlight playerLight;
     HitFlash flash;
     float health, wanderTimer, warnTimer, biteTimer, barkTimer, repathTimer, staggerTimer, lostTimer, animPhase, lunge, hitReact;
+    float hitStun, hitSlow; // 맞고 굳은 시간, 그 뒤 느려지는 시간 (GameBalance.enemyHit*)
     float provokeCooldown; // 경고하다 물러난 뒤 다시 으르렁거리기까지 쉬는 시간
 
     public bool IsDead => state == State.Dead;
@@ -76,6 +77,13 @@ public class Animal : MonoBehaviour, IDamageable
         float dt = Time.deltaTime;
         var player = PlayerController.Instance;
         if (player == null || GameManager.Instance.IsGameOver || !agent.isOnNavMesh) { Animate(dt); return; }
+        // 맞고 굳은 동안은 움직임·물기 간격·몸짓이 모두 멈춘다
+        if (hitStun > 0)
+        {
+            hitStun -= dt;
+            agent.isStopped = true;
+            return;
+        }
 
         float danger = CityDirector.Instance != null ? CityDirector.Instance.Danger : 0;
         Vector3 playerPos = player.transform.position;
@@ -112,6 +120,12 @@ public class Animal : MonoBehaviour, IDamageable
                 barkTimer -= dt;
                 if (barkTimer <= 0) { barkTimer = Random.Range(1.2f, 2.8f); Bark(1f, Random.Range(0.9f, 1.15f)); }
                 break;
+        }
+        // 굳었다 풀린 뒤 다시 움직일 때 잠깐 느리다
+        if (hitSlow > 0 && staggerTimer <= 0)
+        {
+            hitSlow -= dt;
+            agent.speed *= GameBalance.Data.enemyHitSlow;
         }
         Animate(dt);
     }
@@ -212,6 +226,9 @@ public class Animal : MonoBehaviour, IDamageable
         {
             staggerTimer = 0.35f;
             hitReact = 1;
+            hitStun = GameBalance.Data.enemyHitStun;
+            hitSlow = GameBalance.Data.enemyHitSlowSeconds;
+            if (agent.isOnNavMesh) agent.velocity = Vector3.zero;
             if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * 0.4f);
             if (flash != null) flash.Flash(HitFlash.HitColor);
         }

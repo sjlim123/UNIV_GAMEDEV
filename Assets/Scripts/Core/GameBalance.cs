@@ -91,6 +91,14 @@ public class GameBalance : ScriptableObject
     [Tooltip("타는 동안 입히는 피해의 합")]
     public float burnDamage = 10f;
 
+    [Header("적이 맞았을 때 (플레이어가 때리면)")]
+    [Tooltip("맞은 적이 그 자리에 굳는 시간(초): 움직임·공격 준비·공격 간격이 모두 멈춘다")]
+    public float enemyHitStun = 0.15f;
+    [Tooltip("굳었다 풀린 뒤 잠깐 느려지는 정도 (1 = 그대로, 0.85 = 15% 느리게)")]
+    [Range(0.3f, 1f)] public float enemyHitSlow = 0.85f;
+    [Tooltip("느려지는 시간(초). 맞고 멈칫한 뒤 다시 움직일 때부터 센다")]
+    public float enemyHitSlowSeconds = 0.5f;
+
     [Header("짐")]
     [Tooltip("가방 없이 들 수 있는 무게. 가방을 메면 가방마다 더 늘어난다 (ItemDatabase의 CarryBonus)")]
     public float carryCapacity = 5f;
