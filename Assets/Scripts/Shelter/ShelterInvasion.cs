@@ -129,7 +129,7 @@ public class ShelterInvasion : MonoBehaviour
         if (groanTimer <= 0 && spawnPoints != null && spawnPoints.Length > 0 && spawnPoints[0] != null)
         {
             groanTimer = Random.Range(9f, 18f);
-            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), spawnPoints[0].position + Vector3.up * 1.5f, 0.7f, Random.Range(0.55f, 0.75f), 1f, 30f);
+            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), spawnPoints[0].position + Vector3.up * 1.5f, 0.7f, Random.Range(0.78f, 0.9f), 1f, 30f);
         }
 
         spawnTimer -= dt;
@@ -165,7 +165,7 @@ public class ShelterInvasion : MonoBehaviour
             }
             invaders.Add(z);
             if (player != null) z.Alert(player.transform.position);
-            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), hit.position + Vector3.up * 1.5f, 1f, Random.Range(0.75f, 0.9f), 1f, 30f);
+            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), hit.position + Vector3.up * 1.5f, 1f, Random.Range(0.85f, 1f), 1f, 30f);
             return true;
         }
         return false;

@@ -17,10 +17,14 @@ public class Zombie : MonoBehaviour, IDamageable
 
     // 원거리 좀비: 이보다 가까우면 뒷걸음질쳐 거리를 벌린다 (최대 사거리는 GameBalance.rangedAttackRange)
     public const float RangedKeepMin = 6f;
-    // 원거리 좀비 독액이 날아가는 수평 속도(m/s)
-    public const float ProjectileSpeed = 13f;
+    // 원거리 좀비가 새총으로 쏜 돌이 날아가는 수평 속도(m/s)
+    public const float ProjectileSpeed = 19f;
     // 공격 예비 동작 시간(초). 이 동안 때리면 공격이 끊긴다 (거대 좀비는 안 끊긴다)
-    const float RangedWindup = 0.7f, HeavyWindup = 0.6f, RaiderWindup = 0.45f;
+    const float RangedWindup = 0.8f, HeavyWindup = 0.6f, RaiderWindup = 0.45f;
+    // 새총 예비 동작 진행도: SlingGrab까지 돌을 메기며 겨누고, SlingFull까지 고무줄을 끝까지 당긴다
+    const float SlingGrab = 0.3f, SlingFull = 0.85f;
+    // 놓은 뒤 자세를 유지하는 시간과 팔을 내리는 시간(초)
+    const float SlingHold = 0.2f, SlingLower = 0.4f;
 
     enum State { Wander, Investigate, Chase, Dead }
 
@@ -32,8 +36,17 @@ public class Zombie : MonoBehaviour, IDamageable
     PlayerFlashlight playerLight;
     float health, lostSightTimer, attackTimer, groanTimer, wanderTimer, lookTimer, staggerTimer, repathTimer, doorTimer, animPhase, lunge;
     float windup, windupLength, stepDistance, baseAttackRange, size = 1f;
-    bool throwing, backpedal, guarding;
+    bool shooting, backpedal, guarding;
     Vector3 lastKnown, guardPoint;
+
+    // 원거리 좀비의 새총 (다른 종류는 null)
+    ZombieLooks.Slingshot sling;
+    AudioSource stretchSound;
+    Vector3 aimPoint;
+    Quaternion slingHold = Quaternion.identity; // 마지막으로 당기던 오른팔 자세 (몸 기준)
+    float slingSnap = -1;                       // 고무줄을 놓은 뒤 지난 시간 (-1 = 놓지 않음)
+    float slingDraw, slingAim, slingHoldK, snapDraw, snapAim, snapHoldK;
+    bool slingDrawn, slingPosed;
 
     public ZombieKind Kind { get; private set; }
     public bool IsDead => state == State.Dead;
@@ -62,7 +75,7 @@ public class Zombie : MonoBehaviour, IDamageable
         // 거대 좀비는 팔이 길고, 약탈자는 방망이만큼 더 닿는다
         attackRange = baseAttackRange * (kind == ZombieKind.Heavy ? 1.3f : kind == ZombieKind.Raider ? 1.2f : 1f);
         if (kind == ZombieKind.Raider) groanTimer = Random.Range(6f, 12f);
-        ZombieLooks.Apply(this, kind);
+        ZombieLooks.Apply(this, kind, out sling);
     }
 
     // 이 자리 근처만 맴돈다 (2층 전리품을 지키는 좀비)
@@ -141,11 +154,21 @@ public class Zombie : MonoBehaviour, IDamageable
         repathTimer -= dt;
         backpedal = false;
 
-        // 공격 예비 동작이 끝나면 휘두르기·내려찍기·던지기
+        // 공격 예비 동작이 끝나면 휘두르기·내려찍기·새총 쏘기
         if (windup > 0)
         {
             windup -= dt;
             FaceTowards(playerPos);
+            if (shooting)
+            {
+                aimPoint = ChestOf(player);
+                // 돌을 메기고 나면 고무줄을 끼이익 당긴다
+                if (!slingDrawn && windup < windupLength * (1 - SlingGrab))
+                {
+                    slingDrawn = true;
+                    stretchSound = ProceduralAudio.PlayAt3D(ProceduralAudio.SlingStretch(), SlingPoint(), 0.85f, Random.Range(0.95f, 1.08f));
+                }
+            }
             if (windup <= 0) ReleaseAttack(player, playerPos, dist, danger);
         }
         agent.isStopped = staggerTimer > 0 || windup > 0;
@@ -216,7 +239,7 @@ public class Zombie : MonoBehaviour, IDamageable
         }
     }
 
-    // 원거리 좀비: 6m~사거리를 유지하며 독액을 던진다
+    // 원거리 좀비: 6m~사거리를 유지하며 새총으로 돌을 쏜다
     void RangedChase(bool sees, Vector3 playerPos, float dist, float danger)
     {
         if (sees && dist <= balance.rangedAttackRange)
@@ -252,15 +275,17 @@ public class Zombie : MonoBehaviour, IDamageable
     void StartAttack(Vector3 playerPos, float dist, float danger)
     {
         attackTimer = stats.attackDelay;
-        throwing = false;
+        shooting = false;
         switch (Kind)
         {
             case ZombieKind.Ranged when dist > attackRange + 0.3f:
-                // 독액을 끌어올리며 팔을 뒤로 젖힌다
-                throwing = true;
+                // 허리 주머니에서 돌을 꺼내 새총에 메기며 겨눈다 (고무줄은 예비 동작 중에 당긴다)
+                shooting = true;
+                slingDrawn = false;
+                slingSnap = -1;
+                aimPoint = playerPos + Vector3.up * 1.2f;
                 BeginWindup(RangedWindup);
-                voice.pitch = Random.Range(0.9f, 1.1f);
-                voice.PlayOneShot(ProceduralAudio.Retch(), 1f);
+                ProceduralAudio.PlayAt3D(ProceduralAudio.Rustle(), transform.position + Vector3.up * size, 0.7f, Random.Range(0.85f, 1.05f));
                 break;
             case ZombieKind.Heavy:
                 // 두 팔을 머리 위로 치켜든다
@@ -277,6 +302,12 @@ public class Zombie : MonoBehaviour, IDamageable
             default:
                 // 일반·가죽 좀비(와 바짝 붙은 원거리 좀비)는 바로 물어뜯는다
                 lunge = 1;
+                var attackCry = ProceduralAudio.ZombieAttack();
+                if (attackCry != null)
+                {
+                    voice.pitch = VoicePitch();
+                    voice.PlayOneShot(attackCry, 0.9f);
+                }
                 ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.8f, 0.8f);
                 GameManager.Instance.Damage(stats.damage * (1 + 0.3f * danger), DeathReason());
                 break;
@@ -293,9 +324,9 @@ public class Zombie : MonoBehaviour, IDamageable
     {
         lunge = 1;
         float damage = stats.damage * (1 + 0.3f * danger);
-        if (throwing)
+        if (shooting)
         {
-            Throw(player, damage);
+            Shoot(player, damage);
             return;
         }
 
@@ -316,14 +347,33 @@ public class Zombie : MonoBehaviour, IDamageable
         GameManager.Instance.Damage(damage, DeathReason());
     }
 
-    void Throw(PlayerController player, float damage)
+    // 새총 고무줄을 놓아 돌을 쏜다
+    void Shoot(PlayerController player, float damage)
     {
-        Vector3 from = transform.position + Vector3.up * 1.55f * size + transform.forward * 0.45f;
-        Vector3 target = player.cameraRoot.position + Vector3.down * 0.4f; // 가슴 높이
-        EnemyProjectile.Launch(from, target, ProjectileSpeed, damage, "원거리 좀비가 뱉은 독액에 맞았다.", transform, ZombieLooks.Spit);
-        voice.pitch = Random.Range(0.9f, 1.1f);
-        voice.PlayOneShot(ProceduralAudio.Spit(), 1f);
+        Vector3 from = SlingPoint();
+        EnemyProjectile.Launch(from, ChestOf(player), ProjectileSpeed, damage, "새총으로 쏜 돌에 맞았다.", transform, ZombieLooks.Stone);
+        ProceduralAudio.PlayAt3D(ProceduralAudio.SlingSnap(), from, 1f, Random.Range(0.92f, 1.08f));
+        ReleaseSling();
     }
+
+    // 고무줄을 놓는다: 쏘았거나, 당기다 맞아서 놓쳤을 때. 주머니가 튕겨 돌아간다
+    void ReleaseSling()
+    {
+        if (stretchSound != null) stretchSound.Stop();
+        stretchSound = null;
+        slingDrawn = false;
+        if (sling == null || !slingPosed) return;
+        slingSnap = 0;
+        snapDraw = slingDraw;
+        snapAim = slingAim;
+        snapHoldK = slingHoldK;
+    }
+
+    static Vector3 ChestOf(PlayerController player) => player.cameraRoot.position + Vector3.down * 0.4f; // 가슴 높이
+
+    // 돌이 나가는 곳 (새총 두 갈래 사이)
+    Vector3 SlingPoint() =>
+        sling != null && sling.Fork != null ? sling.Muzzle : transform.position + Vector3.up * 1.55f * size + transform.forward * 0.5f;
 
     string DeathReason()
     {
@@ -360,7 +410,7 @@ public class Zombie : MonoBehaviour, IDamageable
     // 닫힌 문 앞에서 막히면 쾅쾅 두드리다 부수고 들어온다
     void TryBreakDoor(float dt)
     {
-        // 가려는 길이 문에 막혀 멈춰 있을 때만 두드린다 (던지려고 멈춘 원거리 좀비 등은 제외)
+        // 가려는 길이 문에 막혀 멈춰 있을 때만 두드린다 (새총을 겨누느라 멈춘 원거리 좀비 등은 제외)
         bool stuck = agent.hasPath && windup <= 0 && agent.velocity.magnitude <= 0.4f
             && (agent.pathStatus != NavMeshPathStatus.PathComplete || agent.remainingDistance > 1.5f);
         if (!stuck) { doorTimer = 0; return; }
@@ -466,10 +516,19 @@ public class Zombie : MonoBehaviour, IDamageable
         health -= amount;
         bool heavy = Kind == ZombieKind.Heavy;
         staggerTimer = heavy ? 0.2f : 0.5f;
-        if (!heavy) windup = 0; // 맞으면 공격 준비가 끊긴다 (거대 좀비는 버틴다)
+        if (!heavy)
+        {
+            // 맞으면 공격 준비가 끊긴다 (거대 좀비는 버틴다). 당기던 새총 고무줄은 놓쳐서 튕겨 돌아간다
+            if (windup > 0 && shooting)
+            {
+                if (slingDrawn) ProceduralAudio.PlayAt3D(ProceduralAudio.SlingSnap(), SlingPoint(), 0.5f, Random.Range(1.1f, 1.25f));
+                ReleaseSling();
+            }
+            windup = 0;
+        }
         if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * (heavy ? 0.1f : 0.35f));
         voice.pitch = IsRaider ? Random.Range(1f, 1.15f) : VoicePitch() * 1.1f;
-        voice.PlayOneShot(ProceduralAudio.Hurt(), 0.9f);
+        voice.PlayOneShot(IsRaider ? ProceduralAudio.Hurt() : ProceduralAudio.ZombieHurt(), 0.9f);
         if (PlayerController.Instance != null) lastKnown = PlayerController.Instance.transform.position;
         state = State.Chase;
         if (health <= 0) StartCoroutine(Die(direction));
@@ -479,6 +538,8 @@ public class Zombie : MonoBehaviour, IDamageable
     {
         state = State.Dead;
         windup = 0;
+        if (stretchSound != null) stretchSound.Stop();
+        if (sling != null) sling.Relax(); // 당기던 고무줄을 놓고 쓰러진다
         agent.enabled = false;
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
@@ -532,17 +593,98 @@ public class Zombie : MonoBehaviour, IDamageable
         float aL = armBase - lunge * 25 + Mathf.Sin(animPhase * 0.7f) * 8;
         float aR = armBase - lunge * 25 + Mathf.Sin(animPhase * 0.7f + 1.5f) * 8;
         float lean = 12 + lunge * 15;
-        if (Kind == ZombieKind.Ranged && throwing && (wind > 0 || lunge > 0))
-        {
-            // 던지기: 오른팔을 뒤로 젖혔다가 앞으로 내던진다
-            aR = wind > 0 ? Mathf.Lerp(armBase, -215f, wind) : Mathf.Lerp(armBase, -100f, lunge);
-            lean = 12 - wind * 18 + lunge * 15;
-        }
         if (armL != null) armL.localRotation = Quaternion.Euler(aL, 0, -6);
         if (armR != null) armR.localRotation = Quaternion.Euler(aR, 0, 6);
         if (body != null) body.localRotation = Quaternion.Euler(lean + Mathf.Sin(animPhase * 2) * 2, Mathf.Sin(animPhase) * 6, Mathf.Sin(animPhase * 0.5f) * 5);
         if (head != null) head.localRotation = Quaternion.Euler(Mathf.Sin(animPhase * 0.31f) * 12, Mathf.Sin(animPhase * 0.23f) * 20, 20 + Mathf.Sin(animPhase * 0.4f) * 10);
+        if (sling != null) AnimateSling(dt, wind);
     }
+
+    // 원거리 좀비의 새총: 몸을 틀어 왼손 새총으로 겨누고, 오른손으로 주머니를 집어 귀 옆까지 당겼다가 놓는다.
+    // 놓으면 주머니가 튕겨 Y자 앞으로 넘어갔다 돌아오며 떨리고, 잠시 뒤 팔을 내린다
+    void AnimateSling(float dt, float wind)
+    {
+        bool drawing = shooting && windup > 0;
+        if (slingSnap >= 0)
+        {
+            slingSnap += dt;
+            if (slingSnap > SlingHold + SlingLower) slingSnap = -1;
+        }
+        if (!drawing && slingSnap < 0)
+        {
+            if (slingPosed) sling.Relax();
+            slingPosed = false;
+            slingDraw = slingAim = slingHoldK = 0;
+            return;
+        }
+        slingPosed = true;
+
+        float holdK, draw;
+        bool loaded;
+        if (drawing)
+        {
+            slingAim = Smooth(wind / SlingGrab);
+            holdK = slingAim;
+            draw = Mathf.Clamp01((wind - SlingGrab * 0.85f) / (SlingGrab * 0.5f)); // 손이 주머니에 닿으면 주머니가 손을 따라간다
+            loaded = wind > SlingGrab * 0.6f;
+        }
+        else
+        {
+            // 놓은 뒤: 주머니는 감쇠 진동, 팔은 잠깐 버티다 내린다
+            float t = slingSnap;
+            float lower = 1 - Smooth((t - SlingHold) / SlingLower);
+            slingAim = snapAim * lower;
+            holdK = snapHoldK * lower;
+            draw = snapDraw * Mathf.Exp(-t * 18f) * Mathf.Cos(t * 38f);
+            if (draw < 0) draw *= 0.5f;
+            loaded = false;
+        }
+        float aim = slingAim;
+
+        // 몸을 꼿꼿이 세우고 왼어깨를 앞으로 튼다. 머리는 튼 만큼 되돌려 과녁을 본다
+        if (body != null) body.localRotation = Quaternion.Slerp(body.localRotation, Quaternion.Euler(3, 22, 0), aim);
+        if (head != null) head.localRotation = Quaternion.Slerp(head.localRotation, Quaternion.Euler(4, -20, 6), aim);
+
+        // 왼팔: 새총을 가슴 앞으로 모아 과녁을 겨눈다
+        if (armL != null && body != null)
+        {
+            var to = aimPoint - armL.position;
+            var dir = (to.sqrMagnitude > 0.01f ? to.normalized : transform.forward) * 0.92f + transform.right * 0.36f;
+            armL.localRotation = Quaternion.Slerp(armL.localRotation, ArmPose(dir), aim);
+        }
+
+        // 오른팔: 주머니를 집으러 새총 쪽으로 뻗었다가(잡기) 귀 옆까지 당긴다
+        Vector3 hand = sling.Rest;
+        if (armR != null && body != null)
+        {
+            if (drawing)
+            {
+                float pull = Smooth((wind - SlingGrab) / (SlingFull - SlingGrab));
+                var grab = sling.Rest - armR.position;
+                // 오른쪽 귀 뒤 바깥 (고무줄이 머리를 뚫지 않고 옆을 지난다. 아래층을 겨눌 때도)
+                var anchor = body.TransformDirection(new Vector3(0.55f, 0.35f, -0.75f));
+                slingHold = ArmPose(Vector3.Slerp(grab.normalized, anchor.normalized, pull));
+                slingHoldK = holdK;
+            }
+            armR.localRotation = Quaternion.Slerp(armR.localRotation, slingHold, holdK);
+            hand = armR.TransformPoint(new Vector3(0, -0.7f, 0));
+        }
+        slingDraw = draw;
+        sling.Pose(hand, draw, loaded);
+    }
+
+    // 팔(아래쪽 -y)이 worldDir을 가리키게 하는 몸 기준 회전. 팔 앞면(+z, 새총 갈래 쪽)은 되도록 위를 향한다
+    Quaternion ArmPose(Vector3 worldDir)
+    {
+        var d = body.InverseTransformDirection(worldDir);
+        if (d.sqrMagnitude < 1e-6f) return Quaternion.identity;
+        d.Normalize();
+        var up = Vector3.ProjectOnPlane(Vector3.up, d);
+        if (up.sqrMagnitude < 1e-4f) up = Vector3.ProjectOnPlane(Vector3.forward, d);
+        return Quaternion.LookRotation(up.normalized, -d);
+    }
+
+    static float Smooth(float x) => Mathf.SmoothStep(0, 1, x);
 
     // 거대 좀비: 느릿하게 몸을 좌우로 흔들며 쿵쿵 걷고, 두 팔을 치켜들었다 내려찍는다
     void AnimateHeavy(float dt, float speed, float wind)

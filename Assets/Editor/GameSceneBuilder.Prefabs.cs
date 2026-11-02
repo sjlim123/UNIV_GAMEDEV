@@ -48,6 +48,15 @@ public static partial class GameSceneBuilder
         spot.intensity = 40f;
         spot.shadows = LightShadows.Soft;
         spot.shadowStrength = 0.95f;
+        // 손을 따라 흔들리는 빛이라 그림자 자국(얼룩 줄무늬)이 지지직 떨려 보이지 않게
+        // 그림자 해상도를 높이고 바이어스를 조금 키운다
+        var spotData = spot.GetUniversalAdditionalLightData();
+        spotData.usePipelineSettings = false;
+        var spotSo = new SerializedObject(spotData); // 해상도 단계는 스크립트에서 읽기 전용이라 직렬화 값으로 바꾼다
+        SetProp(spotSo, "m_AdditionalLightsShadowResolutionTier", UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierHigh);
+        spotSo.ApplyModifiedPropertiesWithoutUndo();
+        spot.shadowBias = 0.08f;
+        spot.shadowNormalBias = 0.6f;
 
         root.AddComponent<PlayerController>().cameraRoot = camRoot;
         root.AddComponent<PlayerInteractor>().cam = cam;

@@ -1,32 +1,61 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 제작대 창 (아이콘 카드형): 뒤 화면을 흐리게 깐 유리판 위에
-// 왼쪽은 조합법 카드 목록(휠로 스크롤), 오른쪽은 고른 조합법의 결과물·재료·제작 버튼을 보여 준다.
-// 조합 규칙(재료 확인·소비·완성품 위치)은 Workbench.cs
+// 제작대·화로 창 (아이콘 카드형): 뒤 화면을 흐리게 깐 유리판 위에
+// 왼쪽은 등급별로 묶은 조합법 카드 목록(휠로 스크롤), 오른쪽은 고른 조합법의 결과물·재료·제작 버튼을 보여 준다.
+// 한 창을 두 가지로 쓴다: 제작대(조합, 전력 필요) / 화로(제련, 부싯돌과 라이터로 불을 붙여 Furnace.SmeltSeconds초 동안 녹인다)
+// 조합 규칙(재료 확인·소비·완성품 위치)은 Workbench.cs, 녹이기 진행은 Furnace.cs
 public partial class UIManager
 {
     const float WorkbenchBlurInterval = 0.1f;
+    // 오른쪽 상세 칸의 너비 (유리판 1440 - 왼쪽 512 - 오른쪽 여백 44)
+    const float CraftDetailWidth = 884;
+
+    static readonly Color SmeltColor = new Color(0.95f, 0.47f, 0.16f);
 
     GameObject workbenchRoot;
     RawImage workbenchBlur;
     RectTransform workbenchList, workbenchDetail;
     ScrollRect workbenchScroll;
-    UnityEngine.UI.Text workbenchSub, workbenchWeight, workbenchNotice;
+    UnityEngine.UI.Text workbenchTitle, workbenchSub, workbenchWeight, workbenchNotice;
     CanvasGroup workbenchNoticeGroup;
     Transform workbenchSource;
-    int workbenchSelected;
+    Recipe workbenchPick, furnacePick;
     float workbenchBlurTimer;
 
+    // 화로 모드: 이 창이 지금 화로 창인가, 어느 화로인가, 녹이는 중 버튼의 진행 막대
+    bool furnaceMode;
+    Furnace furnace;
+    RectTransform smeltFill;
+    bool furnaceWasBusy;
+
+    // 제작대 창이나 화로 창이 열려 있는가 (둘은 같은 창이다)
     public bool IsWorkbenchOpen => workbenchRoot != null && workbenchRoot.activeSelf;
+    public bool IsFurnaceOpen => IsWorkbenchOpen && furnaceMode;
 
     // source: 제작 소리를 낼 위치 (제작대). 없으면 2D 소리
-    public void OpenWorkbench(Transform source = null)
+    public void OpenWorkbench(Transform source = null) => OpenCrafting(false, source);
+
+    // source: 화로. 없으면 방공호의 화로(Furnace.Instance)를 쓴다
+    public void OpenFurnace(Transform source = null) => OpenCrafting(true, source);
+
+    void OpenCrafting(bool smelt, Transform source)
     {
         if (workbenchRoot == null) BuildWorkbench();
-        ClosePanel();
+        ClosePanel(); // 제작대 창도 닫으므로 아래에서 다시 채운다
+        furnaceMode = smelt;
         workbenchSource = source;
+        furnace = null;
+        if (smelt)
+        {
+            if (source != null) furnace = source.GetComponentInParent<Furnace>();
+            if (furnace == null) furnace = Furnace.Instance;
+        }
+        furnaceWasBusy = WatchedFurnaceBusy;
+        workbenchTitle.text = smelt ? "화로" : "제작대";
         workbenchRoot.SetActive(true);
         UpdateBlur(workbenchBlur);
         workbenchBlurTimer = WorkbenchBlurInterval;
@@ -35,13 +64,16 @@ public partial class UIManager
         workbenchScroll.verticalNormalizedPosition = 1;
     }
 
+    // 녹이는 도중에 닫아도 화로는 계속 녹이고, 다 되면 알림으로 알려 준다
     public void CloseWorkbench()
     {
         if (workbenchRoot != null) workbenchRoot.SetActive(false);
         workbenchSource = null;
+        furnace = null;
+        smeltFill = null;
     }
 
-    // UIManager.Update에서 제작대 창이 열려 있을 때 매 프레임 부른다
+    // UIManager.Update에서 제작대(화로) 창이 열려 있을 때 매 프레임 부른다
     void UpdateWorkbench()
     {
         // 뒤 배경은 0.1초마다 다시 찍는다 (매 프레임 찍으면 화면을 두 번 그리게 된다)
@@ -54,6 +86,51 @@ public partial class UIManager
         // 창이 HUD 알림을 가리므로 같은 알림을 창 위쪽에 보여 준다
         workbenchNotice.text = toastText.text;
         workbenchNoticeGroup.alpha = toastGroup.alpha;
+
+        // 화로: 진행 막대를 채우고, 다 녹으면 목록·재료 수·버튼을 다시 만든다
+        // (제작대 창이어도 녹이기가 끝나면 철주괴 등 재료 수가 바뀌므로 다시 만든다)
+        bool busy = WatchedFurnaceBusy;
+        if (busy != furnaceWasBusy)
+        {
+            furnaceWasBusy = busy;
+            RefreshWorkbench();
+        }
+        if (FurnaceBusy && smeltFill != null) smeltFill.anchorMax = new Vector2(furnace.Progress, 1);
+    }
+
+    // 지금 창에서 보여 줄 조합법 (제작대: Recipes / 화로: SmeltRecipes). 완성품 등급 순서로,
+    // 같은 등급 안에서는 ItemDatabase에 넣은 순서대로 둔다 (목록을 등급별로 묶어 보여 준다)
+    List<Recipe> CraftRecipes => (furnaceMode ? ItemDatabase.SmeltRecipes : ItemDatabase.Recipes)
+        .OrderBy(r => (int)ItemDatabase.Get(r.ResultId).Rarity).ToList();
+
+    // 제작대와 화로는 고른 조합법을 따로 기억한다
+    Recipe CraftSelection
+    {
+        get => furnaceMode ? furnacePick : workbenchPick;
+        set { if (furnaceMode) furnacePick = value; else workbenchPick = value; }
+    }
+
+    bool FurnaceBusy => furnaceMode && furnace != null && furnace.IsSmelting;
+
+    // 창이 지켜보는 화로가 녹이는 중인가 (화로 창: 연 화로 / 제작대 창: 방공호의 화로)
+    bool WatchedFurnaceBusy
+    {
+        get
+        {
+            var f = furnaceMode ? furnace : Furnace.Instance;
+            return f != null && f.IsSmelting;
+        }
+    }
+
+    // 쓸 수 있는 상태인가: 제작대는 전력이 있어야 하고, 화로는 전력 없이 부싯돌과 라이터로 불을 붙인다
+    bool StationReady(GameState s) => furnaceMode ? furnace != null && Furnace.HasLighter(s) : Workbench.IsPowered(s);
+
+    // 쓸 수 없을 때 짧은 이유 (목록 카드) / 긴 이유 (상세)
+    string StationProblem(bool longForm)
+    {
+        if (!furnaceMode) return longForm ? "전력이 없어 제작할 수 없다" : "전력 없음";
+        if (furnace == null) return longForm ? "화로가 없어 녹일 수 없다" : "화로 없음";
+        return longForm ? "부싯돌과 라이터가 없어 불을 붙일 수 없다" : "라이터 없음";
     }
 
     void BuildWorkbench()
@@ -67,10 +144,11 @@ public partial class UIManager
         workbenchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 
-        var title = NewText(glass, "제작대", 38, TextAnchor.MiddleLeft, Text, FontBold);
-        Place(title.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(170, 56));
+        workbenchTitle = NewText(glass, "제작대", 38, TextAnchor.MiddleLeft, Text, FontBold);
+        Place(workbenchTitle.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(170, 56));
         workbenchSub = NewText(glass, "", 19, TextAnchor.MiddleLeft, Dim);
         Place(workbenchSub.rectTransform, new Vector2(0, 1), new Vector2(184, -34), new Vector2(660, 40));
         workbenchWeight = NewText(glass, "", 20, TextAnchor.MiddleRight, Text, FontSemiBold);
@@ -140,44 +218,87 @@ public partial class UIManager
         workbenchRoot.SetActive(false);
     }
 
-    // 고른 조합법을 그대로 두고 목록과 상세를 다시 만든다 (제작한 뒤에도 부른다)
+    // 고른 조합법을 그대로 두고 목록과 상세를 다시 만든다 (제작한 뒤, 녹이기가 시작·끝난 뒤에도 부른다)
     void RefreshWorkbench()
     {
         if (!IsWorkbenchOpen) return;
         var s = GameManager.Instance.State;
-        var recipes = ItemDatabase.Recipes;
-        bool powered = Workbench.IsPowered(s);
-        workbenchSub.text = powered ? "재료는 창고와 소지품에서 함께 쓴다." : "전력이 없어 작업등과 공구를 쓸 수 없다. 발전기에 연료를 넣자.";
-        workbenchSub.color = powered ? Dim : Danger;
+        var recipes = CraftRecipes;
+        bool ready = StationReady(s);
+        if (furnaceMode)
+        {
+            workbenchSub.text = ready ? "부싯돌과 라이터로 불을 붙여 고철을 녹이고 고기를 굽는다. 전기는 필요 없다."
+                : furnace == null ? "화로를 찾을 수 없다." : "부싯돌과 라이터가 있어야 불을 붙일 수 있다. 제작대에서 만들자.";
+            workbenchSub.color = ready ? Dim : Danger;
+        }
+        else
+        {
+            workbenchSub.text = ready ? "재료는 창고와 소지품에서 함께 쓴다." : "전력이 없어 작업등과 공구를 쓸 수 없다. 발전기에 연료를 넣자.";
+            workbenchSub.color = ready ? Dim : Danger;
+        }
         workbenchWeight.text = $"소지품  {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg";
 
         ClearChildren(workbenchList);
         ClearChildren(workbenchDetail);
+        smeltFill = null;
         if (recipes.Count == 0)
         {
             Line(workbenchList, "조합법이 없습니다.", 22, Dim);
             return;
         }
 
-        workbenchSelected = Mathf.Clamp(workbenchSelected, 0, recipes.Count - 1);
+        var selected = CraftSelection;
+        if (selected == null || !recipes.Contains(selected)) selected = recipes[0];
+        CraftSelection = selected;
+        // 조합법은 등급 순서로 들어 있다. 등급이 바뀔 때마다 머리글을 단다
         for (int i = 0; i < recipes.Count; i++)
         {
-            int k = i;
-            RecipeCard(recipes[i], s, powered, i == workbenchSelected, () => { workbenchSelected = k; RefreshWorkbench(); });
+            var r = recipes[i];
+            var rarity = ItemDatabase.Get(r.ResultId).Rarity;
+            if (i == 0 || ItemDatabase.Get(recipes[i - 1].ResultId).Rarity != rarity) RecipeGroupHeader(recipes, rarity, s, ready);
+            RecipeCard(r, s, ready, r == selected, () => { CraftSelection = r; RefreshWorkbench(); });
         }
-        RecipeDetail(recipes[workbenchSelected], s, powered);
+        RecipeDetail(selected, s, ready);
+    }
+
+    // 등급 머리글: 등급 이름(등급 색) + 그 등급에서 지금 만들 수 있는 수 / 전체 수
+    void RecipeGroupHeader(List<Recipe> recipes, ItemRarity rarity, GameState s, bool ready)
+    {
+        int total = 0, can = 0;
+        foreach (var r in recipes)
+        {
+            if (ItemDatabase.Get(r.ResultId).Rarity != rarity) continue;
+            total++;
+            if (ready && Workbench.HasIngredients(s, r) && !Workbench.AlreadyInstalled(s, r)) can++;
+        }
+        var rc = ItemRarityInfo.Color(rarity);
+        var rt = NewRect("Group", workbenchList);
+        var le = rt.gameObject.AddComponent<LayoutElement>();
+        le.minHeight = le.preferredHeight = 40;
+        var bar = NewRect("Bar", rt);
+        Place(bar, new Vector2(0, 0), new Vector2(2, 6), new Vector2(4, 22));
+        bar.gameObject.AddComponent<Image>().color = rc;
+        var name = NewText(rt, ItemRarityInfo.Name(rarity), 20, TextAnchor.MiddleLeft, rc, FontBold);
+        Place(name.rectTransform, new Vector2(0, 0), new Vector2(16, 2), new Vector2(160, 30));
+        string canText = $"<color=#{ColorUtility.ToHtmlStringRGB(AddedColor)}>만들 수 있음 {can}</color>  ·  {total}개";
+        var count = NewText(rt, can > 0 ? canText : $"{total}개", 16, TextAnchor.MiddleRight, Dim);
+        Place(count.rectTransform, new Vector2(1, 0), new Vector2(-8, 2), new Vector2(240, 30));
     }
 
     // 왼쪽 목록의 조합법 카드: 등급 테두리 아이콘 + 이름(등급 색) + 제작 가능 여부. 만들 수 없으면 흐리게
-    void RecipeCard(Recipe recipe, GameState s, bool powered, bool selected, Action onClick)
+    void RecipeCard(Recipe recipe, GameState s, bool ready, bool selected, Action onClick)
     {
         var def = ItemDatabase.Get(recipe.ResultId);
         var rc = ItemRarityInfo.Color(def.Rarity);
         bool enough = Workbench.HasIngredients(s, recipe);
-        bool craftable = enough && powered;
+        bool busy = FurnaceBusy;
+        bool active = busy && furnace.CurrentRecipe == recipe;
+        bool installed = Workbench.AlreadyInstalled(s, recipe);
+        bool craftable = enough && ready && !busy && !installed;
 
         var rt = Box(workbenchList, "Recipe", Color.white, selected ? new Color(Accent.r, Accent.g, Accent.b, 0.75f) : new Color(1, 1, 1, 0.08f));
         var b = rt.gameObject.AddComponent<Button>();
+        UIPress.Attach(b, 1.015f);
         b.targetGraphic = rt.GetComponent<Image>();
         var colors = b.colors;
         colors.normalColor = selected ? new Color(0.36f, 0.27f, 0.1f, 0.7f) : new Color(1, 1, 1, 0.04f);
@@ -194,7 +315,7 @@ public partial class UIManager
         var body = NewRect("Body", rt);
         Stretch(body);
         var group = body.gameObject.AddComponent<CanvasGroup>();
-        group.alpha = craftable ? 1f : 0.5f;
+        group.alpha = craftable || active ? 1f : 0.5f;
         group.blocksRaycasts = false;
 
         var slot = NewItemSlot(body, "Card", 7);
@@ -207,13 +328,20 @@ public partial class UIManager
         var tag = NewText(body, ItemRarityInfo.Name(def.Rarity), 15, TextAnchor.MiddleRight, rc, FontSemiBold);
         Place(tag.rectTransform, new Vector2(1, 1), new Vector2(-16, -18), new Vector2(90, 24));
 
-        string state = craftable ? "제작 가능" : !powered ? "전력 없음" : "재료 부족";
-        var st = NewText(body, state, 17, TextAnchor.MiddleLeft, craftable ? AddedColor : !powered ? Danger : Dim);
+        string state;
+        Color stateColor;
+        if (active) { state = "녹이는 중…"; stateColor = SmeltColor; }
+        else if (installed) { state = "설치함"; stateColor = AddedColor; }
+        else if (!ready) { state = StationProblem(false); stateColor = Danger; }
+        else if (!enough) { state = "재료 부족"; stateColor = Dim; }
+        else if (busy) { state = "화로 사용 중"; stateColor = Dim; }
+        else { state = furnaceMode ? "녹일 수 있음" : "제작 가능"; stateColor = AddedColor; }
+        var st = NewText(body, state, 17, TextAnchor.MiddleLeft, stateColor);
         Place(st.rectTransform, new Vector2(0, 1), new Vector2(96, -52), new Vector2(260, 26));
     }
 
-    // 오른쪽 상세: 큰 결과물 카드, 이름·등급·설명, 재료 카드, 무게, 제작 버튼
-    void RecipeDetail(Recipe recipe, GameState s, bool powered)
+    // 오른쪽 상세: 큰 결과물 카드, 이름·등급·설명, 재료 카드, 무게, 제작(녹이기) 버튼
+    void RecipeDetail(Recipe recipe, GameState s, bool ready)
     {
         var d = workbenchDetail;
         var def = ItemDatabase.Get(recipe.ResultId);
@@ -235,7 +363,9 @@ public partial class UIManager
         var desc = NewText(d, def.Description, 22, TextAnchor.UpperLeft, Text);
         desc.lineSpacing = 1.2f;
         Place(desc.rectTransform, new Vector2(0, 1), new Vector2(228, -116), new Vector2(640, 60));
-        var output = NewText(d, $"완성 수량  x{recipe.ResultCount}", 19, TextAnchor.MiddleLeft, Dim);
+        string amount = Workbench.IsInstall(recipe) ? "방공호 거실 벽 앞에 설치한다 (한 번만)"
+            : $"완성 수량  x{recipe.ResultCount}" + (furnaceMode ? $"   ·   녹이는 시간 {Furnace.SmeltSeconds:0}초" : "");
+        var output = NewText(d, amount, 19, TextAnchor.MiddleLeft, Dim);
         Place(output.rectTransform, new Vector2(0, 1), new Vector2(228, -164), new Vector2(640, 30));
 
         var line = NewRect("Line", d);
@@ -249,7 +379,7 @@ public partial class UIManager
         // 필요 재료 카드 (한 줄에 4장)
         var head = NewText(d, "필요 재료   <size=17><color=#a8a294>보유 / 필요</color></size>", 22, TextAnchor.MiddleLeft, Accent, FontSemiBold);
         Place(head.rectTransform, new Vector2(0, 1), new Vector2(0, -240), new Vector2(440, 34));
-        var note = NewText(d, "창고에 있는 재료를 먼저 쓴다", 17, TextAnchor.MiddleRight, Dim);
+        var note = NewText(d, furnaceMode ? "부싯돌과 라이터로 불을 붙인다 · 창고 재료를 먼저 쓴다" : "창고에 있는 재료를 먼저 쓴다", 17, TextAnchor.MiddleRight, Dim);
         Place(note.rectTransform, new Vector2(1, 1), new Vector2(0, -240), new Vector2(420, 34));
         var grid = NewRect("Ingredients", d);
         grid.anchorMin = new Vector2(0, 1);
@@ -257,65 +387,131 @@ public partial class UIManager
         grid.pivot = new Vector2(0.5f, 1);
         grid.anchoredPosition = new Vector2(0, -288);
         grid.sizeDelta = new Vector2(0, 214);
+        // 재료가 4가지까지는 한 줄에 4장, 5가지면 카드를 좁혀 한 줄에 5장
+        int columns = Mathf.Max(4, recipe.Ingredients.Count);
+        float gap = columns > 4 ? 12 : 20;
+        float cellW = (CraftDetailWidth - gap * (columns - 1)) / columns;
         var gl = grid.gameObject.AddComponent<GridLayoutGroup>();
-        gl.cellSize = new Vector2(206, 214);
-        gl.spacing = new Vector2(20, 16);
+        gl.cellSize = new Vector2(cellW, 214);
+        gl.spacing = new Vector2(gap, 16);
         gl.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        gl.constraintCount = 4;
-        foreach (var kv in recipe.Ingredients) IngredientCard(grid, kv.Key, kv.Value, s);
+        gl.constraintCount = columns;
+        foreach (var kv in recipe.Ingredients) IngredientCard(grid, kv.Key, kv.Value, s, cellW);
 
-        // 아래: 완성품이 들어갈 곳과 무게 + 제작 버튼
+        // 아래: 완성품이 들어갈 곳과 무게 + 제작(녹이기) 버튼
         bool enough = Workbench.HasIngredients(s, recipe);
-        bool can = enough && powered;
+        bool busy = FurnaceBusy;
+        bool active = busy && furnace.CurrentRecipe == recipe;
+        bool install = Workbench.IsInstall(recipe);
+        bool installed = Workbench.AlreadyInstalled(s, recipe);
+        bool can = enough && ready && !busy && !installed;
         string status;
         Color statusColor;
-        if (!powered) { status = "전력이 없어 제작할 수 없다"; statusColor = Danger; }
+        if (active) { status = "녹이는 중… 창을 닫아도 계속 녹는다"; statusColor = SmeltColor; }
+        else if (busy) { status = "화로에서 다른 재료를 녹이는 중이다"; statusColor = Accent; }
+        else if (installed) { status = "이미 방공호에 설치했다"; statusColor = AddedColor; }
+        else if (!ready) { status = StationProblem(true); statusColor = Danger; }
         else if (!enough) { status = "재료가 모자란다"; statusColor = Danger; }
+        else if (install) { status = "만들면 방공호에 바로 설치한다"; statusColor = Text; }
         else if (Workbench.ResultFitsInHand(s, recipe)) { status = "완성품은 소지품에 넣는다"; statusColor = Text; }
         else { status = "무거워서 완성품은 창고에 넣는다"; statusColor = Accent; }
-        float resultKg = def.Weight * recipe.ResultCount;
+        float resultKg = install ? 0 : s.Carried.UnitWeight(def.Id) * recipe.ResultCount;
         var st = NewText(d, $"{status}\n<size=18><color=#a8a294>완성품 {resultKg:0.0} kg   ·   소지품 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg</color></size>", 22, TextAnchor.MiddleLeft, statusColor, FontSemiBold);
         st.lineSpacing = 1.15f;
         Place(st.rectTransform, new Vector2(0, 0), new Vector2(0, 2), new Vector2(540, 72));
 
-        var btn = MakeButton(d, "제작", CraftSelected, can, 30);
+        if (busy)
+        {
+            SmeltingButton(d);
+            return;
+        }
+        var btn = MakeButton(d, furnaceMode ? "녹이기" : install ? (installed ? "설치함" : "설치") : "제작", CraftSelected, can, 30);
         Place((RectTransform)btn.transform, new Vector2(1, 0), Vector2.zero, new Vector2(320, 76));
         if (can)
         {
             var colors = btn.colors;
-            colors.normalColor = new Color(0.5f, 0.37f, 0.14f, 0.95f);
-            colors.highlightedColor = new Color(0.64f, 0.48f, 0.2f, 1f);
+            if (furnaceMode)
+            {
+                colors.normalColor = new Color(0.56f, 0.24f, 0.08f, 0.95f);
+                colors.highlightedColor = new Color(0.72f, 0.33f, 0.12f, 1f);
+                colors.pressedColor = new Color(0.85f, 0.42f, 0.16f, 1f);
+            }
+            else
+            {
+                colors.normalColor = new Color(0.5f, 0.37f, 0.14f, 0.95f);
+                colors.highlightedColor = new Color(0.64f, 0.48f, 0.2f, 1f);
+            }
             colors.selectedColor = colors.normalColor;
             btn.colors = colors;
         }
     }
 
-    // 재료 카드: 아이콘, 이름(등급 색), 보유 / 필요 (모자라면 빨강), 창고·소지 개수
-    void IngredientCard(RectTransform parent, string id, int need, GameState s)
+    // 녹이는 동안의 버튼: 눌리지 않고, 진행 막대가 차오른다 (UpdateWorkbench가 채운다)
+    void SmeltingButton(RectTransform parent)
+    {
+        var btn = MakeButton(parent, "녹이는 중…", () => { }, false, 28);
+        var rt = (RectTransform)btn.transform;
+        Place(rt, new Vector2(1, 0), Vector2.zero, new Vector2(320, 76));
+        var frame = rt.Find("Frame");
+        if (frame != null) frame.GetComponent<Image>().color = new Color(SmeltColor.r, SmeltColor.g, SmeltColor.b, 0.7f);
+        var label = rt.GetComponentInChildren<UnityEngine.UI.Text>();
+        if (label != null) label.color = Text;
+
+        // 바탕 위, 테두리·글씨 아래에 막대를 깐다
+        var track = NewRect("Progress", rt);
+        track.SetSiblingIndex(0);
+        Stretch(track, 4, 4);
+        smeltFill = NewRect("Fill", track);
+        smeltFill.anchorMin = Vector2.zero;
+        smeltFill.anchorMax = new Vector2(furnace != null ? furnace.Progress : 0f, 1);
+        smeltFill.offsetMin = smeltFill.offsetMax = Vector2.zero;
+        var img = smeltFill.gameObject.AddComponent<Image>();
+        img.sprite = UIStyle.Fill;
+        img.type = Image.Type.Sliced;
+        img.color = new Color(SmeltColor.r, SmeltColor.g, SmeltColor.b, 0.62f);
+        img.raycastTarget = false;
+    }
+
+    // 재료 카드: 아이콘, 이름(등급 색), 보유 / 필요 (모자라면 빨강), 창고·소지 개수. width: 카드 너비
+    void IngredientCard(RectTransform parent, string id, int need, GameState s, float width)
     {
         var def = ItemDatabase.Get(id);
         int have = s.Total(id);
         bool lack = have < need;
+        float textW = width - 14;
+        // 장비 칸에 착용한 것은 재료로 세지 않는다 (벗어야 쓸 수 있다)
+        bool worn = lack && (s.EquippedBackpack == id || s.EquippedArmor == id);
         var card = Box(parent, "Ingredient", new Color(1, 1, 1, 0.045f), lack ? new Color(Danger.r, Danger.g, Danger.b, 0.6f) : new Color(1, 1, 1, 0.12f));
 
         var slot = NewItemSlot(card, "Slot", 10);
         Place(slot.Rect, new Vector2(0.5f, 1), new Vector2(0, -16), new Vector2(96, 96));
         SetItemSlot(slot, id);
 
-        var name = NewText(card, def.Name, 20, TextAnchor.MiddleCenter, ItemRarityInfo.Color(def.Rarity), FontSemiBold);
-        Place(name.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -118), new Vector2(190, 28));
+        var name = NewText(card, def.Name, def.Name.Length > 7 ? 17 : 20, TextAnchor.MiddleCenter, ItemRarityInfo.Color(def.Rarity), FontSemiBold);
+        Place(name.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -118), new Vector2(textW, 28));
         var count = NewText(card, $"{have} / {need}", 28, TextAnchor.MiddleCenter, lack ? Danger : Text, FontBold);
-        Place(count.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -148), new Vector2(190, 36));
-        var split = NewText(card, $"창고 {s.Storage.Count(id)}  ·  소지 {s.Carried.Count(id)}", 15, TextAnchor.MiddleCenter, Dim);
-        Place(split.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -186), new Vector2(196, 22));
+        Place(count.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -148), new Vector2(textW, 36));
+        var split = NewText(card, worn ? "착용 중 · 벗어야 쓴다" : $"창고 {s.Storage.Count(id)}  ·  소지 {s.Carried.Count(id)}", 15, TextAnchor.MiddleCenter, worn ? Danger : Dim);
+        Place(split.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -186), new Vector2(textW, 22));
     }
 
+    // 제작 / 녹이기 버튼
     void CraftSelected()
     {
-        var recipes = ItemDatabase.Recipes;
-        if (workbenchSelected < 0 || workbenchSelected >= recipes.Count) return;
+        var selected = CraftSelection;
+        if (selected == null || !CraftRecipes.Contains(selected)) return;
+        if (furnaceMode)
+        {
+            // 녹이는 동안에는 버튼이 막혀 있고, StartSmelt도 다시 시작하지 않는다
+            if (furnace != null && furnace.StartSmelt(selected))
+            {
+                furnaceWasBusy = true;
+                RefreshWorkbench();
+            }
+            return;
+        }
         Vector3? at = workbenchSource != null ? workbenchSource.position : (Vector3?)null;
-        if (Workbench.Craft(recipes[workbenchSelected], at)) RefreshWorkbench();
+        if (Workbench.Craft(selected, at)) RefreshWorkbench();
     }
 
     // 칸 오른쪽 아래 개수 표시 (예: x2)

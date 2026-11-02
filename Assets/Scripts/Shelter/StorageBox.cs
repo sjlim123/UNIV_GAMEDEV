@@ -32,8 +32,8 @@ public class StorageBox : Interactable
                 ui.RowIcon(row, id);
                 ui.RowLabel(row, $"{UIManager.ColoredName(id)} x{kv.Value}");
                 ui.RowWeight(row, ItemDatabase.Get(id).Weight * kv.Value);
-                ui.RowButton(row, "1개 넣기", () => { if (CanStore(s, id, 1) && s.Carried.Remove(id)) s.Storage.Add(id); ui.RefreshPanel(); });
-                ui.RowButton(row, "모두 넣기", () => { int n = s.Carried.Count(id); if (!CanStore(s, id, n)) return; s.Carried.Remove(id, n); s.Storage.Add(id, n); ui.RefreshPanel(); });
+                ui.RowButton(row, "1개 넣기", () => { if (s.Carried.Remove(id)) s.Storage.Add(id); ui.RefreshPanel(); });
+                ui.RowButton(row, "모두 넣기", () => { int n = s.Carried.Count(id); s.Carried.Remove(id, n); s.Storage.Add(id, n); ui.RefreshPanel(); });
             }
 
             ui.Line(c, "");
@@ -56,13 +56,5 @@ public class StorageBox : Interactable
                 });
             }
         }, "storage");
-    }
-
-    // 가방을 넣으면 들 수 있는 무게가 줄어든다. 그래도 감당할 수 있을 때만 넣는다
-    static bool CanStore(GameState s, string id, int n)
-    {
-        if (id != "backpack" || s.CanDropBackpack(n)) return true;
-        GameManager.Instance.UI.ShowMessage("가방을 빼면 너무 무겁다. 다른 물건부터 넣어야 한다.");
-        return false;
     }
 }

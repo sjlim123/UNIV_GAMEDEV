@@ -24,7 +24,7 @@ public class PlayerHands : MonoBehaviour
     Vector3 sway;
     float bobPhase, lowerLeft = 1f, lowerRight;
     float actionT = 1f, actionTime = 1f;
-    int action; // 1 주먹, 2 둔기, 3 사용
+    int action; // 1 주먹·찌르기, 2 휘두르기, 3 사용, 4 새총 쏘기
 
     void Awake() => Instance = this;
 
@@ -99,6 +99,7 @@ public class PlayerHands : MonoBehaviour
     public void PlayPunch() => Play(1, 0.3f);
     public void PlaySwing() => Play(2, 0.5f);
     public void PlayUse() => Play(3, 0.7f);
+    public void PlayShoot() => Play(4, 0.35f);
 
     void Play(int a, float time)
     {
@@ -159,6 +160,13 @@ public class PlayerHands : MonoBehaviour
                 rPos = Vector3.Lerp(rPos, new Vector3(0.04f, -0.1f, 0.3f), p);
                 rRot *= Quaternion.Euler(-40 * p, -30 * p, 0);
             }
+            else if (action == 4)
+            {
+                // 고무줄을 놓는 순간 손이 앞으로 튕겼다가 돌아온다
+                float p = Mathf.Sin(k * Mathf.PI) * (1 - k);
+                rPos += new Vector3(0, 0.02f, 0.06f) * p;
+                rRot *= Quaternion.Euler(-12 * p, 0, 0);
+            }
         }
         rightArm.localPosition = rPos;
         rightArm.localRotation = rRot;
@@ -181,7 +189,8 @@ public class PlayerHands : MonoBehaviour
         t.SetParent(rightHeld, false);
         ItemVisuals.Build(id, t);
 
-        if (id == "club")
+        // 방망이류는 손잡이를 쥐고 위로 세워 든다 (모양은 +z 방향으로 길게 만든다)
+        if (ItemDatabase.Get(id).Weapon == WeaponKind.Swing)
         {
             t.localRotation = Quaternion.Euler(-72, 0, 0);
             t.localScale = Vector3.one * 0.85f;

@@ -62,7 +62,7 @@ public partial class UIManager
         patchRoot.SetActive(true);
         patchRoot.transform.SetAsLastSibling();
         fadeOverlay.transform.SetAsLastSibling();
-        UpdatePatchBlur();
+        RefreshGlass(); // 뒤 배경을 바로 찍는다. 열려 있는 동안은 UpdateGlass가 0.1초마다 다시 찍는다
         RefreshPatchNotes();
     }
 
@@ -80,6 +80,7 @@ public partial class UIManager
         patchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.28f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1480, 840));
 
         var title = NewText(glass, "패치노트", 38, TextAnchor.MiddleLeft, Text, FontBold);
@@ -189,6 +190,7 @@ public partial class UIManager
         var rt = Box(patchVersionList, "Version", Color.white, selected ? new Color(Accent.r, Accent.g, Accent.b, 0.7f) : new Color(1, 1, 1, 0.08f));
         var img = rt.GetComponent<Image>();
         var b = rt.gameObject.AddComponent<Button>();
+        UIPress.Attach(b, 1.01f);
         b.targetGraphic = img;
         var colors = b.colors;
         colors.normalColor = selected ? new Color(0.36f, 0.27f, 0.1f, 0.75f) : new Color(1, 1, 1, 0.04f);
@@ -278,7 +280,7 @@ public partial class UIManager
         }
     }
 
-    // ---------- 유리판 블러 (패치노트·제작대 창이 함께 쓴다) ----------
+    // ---------- 유리판 블러 (패치노트·제작대·트럭·일반 창·메뉴가 함께 쓴다. 패치노트·일반 창·메뉴의 갱신은 UIManager.cs의 UpdateGlass) ----------
 
     static readonly Color GlassFill = new Color(0.09f, 0.095f, 0.09f, 0.62f);
     static readonly Color GlassFrame = new Color(1, 1, 1, 0.14f);
@@ -294,8 +296,6 @@ public partial class UIManager
         t.color = tint;
         return blur;
     }
-
-    void UpdatePatchBlur() => UpdateBlur(patchBlur);
 
     // 뒤 배경 블러: 카메라 화면을 작게 그린 뒤 여러 번 줄였다가 다시 키워 부드럽게 번지게 한다 (가벼운 방식)
     // 블러 텍스처는 하나를 같이 쓴다 (블러 창은 한 번에 하나만 열린다)

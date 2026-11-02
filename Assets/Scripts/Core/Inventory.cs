@@ -14,9 +14,16 @@ public class Inventory
         get
         {
             float w = 0;
-            foreach (var kv in counts) w += ItemDatabase.Get(kv.Key).Weight * kv.Value;
+            foreach (var kv in counts) w += UnitWeight(kv.Key) * kv.Value;
             return w;
         }
+    }
+
+    // 이 안에서 한 개의 무게. 돌주머니가 함께 있으면 돌은 무게가 없다
+    public float UnitWeight(string id)
+    {
+        if (id == ItemDatabase.SlingAmmoId && Count(ItemDatabase.StonePouchId) > 0) return 0f;
+        return ItemDatabase.Get(id).Weight;
     }
 
     public void Add(string id, int n = 1)

@@ -24,6 +24,9 @@ public static partial class GameSceneBuilder
         M["blastStripe"] = TexMat("M_BlastDoorStripe", "rusty_metal_02", new Color(0.72f, 0.55f, 0.1f), 0.3f, 0.3f);
         M["radioDial"] = Emissive("M_RadioDial", new Color(1f, 0.78f, 0.45f), new Color(1.6f, 0.95f, 0.4f));
         M["radioLed"] = Emissive("M_RadioLed", new Color(0.3f, 1f, 0.4f), new Color(0.3f, 2.2f, 0.5f));
+        // 화로 화구 안의 불·숯 (Furnace가 발광 세기를 바꾼다)
+        M["furnaceFire"] = Emissive("M_FurnaceFire", new Color(1f, 0.45f, 0.12f), new Color(5f, 1.7f, 0.35f));
+        M["furnaceCoal"] = Emissive("M_FurnaceCoal", new Color(0.25f, 0.07f, 0.03f), new Color(1.8f, 0.4f, 0.08f));
 
         // 바닥·천장
         Box("Floor", root, new Vector3(0, -0.1f, 0), new Vector3(10.3f, 0.2f, 8.3f), M["floor"], 2.5f);
@@ -64,12 +67,19 @@ public static partial class GameSceneBuilder
         BuildShelf(root, new Vector3(3.6f, 0, -3.62f), 0, true);
         BuildTable(root, new Vector3(0.6f, 0, -0.4f));
         BuildGenerator(root, new Vector3(8.9f, 0, 0));
+        // 화로: 거실 북쪽 벽 서편 (침대와 복도 입구 사이, 벽에 붙임). 난수를 쓰지 않아 다른 배치는 그대로다
+        BuildFurnace(root, new Vector3(-2.55f, 0, 3.45f));
 
         // 물통
         Prim(PrimitiveType.Cylinder, "WaterBarrel1", root, new Vector3(-4.4f, 0.45f, -1.3f), new Vector3(0.55f, 0.45f, 0.55f), M["paintBlue"], null, true);
         Prim(PrimitiveType.Cylinder, "WaterBarrel2", root, new Vector3(-4.35f, 0.45f, -0.6f), new Vector3(0.55f, 0.45f, 0.55f), M["paintBlue"], null, true);
-        Box("Crate", root, new Vector3(4.2f, 0.3f, -1.6f), new Vector3(0.8f, 0.6f, 0.6f), M["wood"], 1f, true, new Vector3(0, 12, 0));
-        Box("Crate2", root, new Vector3(4.3f, 0.82f, -1.6f), new Vector3(0.55f, 0.44f, 0.5f), M["wood"], 1f, true, new Vector3(0, -8, 0));
+        // 소품 (Poly Haven CC0 모델): 군용 상자 위 구급함, 제작대 옆 공구함, 발전기실 연료통, 침대 옆 벽의 방독면
+        PolyProp("old_military_crate", root, new Vector3(4.25f, 0, -1.65f), 88, 0.3f);
+        PolyProp("medical_box", root, new Vector3(4.2f, 0.3f, -1.95f), 75, 0.35f, 0.2f, false);
+        PolyProp("metal_tool_chest", root, new Vector3(1.65f, 0, 3.6f), 180, 0.35f, 0.4f);
+        PolyProp("metal_jerrycan", root, new Vector3(6.0f, 0, -1.95f), 25, 0.45f, 0.3f);
+        PolyProp("metal_jerrycan", root, new Vector3(6.45f, 0, -2.05f), -10, 0.45f, 0.3f);
+        PolyProp("old_gas_mask", root, new Vector3(-4.78f, 1.9f, 0.55f), 90, 0.35f, 0, false);
 
         // 출입구 (복도 끝 철문)
         var exit = Group("Exit", root, new Vector3(0, 0, 11.82f));
@@ -111,6 +121,8 @@ public static partial class GameSceneBuilder
         AssetDatabase.DeleteAsset(navPath);
         AssetDatabase.CreateAsset(surface.navMeshData, navPath);
 
+        UnbatchInteractables();
+        Debug.Log($"[GameSceneBuilder] Shelter: 같은 면에 겹친 상자 {FixCoplanarFaces()}곳을 고침");
         AssetDatabase.SaveAssets();
         EditorSceneManager.SaveScene(scene, SceneDir + "/Shelter.unity");
     }
@@ -148,7 +160,7 @@ public static partial class GameSceneBuilder
         foreach (var x in new[] { -1.02f, 1.02f })
             foreach (var z in new[] { -0.34f, 0.34f })
                 Box("Leg", g, new Vector3(x, 0.43f, z), new Vector3(0.06f, 0.86f, 0.06f), M["metal"], 1f, false);
-        Box("Shelf", g, new Vector3(0, 0.25f, 0), new Vector3(2.1f, 0.04f, 0.7f), M["wood"], 1.2f, false);
+        Box("Shelf", g, new Vector3(0, 0.25f, 0), new Vector3(2.04f, 0.04f, 0.7f), M["wood"], 1.2f, false); // 다리 바깥면보다 안쪽에서 끝난다
         Box("Pegboard", g, new Vector3(0, 1.65f, 0.36f), new Vector3(2.2f, 1.1f, 0.03f), M["wood"], 1.2f, false);
         Box("Vise", g, new Vector3(0.85f, 1.0f, -0.2f), new Vector3(0.18f, 0.12f, 0.22f), M["metal"], 1f, false);
         Prim(PrimitiveType.Cylinder, "HammerHandle", g, new Vector3(-0.4f, 0.96f, -0.1f), new Vector3(0.03f, 0.15f, 0.03f), M["wood"], new Vector3(90, 30, 0));
@@ -188,8 +200,9 @@ public static partial class GameSceneBuilder
         // 바닥 찾기 Raycast(시작점이 상자 안이라 감지 못함)에 걸려 맨 아래 판자 밑으로 떨어져 숨는다.
         Box("SideL", g, new Vector3(-0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, true);
         Box("SideR", g, new Vector3(0.78f, 0.9f, 0), new Vector3(0.04f, 1.8f, 0.45f), M["metal"], 1f, true);
+        // 판자는 옆판 사이에 끼우고 앞을 1cm 들인다 (옆판 바깥면·앞면과 같은 면이 되면 지지직 깜빡인다)
         foreach (var y in new[] { 0.1f, 0.6f, 1.1f, 1.6f })
-            Box("Board", g, new Vector3(0, y, 0), new Vector3(1.6f, 0.03f, 0.45f), M["wood"], 1f, true);
+            Box("Board", g, new Vector3(0, y, -0.005f), new Vector3(1.52f, 0.03f, 0.43f), M["wood"], 1f, true);
         // 뒤판: 좀비 시야(Linecast)가 판자 사이로 선반을 뚫고 지나가지 않게 막는다
         Box("Back", g, new Vector3(0, 0.9f, -0.215f), new Vector3(1.52f, 1.8f, 0.02f), M["metal"], 1f, true);
         if (stocked)
@@ -257,6 +270,127 @@ public static partial class GameSceneBuilder
         hum.rolloffMode = AudioRolloffMode.Linear;
         hum.volume = 0.3f;
         gen.hum = hum;
+    }
+
+    // 화로 (제련): 앞면(화구)이 -Z(거실 쪽), 뒤가 북쪽 벽(z 3.85)에 붙는다. 몸통 x ±0.56, z -0.42~0.38.
+    // 벽돌 몸통 + 쇠 띠·상판, 천장까지 이어진 연통, 화구 안은 발광 머티리얼, 그림자 없는 불빛과 불티.
+    // 콜라이더: 몸통(내비메시 장애물·[F] 대상) + 열린 화구 문·장작 더미(뚫고 지나가지 않게, 모두 Furnace 자식이라 [F] 대상). 철판은 없음
+    static void BuildFurnace(Transform parent, Vector3 pos)
+    {
+        var g = Group("Furnace", parent, pos);
+        var brick = M["brick"];
+        Box("Plinth", g, new Vector3(0, 0.06f, -0.02f), new Vector3(1.12f, 0.12f, 0.8f), M["dirty"], 1.5f, false);
+        // 몸통: 화구 구멍(x ±0.25, y 0.38~0.72)을 남기고 앞면을 네 조각으로 쌓는다
+        Box("Core", g, new Vector3(0, 0.62f, 0.1f), new Vector3(1f, 1f, 0.5f), brick, 1f, false);
+        Box("FrontL", g, new Vector3(-0.375f, 0.62f, -0.25f), new Vector3(0.25f, 1f, 0.2f), brick, 1f, false);
+        Box("FrontR", g, new Vector3(0.375f, 0.62f, -0.25f), new Vector3(0.25f, 1f, 0.2f), brick, 1f, false);
+        Box("FrontLow", g, new Vector3(0, 0.25f, -0.25f), new Vector3(0.5f, 0.26f, 0.2f), brick, 1f, false);
+        Box("FrontHigh", g, new Vector3(0, 0.92f, -0.25f), new Vector3(0.5f, 0.4f, 0.2f), brick, 1f, false);
+        foreach (var y in new[] { 0.3f, 0.98f })
+            Box("Band", g, new Vector3(0, y, 0), new Vector3(1.03f, 0.05f, 0.73f), M["metal"], 1f, false);
+        Box("TopPlate", g, new Vector3(0, 1.145f, 0), new Vector3(1.06f, 0.05f, 0.74f), M["metal"], 1f, false);
+
+        // 화구: 쇠 테두리, 안쪽 벽의 불(발광), 바닥의 숯, 반쯤 열린 쇠문
+        Box("MouthT", g, new Vector3(0, 0.74f, -0.355f), new Vector3(0.6f, 0.04f, 0.02f), M["metal"], 1f, false);
+        Box("MouthB", g, new Vector3(0, 0.36f, -0.355f), new Vector3(0.6f, 0.04f, 0.02f), M["metal"], 1f, false);
+        Box("MouthL", g, new Vector3(-0.28f, 0.55f, -0.355f), new Vector3(0.04f, 0.42f, 0.02f), M["metal"], 1f, false);
+        Box("MouthR", g, new Vector3(0.28f, 0.55f, -0.355f), new Vector3(0.04f, 0.42f, 0.02f), M["metal"], 1f, false);
+        var fire = Box("FireGlow", g, new Vector3(0, 0.55f, -0.16f), new Vector3(0.5f, 0.34f, 0.02f), M["furnaceFire"], 1f, false, null, false);
+        fire.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        Box("CoalBed", g, new Vector3(0, 0.41f, -0.24f), new Vector3(0.46f, 0.06f, 0.16f), M["furnaceCoal"], 1f, false);
+        Box("Coal", g, new Vector3(-0.12f, 0.46f, -0.22f), new Vector3(0.09f, 0.06f, 0.08f), M["furnaceCoal"], 1f, false, new Vector3(10, 25, 0));
+        Box("Coal", g, new Vector3(0.05f, 0.47f, -0.27f), new Vector3(0.1f, 0.07f, 0.07f), M["furnaceCoal"], 1f, false, new Vector3(-8, -30, 6));
+        Box("Coal", g, new Vector3(0.15f, 0.455f, -0.2f), new Vector3(0.07f, 0.05f, 0.07f), M["furnaceCoal"], 1f, false, new Vector3(0, 50, -10));
+        // 경첩(화구 오른쪽 x 0.31, z -0.37)에서 120도 열린 문 (몸통 앞으로 0.4m 튀어나오므로 콜라이더를 둔다)
+        Box("MouthDoor", g, new Vector3(0.435f, 0.55f, -0.587f), new Vector3(0.5f, 0.36f, 0.025f), M["metal"], 1f, true, new Vector3(0, -120, 0));
+        Prim(PrimitiveType.Cylinder, "Hinge", g, new Vector3(0.31f, 0.55f, -0.37f), new Vector3(0.03f, 0.19f, 0.03f), M["metal"]);
+
+        // 연통: 상판에서 천장(y 3.0)까지
+        var flue = new Vector3(0.18f, 0, 0.12f);
+        Prim(PrimitiveType.Cylinder, "FlueCollar", g, flue + new Vector3(0, 1.2f, 0), new Vector3(0.26f, 0.04f, 0.26f), M["metal"]);
+        Prim(PrimitiveType.Cylinder, "Flue", g, flue + new Vector3(0, 2.085f, 0), new Vector3(0.17f, 0.915f, 0.17f), M["metal"]);
+        foreach (var y in new[] { 1.8f, 2.5f })
+            Prim(PrimitiveType.Cylinder, "FlueRing", g, flue + new Vector3(0, y, 0), new Vector3(0.2f, 0.02f, 0.2f), M["metal"]);
+        Prim(PrimitiveType.Cylinder, "CeilingFlange", g, flue + new Vector3(0, 2.98f, 0), new Vector3(0.32f, 0.02f, 0.32f), M["metal"]);
+
+        // 장식: 왼쪽에 쌓아 둔 장작(막대기), 오른쪽 옆면에 기대 둔 철판
+        var wood = Group("Firewood", g, new Vector3(-0.82f, 0, -0.05f));
+        foreach (var (x, y, yaw) in new[] { (-0.11f, 0.05f, 4f), (0f, 0.05f, -3f), (0.11f, 0.05f, 6f), (-0.055f, 0.137f, -5f), (0.055f, 0.137f, 2f), (0f, 0.224f, 8f) })
+            Prim(PrimitiveType.Cylinder, "Log", wood, new Vector3(x, y, 0), new Vector3(0.1f, 0.28f, 0.1f), M["wood"], new Vector3(90, yaw, 0));
+        // 장작 더미 전체를 감싸는 낮은 콜라이더 (플레이어가 통나무를 뚫고 지나가지 않게)
+        var woodCol = wood.gameObject.AddComponent<BoxCollider>();
+        woodCol.center = new Vector3(0, 0.14f, 0);
+        woodCol.size = new Vector3(0.34f, 0.28f, 0.58f);
+        Box("IronPlate", g, new Vector3(0.6f, 0.2f, 0.05f), new Vector3(0.025f, 0.38f, 0.32f), M["metal"], 1f, false, new Vector3(0, 0, 14));
+        Box("IronPlate", g, new Vector3(0.64f, 0.18f, 0.08f), new Vector3(0.025f, 0.34f, 0.28f), M["metal"], 1f, false, new Vector3(0, 6, 18));
+
+        // 불빛: 화구 앞, 그림자 없음. 깜빡임·녹일 때 밝아지는 것은 Furnace가 한다
+        var light = PointLight("FireLight", g, new Vector3(0, 0.6f, -0.65f), new Color(1f, 0.48f, 0.18f), 4f, 6f);
+
+        // 불티: 화구에서 조금씩 튀어 올라 사라진다 (녹이는 동안은 Furnace가 더 뿜는다)
+        var psGo = new GameObject("Embers");
+        psGo.transform.SetParent(g, false);
+        psGo.transform.localPosition = new Vector3(0, 0.62f, -0.42f);
+        psGo.transform.localRotation = Quaternion.Euler(-90, 0, 0);
+        var ps = psGo.AddComponent<ParticleSystem>();
+        var main = ps.main;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.8f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.15f, 0.5f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.03f);
+        main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.78f, 0.38f), new Color(1f, 0.4f, 0.12f));
+        main.gravityModifier = -0.03f; // 뜨거운 공기를 타고 떠오른다
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = 80;
+        var emission = ps.emission;
+        emission.rateOverTime = 3f;
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.scale = new Vector3(0.36f, 0.06f, 0.02f);
+        shape.randomDirectionAmount = 0.25f;
+        var noise = ps.noise;
+        noise.enabled = true;
+        noise.strength = 0.25f;
+        noise.frequency = 0.8f;
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        var grad = new Gradient();
+        grad.SetKeys(
+            new[] { new GradientColorKey(new Color(1f, 0.85f, 0.5f), 0), new GradientColorKey(new Color(1f, 0.4f, 0.1f), 0.6f), new GradientColorKey(new Color(0.4f, 0.1f, 0.05f), 1) },
+            new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1f, 0.1f), new GradientAlphaKey(0, 1) });
+        col.color = grad;
+        var size = ps.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 1, 1, 0.3f));
+        psGo.GetComponent<ParticleSystemRenderer>().sharedMaterial = M["fire"];
+
+        // 소리: 늘 나는 탁탁 소리 + 녹일 때의 불길 소리 (클립은 Furnace가 FurnaceAudio로 만든다)
+        var mouth = Group("Mouth", g, new Vector3(0, 0.55f, -0.4f));
+        var crackle = LoopSource(mouth.gameObject, 0.32f, 9f);
+        var roar = LoopSource(mouth.gameObject, 0.6f, 16f);
+
+        var box = g.gameObject.AddComponent<BoxCollider>();
+        box.center = new Vector3(0, 0.6f, -0.02f);
+        box.size = new Vector3(1.12f, 1.2f, 0.8f);
+        var furnace = g.gameObject.AddComponent<Furnace>();
+        furnace.fireLight = light;
+        furnace.mouthGlow = fire.GetComponent<MeshRenderer>();
+        furnace.embers = ps;
+        furnace.crackle = crackle;
+        furnace.roar = roar;
+    }
+
+    // 3D 반복 소리 (발전기 웅웅거림과 같은 설정)
+    static AudioSource LoopSource(GameObject go, float volume, float maxDistance)
+    {
+        var src = go.AddComponent<AudioSource>();
+        src.loop = true;
+        src.playOnAwake = false;
+        src.spatialBlend = 1;
+        src.minDistance = 1f;
+        src.maxDistance = maxDistance;
+        src.rolloffMode = AudioRolloffMode.Linear;
+        src.volume = volume;
+        return src;
     }
 
     // 배터리 라디오 (정전 중에도 켜진다). 앞면이 -Z(의자 쪽)를 본다

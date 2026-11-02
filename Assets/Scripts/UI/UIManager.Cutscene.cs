@@ -245,6 +245,7 @@ public partial class UIManager
         skipImg.type = Image.Type.Sliced;
         skipImg.color = Color.white;
         var skipButton = skip.gameObject.AddComponent<Button>();
+        UIPress.Attach(skipButton);
         skipButton.targetGraphic = skipImg;
         var colors = skipButton.colors;
         colors.normalColor = new Color(1, 1, 1, 0);
