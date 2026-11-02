@@ -26,7 +26,7 @@ public class PlayerCombat : MonoBehaviour
     void Attack(bool club)
     {
         var b = GameBalance.Data;
-        cooldown = club ? 0.75f : 0.5f;
+        cooldown = club ? b.clubAttackDelay : b.playerAttackDelay;
         if (PlayerHands.Instance != null)
         {
             if (club) PlayerHands.Instance.PlaySwing();
@@ -41,7 +41,7 @@ public class PlayerCombat : MonoBehaviour
             var target = hit.collider.GetComponentInParent<IDamageable>();
             if (target != null)
             {
-                target.TakeDamage(club ? b.clubDamage : b.fistDamage, cam.transform.forward);
+                target.TakeDamage(club ? b.clubDamage : b.playerDamage, cam.transform.forward);
                 source.PlayOneShot(ProceduralAudio.Hit(), 0.9f);
                 PlayerController.Instance.Shake(0.15f);
             }

@@ -6,9 +6,10 @@ using UnityEngine.UI;
 // 배치: 왼쪽 위 제목 + 왼쪽 세로 메뉴(리썰 컴퍼니·오버워치), 맨 아래 패치노트, 오른쪽 아래 버전
 public partial class UIManager
 {
-    const string GameTitle = "핵폭발 생존";
-    const string GameSubtitle = "NUCLEAR  SURVIVAL   ·   가제";
+    const string GameTitle = "벙커랩";
+    const string GameSubtitle = "BUNKER  LAB   ·   NUCLEAR  SURVIVAL";
     GameObject mainMenuRoot, pauseRoot;
+    Button continueButton;
     int settingsTab;
 
     public bool IsPaused { get; private set; }
@@ -44,8 +45,8 @@ public partial class UIManager
         line.gameObject.AddComponent<Image>().color = Accent;
 
         float y = -330, step = 66;
-        MenuButton(m, "새 게임", new Vector2(92, y), () => GameManager.Instance.NewGame());
-        MenuButton(m, "이어하기", new Vector2(92, y -= step), null, false, "저장 기능 준비 중");
+        MenuButton(m, "새 게임", new Vector2(92, y), ConfirmNewGame);
+        continueButton = MenuButton(m, "이어하기", new Vector2(92, y -= step), () => GameManager.Instance.ContinueGame(), true, "");
         MenuButton(m, "설정", new Vector2(92, y -= step), () => OpenSettings());
         MenuButton(m, "조작법", new Vector2(92, y -= step), OpenControls);
         MenuButton(m, "제작진", new Vector2(92, y -= step), OpenCredits);
@@ -80,8 +81,8 @@ public partial class UIManager
         MenuButton(p, "계속하기", new Vector2(92, y), () => SetPaused(false));
         MenuButton(p, "설정", new Vector2(92, y -= step), () => OpenSettings());
         MenuButton(p, "조작법", new Vector2(92, y -= step), OpenControls);
-        MenuButton(p, "메인 메뉴로", new Vector2(92, y -= step), () => GameManager.Instance.GoToMainMenu());
-        MenuButton(p, "게임 종료", new Vector2(92, y -= step), () => GameManager.Instance.QuitGame());
+        MenuButton(p, "메인 메뉴로", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("메인 메뉴로", () => GameManager.Instance.GoToMainMenu()));
+        MenuButton(p, "게임 종료", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("게임 종료", () => GameManager.Instance.QuitGame()));
         return p.gameObject;
     }
 
@@ -131,7 +132,58 @@ public partial class UIManager
     public void ShowMainMenu()
     {
         mainMenuRoot.SetActive(true);
+        RefreshContinueButton();
         ClosePanel();
+    }
+
+    // 저장된 게임이 있으면 지워진다는 것을 먼저 묻는다
+    void ConfirmNewGame()
+    {
+        if (SaveSystem.LoadData() == null)
+        {
+            GameManager.Instance.NewGame();
+            return;
+        }
+        OpenPanel("새 게임", c =>
+        {
+            Line(c, $"저장된 게임({SaveSystem.Summary()})이 지워집니다.\n처음부터 새로 시작할까요?", 26);
+            Line(c, "");
+            var row = Row(c, false);
+            RowButton(row, "새로 시작", () => GameManager.Instance.NewGame(), true, 260);
+            RowButton(row, "취소", ClosePanel, true, 200);
+        });
+    }
+
+    // 탐험 도중 나가면 이어하기 때 가져간 물건을 잃는다는 것을 알린다 (방공호에서는 바로 나간다)
+    void ConfirmLeaveExpedition(string title, Action leave)
+    {
+        if (GameManager.Instance.InShelter)
+        {
+            leave();
+            return;
+        }
+        OpenPanel(title, c =>
+        {
+            Line(c, "탐험 도중에 나가면 진행 상황은 출발할 때로 돌아가고,\n이어할 때 가져간 물건을 모두 잃습니다.", 24);
+            Line(c, "");
+            var row = Row(c, false);
+            RowButton(row, "나가기", () => { ClosePanel(); leave(); }, true, 220);
+            RowButton(row, "취소", ClosePanel, true, 200);
+        });
+    }
+
+    // 저장 파일이 있을 때만 '이어하기'를 누를 수 있고, 오른쪽에 턴과 저장 시각을 보여 준다
+    void RefreshContinueButton()
+    {
+        if (continueButton == null) return;
+        bool exists = SaveSystem.Exists;
+        bool has = exists && SaveSystem.LoadData() != null;
+        continueButton.interactable = has;
+        var texts = continueButton.GetComponentsInChildren<Text>(true);
+        texts[0].color = has ? Text : new Color(1, 1, 1, 0.35f);
+        if (texts.Length > 1) texts[1].text = has ? SaveSystem.Summary() : exists ? "저장 파일이 손상됨" : "저장된 게임 없음";
+        var bar = continueButton.transform.Find("Bar").GetComponent<Image>();
+        bar.color = has ? new Color(Accent.r, Accent.g, Accent.b, 0.7f) : new Color(1, 1, 1, 0.15f);
     }
 
     public void HideMainMenu() => mainMenuRoot.SetActive(false);

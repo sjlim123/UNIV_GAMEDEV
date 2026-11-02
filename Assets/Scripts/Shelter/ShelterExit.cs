@@ -2,10 +2,12 @@ using UnityEngine;
 
 public class ShelterExit : Interactable
 {
-    public override string Prompt => "출입구 - 탐험 출발 (1턴)";
+    public override string Prompt => ShelterInvasion.ZombiesInside ? "출입구 - 좀비를 먼저 처치해야 한다" : "출입구 - 탐험 출발 (1턴)";
 
     public override void Interact(PlayerInteractor player)
     {
+        // 정전 때 들어온 좀비가 살아 있으면 출발할 수 없다
+        if (ShelterInvasion.BlockedByZombies()) return;
         var gm = GameManager.Instance;
         var ui = gm.UI;
         var s = gm.State;
@@ -18,9 +20,19 @@ public class ShelterExit : Interactable
             if (s.Carried.Count("club") == 0) ui.Line(c, "! 무기가 없다. 맨주먹으로는 버티기 힘들다.", 22, UIManager.Danger);
             if (s.Hunger < 25 || s.Thirst < 25) ui.Line(c, "! 배고픔이나 갈증이 심하다. 먼저 먹고 마시자.", 22, UIManager.Danger);
             if (s.Health < 40) ui.Line(c, "! 체력이 낮다. 침대에서 쉬거나 치료하자.", 22, UIManager.Danger);
+            if (s.Power <= 0) ui.Line(c, "! 전력이 없어 방폭문이 열려 있다. 돌아와도 놈들이 계속 들어온다.", 22, UIManager.Danger);
             ui.Line(c, "");
             var row = ui.Row(c);
-            ui.RowButton(row, "출발한다", () => gm.StartExpedition(), true, 200);
+            ui.RowButton(row, "출발한다", () =>
+            {
+                // 창을 띄워 둔 사이에 좀비가 들어왔을 수도 있다
+                if (ShelterInvasion.BlockedByZombies())
+                {
+                    ui.ClosePanel();
+                    return;
+                }
+                gm.StartExpedition();
+            }, true, 200);
             ui.RowButton(row, "아직 아니다", ui.ClosePanel, true, 200);
         });
     }

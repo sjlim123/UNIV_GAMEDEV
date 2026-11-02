@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// 1인칭 이동: WASD, 마우스 시점, Shift 달리기, C 앉기. 발소리와 소음 수치도 여기서 만든다.
+// 1인칭 이동: WASD, 마우스 시점, Shift 달리기(스테미너 소모), C 앉기. 발소리와 소음 수치도 여기서 만든다.
 // 이동 속도는 GameBalance, 마우스 감도는 설정 메뉴에서 바꾼다.
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
@@ -16,10 +16,14 @@ public class PlayerController : MonoBehaviour
     CharacterController cc;
     AudioSource stepSource;
     float pitch, verticalVelocity, bobTimer, stepDistance, shake, extraNoise;
+    float staminaRegenTimer;
+    bool exhausted; // 스테미너를 다 쓰면 일정량 찰 때까지 달릴 수 없다
 
     public bool IsCrouching { get; private set; }
     public bool IsRunning { get; private set; }
     public float HorizontalSpeed { get; private set; }
+    // 0 ~ GameBalance.staminaMax. 달리면 줄고, Shift를 떼고 있으면 0.5초마다 찬다
+    public float Stamina { get; private set; }
     // 0 = 조용함, 0.25 = 앉아서 이동, 1 = 걷기, 2 = 달리기. 좀비가 이 값으로 소리를 듣는다
     public float Noise { get; private set; }
 
@@ -38,6 +42,7 @@ public class PlayerController : MonoBehaviour
         cc = GetComponent<CharacterController>();
         stepSource = gameObject.AddComponent<AudioSource>();
         stepSource.spatialBlend = 0;
+        Stamina = GameBalance.Data.staminaMax;
     }
 
     void OnDestroy()
@@ -46,6 +51,27 @@ public class PlayerController : MonoBehaviour
     }
 
     public void Shake(float amount) => shake = Mathf.Max(shake, amount);
+
+    void UpdateStamina(bool shift, float dt, GameBalance balance)
+    {
+        if (IsRunning)
+        {
+            Stamina = Mathf.Max(0, Stamina - balance.staminaRunCostPerSecond * dt);
+            if (Stamina <= 0) exhausted = true;
+        }
+        if (shift)
+        {
+            staminaRegenTimer = 0;
+            return;
+        }
+        staminaRegenTimer += dt;
+        while (staminaRegenTimer >= 0.5f)
+        {
+            staminaRegenTimer -= 0.5f;
+            Stamina = Mathf.Min(balance.staminaMax, Stamina + balance.staminaRegenPerHalfSecond);
+        }
+        if (exhausted && Stamina >= balance.staminaMinToRun) exhausted = false;
+    }
     public void MakeNoise(float level) => extraNoise = Mathf.Max(extraNoise, level);
 
     void Update()
@@ -81,8 +107,10 @@ public class PlayerController : MonoBehaviour
             pitch = Mathf.Clamp(pitch - d.y, -85f, 85f);
         }
 
-        IsRunning = !blocked && !IsCrouching && kb != null && kb.leftShiftKey.isPressed && move.y > 0;
-        float speed = IsCrouching ? balance.crouchSpeed : IsRunning ? balance.runSpeed : balance.walkSpeed;
+        bool shift = !blocked && kb != null && kb.leftShiftKey.isPressed;
+        IsRunning = shift && !IsCrouching && move.y > 0 && !exhausted && Stamina > 0;
+        UpdateStamina(shift, dt, balance);
+        float speed = IsCrouching ? balance.CrouchSpeed : IsRunning ? balance.RunSpeed : balance.WalkSpeed;
 
         Vector3 dir = transform.right * move.x + transform.forward * move.y;
         if (dir.sqrMagnitude > 1) dir.Normalize();

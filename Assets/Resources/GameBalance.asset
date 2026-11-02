@@ -22,13 +22,21 @@ MonoBehaviour:
   startHunger: 90
   startThirst: 90
   startPower: 60
-  walkSpeed: 3.2
-  runSpeed: 5.8
-  crouchSpeed: 1.6
-  carryCapacity: 15
-  backpackBonus: 8
-  fistDamage: 15
-  clubDamage: 45
+  speedUnit: 0.4
+  playerMaxHealth: 100
+  playerDamage: 10
+  playerSpeed: 8
+  playerAttackDelay: 1
+  runMultiplier: 1.8
+  crouchMultiplier: 0.5
+  clubDamage: 30
+  clubAttackDelay: 1.2
+  staminaMax: 100
+  staminaRunCostPerSecond: 20
+  staminaRegenPerHalfSecond: 5
+  staminaMinToRun: 15
+  carryCapacity: 5
+  backpackBonus: 5
   flashlightSecondsPerBattery: 300
   fuelPower: 35
   expeditionSeconds: 300
@@ -39,11 +47,53 @@ MonoBehaviour:
   zombieSpawnIntervalStart: 50
   zombieSpawnIntervalEnd: 20
   safeRadius: 30
-  zombieHealth: 100
+  traderChance: 0.1
+  raiderChance: 0.3
+  zombie:
+    displayName: "\uC880\uBE44"
+    health: 100
+    damage: 12
+    speed: 8
+    attackDelay: 1.6
+    fromTurn: 1
+  leatherZombie:
+    displayName: "\uAC00\uC8FD \uC880\uBE44"
+    health: 200
+    damage: 20
+    speed: 10
+    attackDelay: 1.6
+    fromTurn: 10
+  rangedZombie:
+    displayName: "\uC6D0\uAC70\uB9AC \uC880\uBE44"
+    health: 150
+    damage: 10
+    speed: 8
+    attackDelay: 3
+    fromTurn: 15
+  heavyZombie:
+    displayName: "\uAC70\uB300 \uC880\uBE44"
+    health: 300
+    damage: 30
+    speed: 10
+    attackDelay: 3
+    fromTurn: 30
+  dog:
+    displayName: "\uB4E4\uAC1C"
+    health: 80
+    damage: 8
+    speed: 13
+    attackDelay: 2
+    fromTurn: 1
+  raider:
+    displayName: "\uC57D\uD0C8\uC790"
+    health: 100
+    damage: 15
+    speed: 10
+    attackDelay: 1
+    fromTurn: 5
   zombieWanderSpeed: 0.7
-  zombieChaseSpeed: 2.8
   zombieSightRange: 11
   zombieHearingRange: 8
-  zombieDamage: 12
-  zombieAttackCooldown: 1.6
   flashlightVisibility: 1.5
+  rangedAttackRange: 12
+  outageZombieInterval: 20

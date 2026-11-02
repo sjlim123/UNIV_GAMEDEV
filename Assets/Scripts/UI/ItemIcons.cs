@@ -2,18 +2,32 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
-// 아이템 모양을 작은 카메라로 한 번 찍어 핫바 아이콘으로 쓴다 (아이콘 그림 에셋이 없어도 된다)
+// 아이템 아이콘. ItemDef.Icon 그림(Resources/ItemIcons/{이름}.png)이 있으면 그것을 쓰고,
+// 없으면 아이템 모양을 작은 카메라로 한 번 찍어 쓴다 (아이콘 그림 에셋이 없어도 된다)
+// 그림을 바꾸려면 같은 이름의 PNG만 갈아 끼우면 된다 (투명 배경 정사각형 권장)
 public static class ItemIcons
 {
     const int Size = 128;
+    const string Folder = "ItemIcons/";
     static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
     public static Sprite Get(string id)
     {
         if (cache.TryGetValue(id, out var s) && s != null) return s;
-        s = Render(id);
+        s = Load2D(id);
+        if (s == null) s = Render(id);
         cache[id] = s;
         return s;
+    }
+
+    // 2D 아이콘 그림. 텍스처 가져오기 설정(Sprite 여부)과 상관없이 코드에서 스프라이트를 만든다
+    static Sprite Load2D(string id)
+    {
+        string icon = ItemDatabase.Get(id).Icon;
+        if (string.IsNullOrEmpty(icon)) return null;
+        var tex = Resources.Load<Texture2D>(Folder + icon);
+        if (tex == null) return null;
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
     }
 
     static Sprite Render(string id)

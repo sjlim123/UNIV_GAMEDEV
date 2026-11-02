@@ -10,6 +10,11 @@ public class Generator : Interactable
     {
         var gm = GameManager.Instance;
         var s = gm.State;
+        if (s.Power >= 100f)
+        {
+            gm.UI.ShowMessage("전력이 이미 가득 차 있다.");
+            return;
+        }
         if (!s.ConsumeFromAnywhere("fuel", 1))
         {
             gm.UI.ShowMessage("연료가 없다. 도시에서 연료통을 찾아야 한다.");

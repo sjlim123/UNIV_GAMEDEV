@@ -62,6 +62,11 @@ public class PlayerHotbar : MonoBehaviour
     public void Drop(string id)
     {
         var s = GameManager.Instance.State;
+        if (id == "backpack" && !s.CanDropBackpack())
+        {
+            GameManager.Instance.UI.ShowMessage("가방을 버리면 너무 무겁다. 다른 물건부터 버려야 한다.");
+            return;
+        }
         if (!s.Carried.Remove(id)) return;
         PickupItem.Spawn(id, 1, transform.position + transform.forward * 0.8f + Vector3.up * 0.3f);
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.4f);
