@@ -241,18 +241,19 @@ public static partial class GameSceneBuilder
 
     static void PoseZombie(GameObject prefab, Vector3 pos, float yaw)
     {
-        var z = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-        PrefabUtility.UnpackPrefabInstance(z, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        // 실행하면 디자인 시트의 일반 좀비 몸을 짓고 이 자세로 서서 흔들린다 (CharacterFigure)
+        var z = new GameObject("MenuZombie");
         z.transform.position = pos;
         z.transform.rotation = Quaternion.Euler(0, yaw, 0);
-        Object.DestroyImmediate(z.GetComponent<Zombie>());
-        Object.DestroyImmediate(z.GetComponent<NavMeshAgent>());
-        var t = z.transform;
-        t.Find("Body").localRotation = Quaternion.Euler(14, 0, 4);
-        t.Find("Body/ArmL").localRotation = Quaternion.Euler(-70, 0, -6);
-        t.Find("Body/ArmR").localRotation = Quaternion.Euler(-55, 0, 8);
-        t.Find("Body/Head").localRotation = Quaternion.Euler(8, 15, 24);
-        t.Find("LegL").localRotation = Quaternion.Euler(12, 0, 0);
-        t.Find("LegR").localRotation = Quaternion.Euler(-8, 0, 0);
+        var f = z.AddComponent<CharacterFigure>();
+        f.kind = FigureKind.Zombie;
+        f.variant = Mathf.Abs(Mathf.RoundToInt(pos.z)) % 4;
+        f.glowTemplate = M["zEye"];
+        f.bodyPose = new Vector3(14, 0, 4);
+        f.armLPose = new Vector3(-70, 0, -6);
+        f.armRPose = new Vector3(-55, 0, 8);
+        f.headPose = new Vector3(8, 15, 24);
+        f.legLPose = new Vector3(12, 0, 0);
+        f.legRPose = new Vector3(-8, 0, 0);
     }
 }

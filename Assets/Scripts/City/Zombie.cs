@@ -13,7 +13,10 @@ public class Zombie : MonoBehaviour, IDamageable
     // 속도·시야·피해 등은 GameBalance 에셋에서 조정한다
     public float attackRange = 1.6f;
 
-    public Transform body, head, armL, armR, legL, legR;
+    // 관절 (Configure가 몸을 지을 때 채운다): 몸통·머리·턱·어깨·팔꿈치·엉덩이·무릎
+    public Transform body, head, armL, armR, legL, legR, foreL, foreR, shinL, shinR, jaw;
+    // 눈이 빛나는 재질의 원본 (빌드에 발광 셰이더가 들어가게 프리팹이 들고 있는다)
+    public Material eyeTemplate;
 
     // 원거리 좀비: 이보다 가까우면 뒷걸음질쳐 거리를 벌린다 (최대 사거리는 GameBalance.rangedAttackRange)
     public const float RangedKeepMin = 6f;
@@ -36,7 +39,11 @@ public class Zombie : MonoBehaviour, IDamageable
     PlayerFlashlight playerLight;
     float health, lostSightTimer, attackTimer, groanTimer, wanderTimer, lookTimer, staggerTimer, repathTimer, doorTimer, animPhase, lunge;
     float windup, windupLength, stepDistance, baseAttackRange, size = 1f;
-    bool shooting, backpedal, guarding;
+    float hitReact, mouth; // 맞아서 움찔한 정도, 입을 벌린 정도 (0~1, 저절로 줄어든다)
+    bool shooting, backpedal, guarding, configured;
+    CharacterRig rig;
+    HitFlash flash;
+    int armorLost; // 가죽 좀비: 떨어져 나간 갑옷 조각 수
     Vector3 lastKnown, guardPoint;
 
     // 원거리 좀비의 새총 (다른 종류는 null)
@@ -66,6 +73,7 @@ public class Zombie : MonoBehaviour, IDamageable
     public void Configure(ZombieKind kind)
     {
         if (state == State.Dead) return;
+        configured = true;
         Kind = kind;
         stats = StatsFor(kind);
         health = stats.health;
@@ -75,7 +83,18 @@ public class Zombie : MonoBehaviour, IDamageable
         // 거대 좀비는 팔이 길고, 약탈자는 방망이만큼 더 닿는다
         attackRange = baseAttackRange * (kind == ZombieKind.Heavy ? 1.3f : kind == ZombieKind.Raider ? 1.2f : 1f);
         if (kind == ZombieKind.Raider) groanTimer = Random.Range(6f, 12f);
-        ZombieLooks.Apply(this, kind, out sling);
+        rig = ZombieLooks.Apply(this, kind, out sling, out _);
+        body = rig.Body; head = rig.Head; jaw = rig.Jaw;
+        armL = rig.ArmL; armR = rig.ArmR; foreL = rig.ForeL; foreR = rig.ForeR;
+        legL = rig.LegL; legR = rig.LegR; shinL = rig.ShinL; shinR = rig.ShinR;
+        flash = HitFlash.For(gameObject, rig.Renderers);
+        armorLost = 0;
+    }
+
+    // Configure를 부르지 않고 놓인 좀비는 일반 좀비로 짓는다
+    void Start()
+    {
+        if (!configured) Configure(ZombieKind.Normal);
     }
 
     // 이 자리 근처만 맴돈다 (2층 전리품을 지키는 좀비)
@@ -100,6 +119,7 @@ public class Zombie : MonoBehaviour, IDamageable
 
     void Awake()
     {
+        if (eyeTemplate != null) ProcTex.GlowTemplate = eyeTemplate;
         agent = GetComponent<NavMeshAgent>();
         balance = GameBalance.Data;
         stats = balance.zombie;
@@ -464,6 +484,7 @@ public class Zombie : MonoBehaviour, IDamageable
         groanTimer = chasing ? Random.Range(1.2f, 2.6f) : Mathf.Lerp(Random.Range(5f, 11f), Random.Range(2.2f, 4.5f), near);
         voice.pitch = VoicePitch();
         voice.PlayOneShot(ProceduralAudio.ZombieGroan(), chasing ? 1f : 0.85f);
+        mouth = 1;
     }
 
     void Scream()
@@ -478,6 +499,7 @@ public class Zombie : MonoBehaviour, IDamageable
         voice.pitch = VoicePitch();
         voice.PlayOneShot(ProceduralAudio.ZombieScream(), 1f);
         groanTimer = 2f;
+        mouth = 1.3f;
     }
 
     // 발소리: 배회할 땐 작게, 쫓아올 땐 크게
@@ -510,33 +532,64 @@ public class Zombie : MonoBehaviour, IDamageable
 
     // ---------- 피해·죽음 ----------
 
+    // direction이 0이면 불에 타는 것처럼 계속 받는 피해: 움찔하거나 밀리지 않는다
     public void TakeDamage(float amount, Vector3 direction)
     {
         if (state == State.Dead) return;
         health -= amount;
-        bool heavy = Kind == ZombieKind.Heavy;
-        staggerTimer = heavy ? 0.2f : 0.5f;
-        if (!heavy)
+        bool dot = direction == Vector3.zero;
+        if (!dot)
         {
-            // 맞으면 공격 준비가 끊긴다 (거대 좀비는 버틴다). 당기던 새총 고무줄은 놓쳐서 튕겨 돌아간다
-            if (windup > 0 && shooting)
+            bool heavy = Kind == ZombieKind.Heavy;
+            staggerTimer = heavy ? 0.2f : 0.5f;
+            hitReact = heavy ? 0.5f : 1f;
+            if (!heavy)
             {
-                if (slingDrawn) ProceduralAudio.PlayAt3D(ProceduralAudio.SlingSnap(), SlingPoint(), 0.5f, Random.Range(1.1f, 1.25f));
-                ReleaseSling();
+                // 맞으면 공격 준비가 끊긴다 (거대 좀비는 버틴다). 당기던 새총 고무줄은 놓쳐서 튕겨 돌아간다
+                if (windup > 0 && shooting)
+                {
+                    if (slingDrawn) ProceduralAudio.PlayAt3D(ProceduralAudio.SlingSnap(), SlingPoint(), 0.5f, Random.Range(1.1f, 1.25f));
+                    ReleaseSling();
+                }
+                windup = 0;
             }
-            windup = 0;
+            if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * (heavy ? 0.1f : 0.35f));
+            if (flash != null) flash.Flash(HitFlash.HitColor);
+            if (Kind == ZombieKind.Leather) LoseArmor(direction);
         }
-        if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * (heavy ? 0.1f : 0.35f));
-        voice.pitch = IsRaider ? Random.Range(1f, 1.15f) : VoicePitch() * 1.1f;
-        voice.PlayOneShot(IsRaider ? ProceduralAudio.Hurt() : ProceduralAudio.ZombieHurt(), 0.9f);
+        if (!dot || Random.value < 0.35f)
+        {
+            voice.pitch = IsRaider ? Random.Range(1f, 1.15f) : VoicePitch() * 1.1f;
+            voice.PlayOneShot(IsRaider ? ProceduralAudio.Hurt() : ProceduralAudio.ZombieHurt(), dot ? 0.6f : 0.9f);
+            mouth = 1;
+        }
         if (PlayerController.Instance != null) lastKnown = PlayerController.Instance.transform.position;
         state = State.Chase;
-        if (health <= 0) StartCoroutine(Die(direction));
+        if (health <= 0) StartCoroutine(Die(dot ? -transform.forward : direction));
+    }
+
+    // 가죽 좀비: 체력이 줄 때마다 갑옷 조각(가슴·어깨·무릎·모자)이 하나씩 떨어져 나간다
+    void LoseArmor(Vector3 direction)
+    {
+        if (rig == null || rig.Armor.Count == 0) return;
+        float lost = 1 - Mathf.Clamp01(health / Mathf.Max(1, stats.health));
+        int shouldLose = Mathf.Min(rig.Armor.Count, Mathf.FloorToInt(lost * (rig.Armor.Count + 1)));
+        while (armorLost < shouldLose)
+        {
+            // 아직 붙어 있는 조각 중 아무거나
+            var left = rig.Armor.FindAll(t => t != null && t.IsChildOf(transform));
+            if (left.Count == 0) break;
+            var piece = left[Random.Range(0, left.Count)];
+            armorLost++;
+            HitEffects.DropPiece(piece, direction);
+            ProceduralAudio.PlayAt3D(ProceduralAudio.Rustle(), piece.position, 0.9f, 0.6f);
+        }
     }
 
     IEnumerator Die(Vector3 direction)
     {
         state = State.Dead;
+        GameManager.Instance.NoteKill(false);
         windup = 0;
         if (stretchSound != null) stretchSound.Stop();
         if (sling != null) sling.Relax(); // 당기던 고무줄을 놓고 쓰러진다
@@ -549,20 +602,44 @@ public class Zombie : MonoBehaviour, IDamageable
         voice.pitch = IsRaider ? 0.85f : VoicePitch() * 0.75f;
         voice.PlayOneShot(IsRaider ? ProceduralAudio.Hurt() : ProceduralAudio.ZombieGroan(), 1f);
 
-        // 맞은 방향으로 쓰러진다
+        // 무릎이 꺾이며 맞은 방향으로 쓰러진다. 팔은 힘없이 늘어진다
         var flat = new Vector3(direction.x, 0, direction.z).normalized;
         var axis = Vector3.Cross(Vector3.up, flat);
         if (axis.sqrMagnitude < 0.01f) axis = transform.right;
         var startRot = transform.rotation;
         var endRot = Quaternion.AngleAxis(88, axis) * startRot;
-        for (float t = 0; t < 1; t += Time.deltaTime / 0.6f)
+        Quaternion bodyFrom = body != null ? body.localRotation : Quaternion.identity, headFrom = head != null ? head.localRotation : Quaternion.identity;
+        Quaternion armLFrom = armL != null ? armL.localRotation : Quaternion.identity, armRFrom = armR != null ? armR.localRotation : Quaternion.identity;
+        for (float t = 0; t < 1; t += Time.deltaTime / 0.75f)
         {
-            transform.rotation = Quaternion.Slerp(startRot, endRot, t * t);
+            float buckle = Mathf.Clamp01(t * 2.2f);       // 먼저 무릎이 꺾이고
+            float fall = Mathf.Clamp01((t - 0.2f) / 0.8f); // 이어서 몸이 넘어간다
+            transform.rotation = Quaternion.Slerp(startRot, endRot, fall * fall);
+            if (shinL != null) shinL.localRotation = Quaternion.Euler(55 * buckle, 0, 0);
+            if (shinR != null) shinR.localRotation = Quaternion.Euler(70 * buckle, 0, 0);
+            if (legL != null) legL.localRotation = Quaternion.Euler(-25 * buckle, 0, -4 * buckle);
+            if (legR != null) legR.localRotation = Quaternion.Euler(-35 * buckle, 0, 6 * buckle);
+            if (body != null) body.localRotation = Quaternion.Slerp(bodyFrom, Quaternion.Euler(28, 0, 6), buckle);
+            if (head != null) head.localRotation = Quaternion.Slerp(headFrom, Quaternion.Euler(35, 20, 25), buckle);
+            if (armL != null) armL.localRotation = Quaternion.Slerp(armLFrom, Quaternion.Euler(-30, 0, -35), fall);
+            if (armR != null) armR.localRotation = Quaternion.Slerp(armRFrom, Quaternion.Euler(-60, 0, 30), fall);
+            if (jaw != null) jaw.localRotation = Quaternion.Euler(28 * buckle, 0, 0);
             yield return null;
         }
         transform.rotation = endRot;
         ProceduralAudio.PlayAt3D(ProceduralAudio.Bang(), transform.position, 0.5f, 0.6f);
+        DropLoot();
         Destroy(gameObject, 40f);
+    }
+
+    // 일반·가죽·원거리 좀비는 쓰러진 자리에 밧줄·천·고철 중 하나를 떨어뜨린다
+    static readonly string[] ZombieLoot = { "rope", "cloth", "metal" };
+
+    void DropLoot()
+    {
+        if (Kind != ZombieKind.Normal && Kind != ZombieKind.Leather && Kind != ZombieKind.Ranged) return;
+        var side = transform.right * Random.Range(-0.4f, 0.4f) + Vector3.up * 0.5f;
+        PickupItem.Spawn(ZombieLoot[Random.Range(0, ZombieLoot.Length)], 1, transform.position + side);
     }
 
     // ---------- 움직임 ----------
@@ -573,9 +650,38 @@ public class Zombie : MonoBehaviour, IDamageable
         float speed = agent.enabled ? agent.velocity.magnitude : 0;
         float wind = windup > 0 && windupLength > 0 ? 1 - windup / windupLength : 0; // 예비 동작 진행도 0→1
         lunge = Mathf.MoveTowards(lunge, 0, dt * 3);
+        hitReact = Mathf.MoveTowards(hitReact, 0, dt * 5);
+        mouth = Mathf.MoveTowards(mouth, 0, dt * 1.4f);
         if (Kind == ZombieKind.Raider) AnimateRaider(dt, speed, wind);
         else if (Kind == ZombieKind.Heavy) AnimateHeavy(dt, speed, wind);
         else AnimateZombie(dt, speed, wind);
+        // 맞으면 몸통이 뒤로 젖혀지고 머리가 꺾인다
+        if (hitReact > 0)
+        {
+            float k = Mathf.Sin(hitReact * Mathf.PI * 0.5f);
+            if (body != null) body.localRotation *= Quaternion.Euler(-22 * k, 0, 8 * k);
+            if (head != null) head.localRotation *= Quaternion.Euler(-25 * k, 0, -10 * k);
+        }
+        // 입: 신음·비명 때 크게 벌리고, 평소에도 반쯤 벌리고 있다 (약탈자는 다문다)
+        if (jaw != null)
+        {
+            float open = IsRaider ? 0 : 7 + 22 * Mathf.Clamp01(mouth) + 18 * lunge + Mathf.Sin(animPhase * 1.7f) * 3;
+            jaw.localRotation = Quaternion.Euler(open, 0, 0);
+        }
+    }
+
+    // 무릎: 다리가 앞으로 넘어오는 동안 굽힌다 (limp가 크면 왼다리를 덜 굽혀 질질 끈다)
+    void SetKnees(float amplitude, float limp = 0f)
+    {
+        float l = Mathf.Max(0, -Mathf.Cos(animPhase)), r = Mathf.Max(0, Mathf.Cos(animPhase));
+        if (shinL != null) shinL.localRotation = Quaternion.Euler(4 + l * amplitude * (1 - limp), 0, 0);
+        if (shinR != null) shinR.localRotation = Quaternion.Euler(4 + r * amplitude, 0, 0);
+    }
+
+    void SetElbows(float left, float right)
+    {
+        if (foreL != null) foreL.localRotation = Quaternion.Euler(left, 0, 0);
+        if (foreR != null) foreR.localRotation = Quaternion.Euler(right, 0, 0);
     }
 
     void SetLegs(float amplitude)
@@ -588,7 +694,11 @@ public class Zombie : MonoBehaviour, IDamageable
     void AnimateZombie(float dt, float speed, float wind)
     {
         animPhase += dt * (1.2f + speed * 2.6f);
-        SetLegs(28 * Mathf.Clamp01(speed / 2f));
+        float walk = Mathf.Clamp01(speed / 2f);
+        SetLegs(28 * walk);
+        SetKnees(40 * walk + 3, Kind == ZombieKind.Normal ? 0.6f : 0.2f);
+        // 팔꿈치를 살짝 굽혀 할퀴려는 손
+        SetElbows(-14 - lunge * 20 + Mathf.Sin(animPhase * 0.9f) * 6, -10 - lunge * 20 + Mathf.Sin(animPhase * 0.9f + 1.2f) * 6);
         float armBase = state == State.Chase ? -85f : -60f;
         float aL = armBase - lunge * 25 + Mathf.Sin(animPhase * 0.7f) * 8;
         float aR = armBase - lunge * 25 + Mathf.Sin(animPhase * 0.7f + 1.5f) * 8;
@@ -640,6 +750,10 @@ public class Zombie : MonoBehaviour, IDamageable
             loaded = false;
         }
         float aim = slingAim;
+        // 겨누는 동안 팔꿈치를 편다 (새총·주머니 위치가 곧은 팔 기준이다)
+        float straight = Mathf.Max(aim, holdK);
+        if (foreL != null) foreL.localRotation = Quaternion.Slerp(foreL.localRotation, Quaternion.identity, straight);
+        if (foreR != null) foreR.localRotation = Quaternion.Slerp(foreR.localRotation, Quaternion.identity, straight);
 
         // 몸을 꼿꼿이 세우고 왼어깨를 앞으로 튼다. 머리는 튼 만큼 되돌려 과녁을 본다
         if (body != null) body.localRotation = Quaternion.Slerp(body.localRotation, Quaternion.Euler(3, 22, 0), aim);
@@ -692,6 +806,8 @@ public class Zombie : MonoBehaviour, IDamageable
         animPhase += dt * (0.9f + speed * 1.5f);
         float swing = Mathf.Clamp01(speed / 2.5f);
         SetLegs(24 * swing);
+        SetKnees(30 * swing + 8);
+        SetElbows(-20 - wind * 30 + lunge * 15, -25 - wind * 40 + lunge * 20);
         float sway = Mathf.Sin(animPhase);
         float armBase = state == State.Chase ? -40f : -20f;
         float arm = wind > 0 ? Mathf.Lerp(armBase, -170f, wind) : Mathf.Lerp(armBase, -60f, lunge);
@@ -709,6 +825,8 @@ public class Zombie : MonoBehaviour, IDamageable
         float s = Mathf.Sin(animPhase);
         bool chasing = state == State.Chase;
         SetLegs(32 * swing);
+        SetKnees(45 * swing + 3);
+        SetElbows(-18 - s * 12 * swing, -15 - wind * 35 + lunge * 25);
         if (armL != null) armL.localRotation = Quaternion.Euler(-s * 28 * swing - 6, 0, -5);
         float rest = (chasing ? -35f : -12f) + s * 10 * swing;
         float bat;

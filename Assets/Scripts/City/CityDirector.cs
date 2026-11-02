@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 // 도시 탐험 진행: 제한시간, 아이템 배치, 좀비 등장(시간이 갈수록 늘어남), 공포 사운드.
+// 제한시간(기본 5분)이 지나면 붉은 밤: 하늘·안개·빛이 붉게 물들고 redNightInterval초마다 체력이 redNightDamage씩 준다 (해치로 돌아갈 때까지).
 // 턴이 지날수록 새 종류의 좀비가 섞이고, 약탈자·잡상인은 탐험마다 확률로 나타난다.
 public class CityDirector : MonoBehaviour
 {
@@ -27,6 +28,15 @@ public class CityDirector : MonoBehaviour
 
     public float TimeLeft { get; private set; }
     public float Danger => Mathf.Clamp01(1 - TimeLeft / timeLimit); // 0 → 1로 점점 위험해짐
+    public bool IsRedNight { get; private set; }
+    public float RedNightElapsed { get; private set; }
+
+    // 붉은 밤으로 바뀌기 전 장면 색 (서서히 붉게 섞는다)
+    Color baseFog, baseAmbient, baseSky;
+    Camera skyCam;
+    readonly List<Light> sunLights = new List<Light>();
+    readonly List<Color> sunColors = new List<Color>();
+    float redNightBlend, redNightTimer, heartbeatVolume;
 
     readonly List<Zombie> zombies = new List<Zombie>(); // 거리를 돌아다니는 좀비 (최대 수에 포함)
     readonly List<Zombie> others = new List<Zombie>();  // 2층 지킴이·약탈자 (최대 수에 포함하지 않음)
@@ -53,7 +63,7 @@ public class CityDirector : MonoBehaviour
         foreach (var p in FindObjectsByType<ItemSpawnPoint>(FindObjectsSortMode.None))
         {
             if (Random.value > balance.itemSpawnChance) continue;
-            string id = ItemDatabase.RollLoot();
+            string id = ItemDatabase.RollLoot(p.outdoor);
             int n = (id == "cloth" || id == "stick") && Random.value < 0.4f ? 2 : 1;
             PickupItem.Spawn(id, n, p.transform.position);
         }
@@ -86,9 +96,56 @@ public class CityDirector : MonoBehaviour
         GameManager.Instance.UI.ShowMessage("폐허가 된 도시. 붉은 등이 켜진 해치가 돌아갈 곳이다.", 5f);
     }
 
+    void StartRedNight(GameManager gm)
+    {
+        IsRedNight = true;
+        TimeLeft = 0;
+        baseFog = RenderSettings.fogColor;
+        baseAmbient = RenderSettings.ambientLight;
+        skyCam = Camera.main;
+        if (skyCam != null) baseSky = skyCam.backgroundColor;
+        sunLights.Clear();
+        sunColors.Clear();
+        foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            if (l.type == LightType.Directional) { sunLights.Add(l); sunColors.Add(l.color); }
+        ProceduralAudio.Play2D(ProceduralAudio.Siren(), 0.5f, 0.8f);
+        gm.UI.ShowMessage("붉은 밤이 왔다! 체력이 계속 줄어든다. 어서 해치로 돌아가자!", 5f);
+        heartbeatVolume = 0.7f;
+    }
+
+    // 붉은 밤: 4초에 걸쳐 장면이 붉게 물들고, 정해진 간격마다 체력이 준다. 좀비는 계속 가장 많이 나온다
+    void UpdateRedNight(GameManager gm, float dt)
+    {
+        RedNightElapsed += dt;
+        redNightBlend = Mathf.Min(1f, redNightBlend + dt / 4f);
+        float k = Mathf.SmoothStep(0, 1, redNightBlend);
+        var red = new Color(0.32f, 0.03f, 0.02f);
+        RenderSettings.fogColor = Color.Lerp(baseFog, red, k);
+        RenderSettings.ambientLight = Color.Lerp(baseAmbient, new Color(0.35f, 0.05f, 0.04f) * (0.8f + 0.2f * Mathf.Sin(Time.time * 1.3f)), k);
+        if (skyCam != null) skyCam.backgroundColor = Color.Lerp(baseSky, new Color(0.16f, 0.01f, 0.01f), k);
+        for (int i = 0; i < sunLights.Count; i++)
+            if (sunLights[i] != null) sunLights[i].color = Color.Lerp(sunColors[i], new Color(1f, 0.18f, 0.1f), k);
+        gm.UI.SetRedNight(k);
+
+        var b = GameBalance.Data;
+        redNightTimer += dt;
+        if (redNightTimer >= b.redNightInterval)
+        {
+            redNightTimer -= b.redNightInterval;
+            gm.Damage(b.redNightDamage, "붉은 밤을 끝내 버티지 못했다.");
+            ProceduralAudio.Play2D(ProceduralAudio.Heartbeat(), 0.6f, 0.9f);
+        }
+    }
+
+    void OnDisable()
+    {
+        if (GameManager.Instance != null && GameManager.Instance.UI != null) GameManager.Instance.UI.SetRedNight(0);
+    }
+
     AudioSource MakeLoop(AudioClip clip, float volume)
     {
         var src = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(src, SoundCategory.Ambient);
         src.clip = clip;
         src.loop = true;
         src.volume = volume;
@@ -113,9 +170,9 @@ public class CityDirector : MonoBehaviour
         if (TimeLeft <= 0 && !ended)
         {
             ended = true;
-            gm.ExpeditionTimeUp();
-            return;
+            StartRedNight(gm);
         }
+        if (IsRedNight) UpdateRedNight(gm, dt);
 
         // 잡상인·약탈자가 있다는 힌트 (시작 안내문이 지나간 뒤)
         if (traderHintTimer > 0)
@@ -150,7 +207,8 @@ public class CityDirector : MonoBehaviour
                 if (a != null && a.IsChasing)
                     threat = Mathf.Max(threat, 1 - Vector3.Distance(a.transform.position, pp) / 20f);
         }
-        heartbeat.volume = Mathf.MoveTowards(heartbeat.volume, threat * 0.9f, dt);
+        heartbeatVolume = Mathf.MoveTowards(heartbeatVolume, threat * 0.9f, dt);
+        heartbeat.volume = heartbeatVolume;
         heartbeat.pitch = 1 + threat * 0.5f;
 
         // 멀리서 들려오는 신음 소리
@@ -161,7 +219,7 @@ public class CityDirector : MonoBehaviour
             Vector2 r = Random.insideUnitCircle.normalized * Random.Range(25f, 45f);
             var pos = player.transform.position + new Vector3(r.x, 1, r.y);
             var clip = Random.value < 0.25f ? ProceduralAudio.Scream() : ProceduralAudio.Groan();
-            ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f);
+            ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f, SoundCategory.Ambient);
         }
     }
 
@@ -183,7 +241,7 @@ public class CityDirector : MonoBehaviour
         gm.UI.ShowMessage("멀리서 사람의 고함 소리가 들린다. 약탈자가 있다.", 4f);
         var dir = raider.transform.position - player.transform.position;
         var pos = player.transform.position + Vector3.ClampMagnitude(dir, 30f) + Vector3.up;
-        ProceduralAudio.PlayAt(ProceduralAudio.RaiderShout(), pos, 0.7f, Random.Range(0.95f, 1.05f), 1f, 60f);
+        ProceduralAudio.PlayAt(ProceduralAudio.RaiderShout(), pos, 0.7f, Random.Range(0.95f, 1.05f), 1f, 60f, SoundCategory.Enemy);
     }
 
     // 지금 턴에 나올 수 있는 종류 중에서 가중치로 고른다

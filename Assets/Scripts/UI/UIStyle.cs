@@ -30,6 +30,55 @@ public static class UIStyle
         }
     }
 
+    static Sprite ring, dot, vignette;
+
+    // 가운데는 투명하고 가장자리로 갈수록 짙어지는 화면 테두리 (붉은 밤)
+    public static Sprite Vignette
+    {
+        get
+        {
+            if (vignette != null) return vignette;
+            const int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "UIVignette" };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x + 0.5f) / size * 2 - 1, dy = (y + 0.5f) / size * 2 - 1;
+                    float d = Mathf.Sqrt(dx * dx * 0.8f + dy * dy);
+                    float a = Mathf.Clamp01((d - 0.45f) / 0.75f);
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(a * a * 255));
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            return vignette = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+    }
+
+    // 원 조준점: 가는 고리 (64px, 가장자리를 부드럽게)
+    public static Sprite Ring => ring != null ? ring : ring = Circle("UIRing", 64, 3.2f);
+    // 점 조준점: 꽉 찬 원
+    public static Sprite Dot => dot != null ? dot : dot = Circle("UIDot", 32, 0f);
+
+    // thickness가 0이면 꽉 찬 원, 아니면 그 두께의 고리
+    static Sprite Circle(string name, int size, float thickness)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = name };
+        var pixels = new Color32[size * size];
+        float half = size / 2f, outer = half - 1f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float r = Mathf.Sqrt((x + 0.5f - half) * (x + 0.5f - half) + (y + 0.5f - half) * (y + 0.5f - half));
+                float a = Mathf.Clamp01(outer - r + 0.5f);
+                if (thickness > 0) a *= Mathf.Clamp01(r - (outer - thickness) + 0.5f);
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        tex.SetPixels32(pixels);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+    }
+
     static Sprite Make(bool outline)
     {
         const int size = 32;
@@ -145,7 +194,9 @@ public class UIHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
 // 버튼을 만질 때의 움직임: 마우스를 올리면 살짝 떠오르고(1.02배), 누르는 동안 눌려 작아졌다가(0.94배)
 // 놓으면 스프링처럼 통 튀며 제자리로 돌아온다. 누르는 순간 바탕에 밝은 빛이 번졌다 사라지고 작은 딸깍 소리가 난다.
-// UIManager가 버튼·카드를 만들 때 UIPress.Attach로 붙인다 (누를 수 없는 버튼이면 반응하지 않는다)
+// UIManager가 버튼·카드를 만들 때 UIPress.Attach로 붙인다 (누를 수 없는 버튼이면 반응하지 않는다).
+// 새로 만든 버튼은 첫 프레임 끝에 제 색을 바로 칠한다: 그러지 않으면 기본색(흰색)에서 0.08초 동안 바뀌며
+// 목록을 다시 그릴 때마다(제작대에서 아이템을 누를 때 등) 하얗게 번쩍인다
 public class UIPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerEnterHandler, IPointerExitHandler
 {
     const float Stiffness = 600f, Damping = 24f, FlashTime = 0.28f;
@@ -157,7 +208,7 @@ public class UIPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IP
     Image flash;
     Vector3 baseScale;
     float scale = 1f, velocity, flashT = 1f;
-    bool down, over;
+    bool down, over, snapped;
 
     public static UIPress Attach(Selectable s, float hoverScale = 1.02f)
     {
@@ -172,6 +223,12 @@ public class UIPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IP
     {
         rt = (RectTransform)transform;
         baseScale = rt.localScale;
+        pending.Add(this);
+        if (!hooked)
+        {
+            Canvas.willRenderCanvases += SnapPending;
+            hooked = true;
+        }
         // 누를 때 번지는 빛 (글자·테두리 위에 얇게 덮는다)
         var go = new GameObject("PressFlash", typeof(RectTransform));
         var frt = (RectTransform)go.transform;
@@ -201,7 +258,7 @@ public class UIPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IP
         if (!Live || e.button != PointerEventData.InputButton.Left) return;
         down = true;
         flashT = 0;
-        ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.18f, 1.35f);
+        ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.18f, 1.35f, SoundCategory.UI);
     }
 
     public void OnPointerUp(PointerEventData e)
@@ -209,6 +266,36 @@ public class UIPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IP
         if (!down) return;
         down = false;
         velocity += 2.4f; // 놓는 순간 위로 튕긴다
+    }
+
+    // 만들어진 프레임에 화면을 그리기 직전(Canvas.willRenderCanvases) 버튼 바탕색을
+    // 지금 상태(누를 수 없음·마우스 위·보통)의 색으로 바로 칠한다. 새로 만든 버튼의 Start·LateUpdate 시점과 상관없이 첫 화면부터 제 색이다
+    static readonly System.Collections.Generic.List<UIPress> pending = new System.Collections.Generic.List<UIPress>();
+    static bool hooked;
+
+    static void SnapPending()
+    {
+        for (int i = 0; i < pending.Count; i++)
+            if (pending[i] != null) pending[i].Snap();
+        pending.Clear();
+    }
+
+    void Snap()
+    {
+        if (snapped) return;
+        snapped = true;
+        if (Gate == null || Gate.targetGraphic == null || Gate.transition != Selectable.Transition.ColorTint) return;
+        var c = Gate.colors;
+        bool hovered = false;
+        var mouse = UnityEngine.InputSystem.Mouse.current;
+        if (mouse != null && Gate.IsInteractable())
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            var cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            hovered = RectTransformUtility.RectangleContainsScreenPoint(rt, mouse.position.ReadValue(), cam);
+        }
+        var target = !Gate.IsInteractable() ? c.disabledColor : hovered ? c.highlightedColor : c.normalColor;
+        Gate.targetGraphic.CrossFadeColor(target * c.colorMultiplier, 0f, true, true);
     }
 
     void OnDisable()

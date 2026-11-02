@@ -68,10 +68,28 @@ public class GameBalance : ScriptableObject
     public float staminaMax = 100f;
     [Tooltip("달리는 동안 초당 소모량")]
     public float staminaRunCostPerSecond = 20f;
-    [Tooltip("Shift를 누르지 않을 때 0.5초마다 채워지는 양")]
-    public float staminaRegenPerHalfSecond = 5f;
+    [Tooltip("Shift를 누르지 않을 때 staminaRegenInterval초마다 채워지는 양")]
+    [UnityEngine.Serialization.FormerlySerializedAs("staminaRegenPerHalfSecond")]
+    public float staminaRegenAmount = 5f;
+    public float staminaRegenInterval = 0.3f;
     [Tooltip("다 쓴 뒤 이만큼 차야 다시 달릴 수 있다")]
     public float staminaMinToRun = 15f;
+    [Tooltip("소지 무게가 들 수 있는 무게의 이 비율 이상이면 스태미나를 더 쓴다 (0.9 = 90%)")]
+    [Range(0, 1)] public float heavyLoadRatio = 0.9f;
+    [Tooltip("짐이 무거울 때 달리기·점프 스태미나 소모 배율")]
+    public float heavyStaminaMultiplier = 1.6f;
+
+    [Header("점프 (테스트하며 조정)")]
+    [Tooltip("점프 높이(m). 짐이 무거우면 75%만 뛴다")]
+    public float jumpHeight = 0.9f;
+    [Tooltip("점프 한 번에 드는 스태미나")]
+    public float jumpStaminaCost = 8f;
+
+    [Header("화상 (라이터로 때리면)")]
+    [Tooltip("불이 붙어 있는 시간(초)")]
+    public float burnSeconds = 5f;
+    [Tooltip("타는 동안 입히는 피해의 합")]
+    public float burnDamage = 10f;
 
     [Header("짐")]
     [Tooltip("가방 없이 들 수 있는 무게. 가방을 메면 가방마다 더 늘어난다 (ItemDatabase의 CarryBonus)")]
@@ -81,8 +99,12 @@ public class GameBalance : ScriptableObject
     public float fuelPower = 35f;
 
     [Header("도시 탐험")]
+    [Tooltip("이 시간(초)이 지나면 붉은 밤이 된다")]
     public float expeditionSeconds = 300f;
-    [Range(0, 1)] public float itemSpawnChance = 0.45f;
+    [Tooltip("붉은 밤: redNightInterval초마다 체력이 이만큼 준다")]
+    public float redNightDamage = 3f;
+    public float redNightInterval = 3f;
+    [Range(0, 1)] public float itemSpawnChance = 0.55f;
     public int startZombies = 3;
     public int maxZombies = 10;
     public int dogCount = 2;
@@ -100,7 +122,7 @@ public class GameBalance : ScriptableObject
     public EnemyStats zombie = new EnemyStats("좀비", 100, 12, 8, 1.6f, 1);
     public EnemyStats leatherZombie = new EnemyStats("가죽 좀비", 200, 20, 10, 1.6f, 10);
     public EnemyStats rangedZombie = new EnemyStats("원거리 좀비", 150, 10, 8, 3f, 15);
-    public EnemyStats heavyZombie = new EnemyStats("거대 좀비", 300, 30, 10, 3f, 30);
+    public EnemyStats heavyZombie = new EnemyStats("거대 좀비", 300, 30, 8, 3f, 30);
     public EnemyStats dog = new EnemyStats("들개", 80, 8, 13, 2f, 1);
     public EnemyStats raider = new EnemyStats("약탈자", 100, 15, 10, 1f, 5);
     [Tooltip("좀비가 배회할 때 속도(m/s)")]

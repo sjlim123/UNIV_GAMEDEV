@@ -10,7 +10,12 @@ public class Animal : MonoBehaviour, IDamageable
 {
     public static readonly List<Animal> All = new List<Animal>();
 
+    // 다리 관절 (Awake에서 몸을 지을 때 채운다: 앞왼·앞오·뒤왼·뒤오의 위·아래)
     public Transform[] legs;
+    Transform[] knees;
+    Transform head, jaw, neck, tail, body;
+    // 눈이 빛나는 재질의 원본 (빌드에 발광 셰이더가 들어가게 프리팹이 들고 있는다)
+    public Material eyeTemplate;
     public float walkSpeed = 1.2f;
     [Tooltip("시야(m)")]
     public float sightRange = 14f;
@@ -29,9 +34,8 @@ public class Animal : MonoBehaviour, IDamageable
     AudioSource voice;
     EnemyStats stats;
     PlayerFlashlight playerLight;
-    Transform[] headParts;   // 머리·주둥이·귀 (경고할 때 낮추고, 물 때 내민다)
-    Vector3[] headBase;
-    float health, wanderTimer, warnTimer, biteTimer, barkTimer, repathTimer, staggerTimer, lostTimer, animPhase, lunge;
+    HitFlash flash;
+    float health, wanderTimer, warnTimer, biteTimer, barkTimer, repathTimer, staggerTimer, lostTimer, animPhase, lunge, hitReact;
     float provokeCooldown; // 경고하다 물러난 뒤 다시 으르렁거리기까지 쉬는 시간
 
     public bool IsDead => state == State.Dead;
@@ -44,14 +48,22 @@ public class Animal : MonoBehaviour, IDamageable
         health = stats.health;
         voice = gameObject.AddComponent<AudioSource>();
         ProceduralAudio.Setup3D(voice, 36f, 64);
-        var names = new[] { "Head", "Snout", "EarL", "EarR" };
-        headParts = new Transform[names.Length];
-        headBase = new Vector3[names.Length];
-        for (int i = 0; i < names.Length; i++)
+        // 디자인 시트의 들개 몸을 짓는다 (예전 상자 모양 몸은 지운다)
+        if (eyeTemplate != null) ProcTex.GlowTemplate = eyeTemplate;
+        for (int i = transform.childCount - 1; i >= 0; i--)
         {
-            headParts[i] = transform.Find(names[i]);
-            if (headParts[i] != null) headBase[i] = headParts[i].localPosition;
+            var c = transform.GetChild(i);
+            if (c.name != "Model" && c.GetComponent<Renderer>() != null || c.name.StartsWith("Leg")) Destroy(c.gameObject);
         }
+        var rig = CharacterModels.Build(transform, FigureKind.Dog);
+        legs = rig.Legs;
+        knees = rig.Knees;
+        head = rig.Head;
+        jaw = rig.Jaw;
+        neck = rig.Neck;
+        tail = rig.Tail;
+        body = rig.Body;
+        flash = HitFlash.For(gameObject, rig.Renderers);
         animPhase = Random.value * 10;
     }
 
@@ -190,13 +202,20 @@ public class Animal : MonoBehaviour, IDamageable
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(dir), 400 * Time.deltaTime);
     }
 
+    // direction이 0이면 불에 타는 것처럼 계속 받는 피해: 움찔하거나 밀리지 않는다
     public void TakeDamage(float amount, Vector3 direction)
     {
         if (state == State.Dead) return;
         health -= amount;
-        staggerTimer = 0.35f;
-        if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * 0.4f);
-        Bark(1f, Random.Range(1.3f, 1.5f)); // 깨갱
+        bool dot = direction == Vector3.zero;
+        if (!dot)
+        {
+            staggerTimer = 0.35f;
+            hitReact = 1;
+            if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * 0.4f);
+            if (flash != null) flash.Flash(HitFlash.HitColor);
+        }
+        if (!dot || Random.value < 0.4f) Bark(dot ? 0.7f : 1f, Random.Range(1.3f, 1.5f)); // 깨갱
         if (health <= 0)
         {
             StartCoroutine(Die());
@@ -208,6 +227,7 @@ public class Animal : MonoBehaviour, IDamageable
     IEnumerator Die()
     {
         state = State.Dead;
+        GameManager.Instance.NoteKill(true);
         agent.enabled = false;
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
@@ -217,32 +237,69 @@ public class Animal : MonoBehaviour, IDamageable
         var start = transform.rotation;
         var side = Vector3.Cross(Vector3.up, start * Vector3.forward).normalized * 0.35f;
         var end = start * Quaternion.Euler(0, 0, 85);
-        for (float t = 0; t < 1; t += Time.deltaTime / 0.4f)
+        for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
         {
-            transform.rotation = Quaternion.Slerp(start, end, t);
+            transform.rotation = Quaternion.Slerp(start, end, t * t);
+            // 다리가 힘없이 접히고 머리가 떨어진다
+            if (legs != null)
+                for (int i = 0; i < legs.Length; i++)
+                {
+                    if (legs[i] != null) legs[i].localRotation = Quaternion.Euler((i < 2 ? -25 : 30) * t, 0, 0);
+                    if (knees != null && knees[i] != null) knees[i].localRotation = Quaternion.Euler((i < 2 ? 40 : -35) * t, 0, 0);
+                }
+            if (neck != null) neck.localRotation = Quaternion.Euler(30 * t, 0, 0);
+            if (jaw != null) jaw.localRotation = Quaternion.Euler(10 + 25 * t, 0, 0);
             yield return null;
         }
         transform.rotation = end;
         // 가죽 1개, 고기 1개
-        PickupItem.Spawn("leather", 1, transform.position + Vector3.up * 0.5f + side);
+        PickupItem.Spawn("leather", 2, transform.position + Vector3.up * 0.5f + side);
         PickupItem.Spawn("raw_meat", 1, transform.position + Vector3.up * 0.5f - side);
         Destroy(gameObject, 30f);
     }
 
+    // 걷기·달리기(다리 4개를 엇갈려 딛고 무릎을 굽힌다), 꼬리 흔들기, 경고할 땐 머리를 낮추고 이를 드러내며, 물 때 머리를 내밀고 턱을 벌린다
     void Animate(float dt)
     {
         float speed = agent.enabled ? agent.velocity.magnitude : 0;
-        animPhase += dt * (2 + speed * 3.5f);
-        float amp = Mathf.Clamp01(speed / 2f) * 35f;
+        bool running = speed > 2.5f;
+        animPhase += dt * (2 + speed * (running ? 2.6f : 3.5f));
+        float amp = Mathf.Clamp01(speed / 2f) * (running ? 42f : 30f);
+        lunge = Mathf.MoveTowards(lunge, 0, dt * 4);
+        hitReact = Mathf.MoveTowards(hitReact, 0, dt * 5);
         if (legs != null)
             for (int i = 0; i < legs.Length; i++)
-                if (legs[i] != null)
-                    legs[i].localRotation = Quaternion.Euler(Mathf.Sin(animPhase + (i % 2 == 0 ? 0 : Mathf.PI) + (i >= 2 ? Mathf.PI * 0.5f : 0)) * amp, 0, 0);
-
-        // 경고할 땐 머리를 낮추고, 물 때는 앞으로 내민다
-        lunge = Mathf.MoveTowards(lunge, 0, dt * 4);
-        var offset = new Vector3(0, state == State.Warn ? -0.08f : 0, lunge * 0.15f);
-        for (int i = 0; i < headParts.Length; i++)
-            if (headParts[i] != null) headParts[i].localPosition = headBase[i] + offset;
+            {
+                // 걸을 땐 대각선 다리끼리, 달릴 땐 앞다리·뒷다리끼리 함께 (질주)
+                float offset = running ? (i < 2 ? 0 : Mathf.PI) + (i % 2) * 0.4f : (i == 0 || i == 3 ? 0 : Mathf.PI);
+                float ph = animPhase + offset;
+                if (legs[i] != null) legs[i].localRotation = Quaternion.Euler(Mathf.Sin(ph) * amp, 0, 0);
+                // 다리를 앞으로 옮길 때 무릎(앞다리) · 발목(뒷다리)을 굽힌다
+                float lift = Mathf.Max(0, -Mathf.Cos(ph)) * Mathf.Clamp01(speed / 1.5f);
+                if (knees != null && knees[i] != null) knees[i].localRotation = Quaternion.Euler(i < 2 ? lift * 55f : -lift * 40f, 0, 0);
+            }
+        // 몸이 걸음마다 오르내리고, 달리면 앞뒤로 출렁인다
+        if (body != null)
+            body.localRotation = Quaternion.Euler((running ? Mathf.Sin(animPhase * 2) * 4f : 0) - hitReact * 8f, 0, Mathf.Sin(animPhase) * 2f * Mathf.Clamp01(speed));
+        bool warn = state == State.Warn;
+        if (neck != null)
+        {
+            // 경고: 머리를 낮추고 앞으로 뺀다. 물기: 앞으로 쭉 내민다. 맞으면 움찔 젖힌다
+            float pitch = (warn ? 22f : 0) - lunge * 14f + Mathf.Sin(animPhase * 0.5f) * 2f - hitReact * 18f;
+            neck.localRotation = Quaternion.Euler(pitch, Mathf.Sin(animPhase * 0.23f) * (state == State.Roam ? 12f : 3f), 0);
+            neck.localPosition = new Vector3(0, 0.05f, 0.3f + lunge * 0.08f);
+        }
+        if (head != null) head.localRotation = Quaternion.Euler(warn ? -12f : 0, 0, warn ? Mathf.Sin(Time.time * 18f) * 1.5f : 0);
+        if (jaw != null)
+        {
+            float open = 10f + (warn ? 14f + Mathf.Sin(Time.time * 22f) * 2f : 0) + lunge * 32f + (running ? 8f : 0);
+            jaw.localRotation = Quaternion.Euler(open, 0, 0);
+        }
+        if (tail != null)
+        {
+            // 배회할 땐 느슨하게 흔들고, 경고·추격 땐 뻣뻣하게 세운다
+            float up = warn || state == State.Chase ? 35f : 0;
+            tail.localRotation = Quaternion.Euler(-118 + up, Mathf.Sin(Time.time * (state == State.Roam ? 4f : 9f)) * (warn ? 6f : 18f), 0);
+        }
     }
 }

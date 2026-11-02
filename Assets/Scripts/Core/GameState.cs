@@ -31,6 +31,49 @@ public class GameState
     // 새총에 메겨 둔 돌로 더 쏠 수 있는 발 수 (0이면 다음에 쏠 때 돌 1개를 메긴다)
     public int SlingShots;
 
+    // ---------- 핫바 ----------
+    // 핫바 1~8번 칸에 놓은 아이템 id (비면 null). 새로 주운 아이템은 빈 칸에 저절로 들어가고,
+    // 소지품 창에서 끌어다 놓아 칸을 바꾸거나 칸 밖으로 끌어 뺀다. 다 쓰거나 버려 소지품에서 없어지면 칸이 빈다
+    public const int HotbarSlots = 8;
+    public readonly string[] Hotbar = new string[HotbarSlots];
+    // 지난번에 소지품에 있던 아이템 (핫바에서 뺀 아이템이 다시 저절로 들어가지 않게)
+    readonly HashSet<string> hotbarKnown = new HashSet<string>();
+
+    // 소지품과 핫바를 맞춘다 (매 프레임 PlayerHotbar가 부른다)
+    public void SyncHotbar()
+    {
+        for (int i = 0; i < HotbarSlots; i++)
+            if (Hotbar[i] != null && Carried.Count(Hotbar[i]) <= 0) Hotbar[i] = null;
+        hotbarKnown.RemoveWhere(id => Carried.Count(id) <= 0);
+        foreach (var kv in Carried.Sorted())
+        {
+            if (!hotbarKnown.Add(kv.Key) || HotbarIndex(kv.Key) >= 0) continue;
+            int empty = System.Array.IndexOf(Hotbar, null);
+            if (empty >= 0) Hotbar[empty] = kv.Key;
+        }
+    }
+
+    public int HotbarIndex(string id) => id == null ? -1 : System.Array.IndexOf(Hotbar, id);
+
+    // 핫바 slot번 칸에 id를 놓는다. 다른 칸에 있던 같은 아이템은 그 칸과 맞바꾼다 (id가 null이면 칸을 비운다)
+    public void SetHotbar(int slot, string id)
+    {
+        if (slot < 0 || slot >= HotbarSlots) return;
+        int from = HotbarIndex(id);
+        if (from >= 0 && from != slot) Hotbar[from] = Hotbar[slot];
+        Hotbar[slot] = id;
+        if (id != null) hotbarKnown.Add(id);
+    }
+
+    // 칸끼리 맞바꾼다
+    public void SwapHotbar(int a, int b)
+    {
+        if (a < 0 || b < 0 || a >= HotbarSlots || b >= HotbarSlots) return;
+        var t = Hotbar[a];
+        Hotbar[a] = Hotbar[b];
+        Hotbar[b] = t;
+    }
+
     // 가방의 무게 보너스는 가방마다 다르다 (낡은 +2 / 일반 +4 / 고급 +8)
     public float CarryCapacity => GameBalance.Data.carryCapacity + (EquippedBackpack != null ? ItemDatabase.Get(EquippedBackpack).CarryBonus : 0f);
 
@@ -178,6 +221,7 @@ public class GameState
         foreach (var kv in Carried.Sorted()) d.carried.Add(new ItemCount { id = kv.Key, count = kv.Value });
         foreach (var kv in Storage.Sorted()) d.storage.Add(new ItemCount { id = kv.Key, count = kv.Value });
         foreach (var kv in Truck.Sorted()) d.truck.Add(new ItemCount { id = kv.Key, count = kv.Value });
+        foreach (var id in Hotbar) d.hotbar.Add(id ?? "");
         return d;
     }
 
@@ -205,6 +249,16 @@ public class GameState
         s.EquippedArmor = ValidEquip(LoadedId(d.equippedArmor, legacy), EquipSlot.Armor);
         // 예전 저장(장비 칸이 없던 때): 소지품의 가방 하나를 장비 칸으로 옮긴다
         if (d.saveFormat < 2 && s.EquippedBackpack == null && s.Carried.Count("old_backpack") > 0) s.Equip("old_backpack");
+        // 핫바 칸 (예전 저장에는 없다: 소지품 순서대로 채운다)
+        if (d.hotbar != null)
+            for (int i = 0; i < d.hotbar.Count && i < HotbarSlots; i++)
+            {
+                string id = LoadedId(d.hotbar[i], legacy);
+                if (!string.IsNullOrEmpty(id) && s.Carried.Count(id) > 0 && s.HotbarIndex(id) < 0) s.SetHotbar(i, id);
+            }
+        if (d.hotbar != null && d.hotbar.Count > 0)
+            foreach (var kv in s.Carried.Sorted()) s.hotbarKnown.Add(kv.Key);
+        s.SyncHotbar();
         return s;
     }
 
@@ -250,4 +304,5 @@ public class SaveData
     public List<ItemCount> truck = new List<ItemCount>();
     public List<ItemCount> carried = new List<ItemCount>();
     public List<ItemCount> storage = new List<ItemCount>();
+    public List<string> hotbar = new List<string>(); // 핫바 1~8번 칸 아이템 id ("" = 빈 칸)
 }

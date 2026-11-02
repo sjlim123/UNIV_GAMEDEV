@@ -38,16 +38,14 @@ public partial class UIManager : MonoBehaviour
 
     RectTransform root;
     GameObject hud;
-    RectTransform healthFill, hungerFill, thirstFill, staminaFill;
-    UnityEngine.UI.Text healthValue, hungerValue, thirstValue, staminaValue;
-    UnityEngine.UI.Text infoText, promptText, toastText, flashlightText, itemNameText, fpsText;
+    UnityEngine.UI.Text promptText, toastText, flashlightText, itemNameText, fpsText;
     RectTransform promptBox;
     CanvasGroup toastGroup;
     GameObject flashBox;
-    Image damageOverlay, fadeOverlay;
+    Image damageOverlay, fadeOverlay, redNightOverlay;
+    float redNight;
     // HUD 글자는 값이 바뀔 때만 다시 만든다 (매 프레임 문자열을 만들지 않게)
-    readonly int[] barShown = { int.MinValue, int.MinValue, int.MinValue, int.MinValue };
-    int infoKey = int.MinValue, flashKey = int.MinValue;
+    int flashKey = int.MinValue;
 
     const int SlotCount = 8;
     readonly List<ItemSlotView> hotbarSlots = new List<ItemSlotView>();
@@ -85,7 +83,7 @@ public partial class UIManager : MonoBehaviour
 
     public bool IsPanelOpen => panel != null && panel.activeSelf;
     // 창이나 일시정지 메뉴가 열려 있으면 플레이어 조작을 막는다
-    public bool IsBlocking => IsPanelOpen || IsPaused || IsPatchNotesOpen || IsCutscenePlaying || IsWorkbenchOpen || IsInventoryOpen || IsTruckOpen;
+    public bool IsBlocking => IsPanelOpen || IsPaused || IsPatchNotesOpen || IsCutscenePlaying || IsWorkbenchOpen || IsInventoryOpen || IsTruckOpen || IsJournalOpen;
 
     void Awake()
     {
@@ -120,6 +118,8 @@ public partial class UIManager : MonoBehaviour
         fpsText = NewText(root, "", 16, TextAnchor.UpperCenter, new Color(0.6f, 1f, 0.6f, 0.8f));
         Place(fpsText.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -8), new Vector2(300, 24));
 
+        redNightOverlay = FullScreenImage("RedNight", new Color(0.45f, 0.02f, 0.01f, 0));
+        redNightOverlay.sprite = UIStyle.Vignette;
         damageOverlay = FullScreenImage("Damage", new Color(0.5f, 0, 0, 0));
         fadeOverlay = FullScreenImage("Fade", new Color(0, 0, 0, 0));
     }
@@ -137,6 +137,7 @@ public partial class UIManager : MonoBehaviour
     {
         SetPaused(false);
         ClosePatchNotes();
+        if (journalRoot != null) journalRoot.SetActive(false);
         CloseWorkbench();
         CloseInventory();
         CloseTruck();
@@ -144,6 +145,7 @@ public partial class UIManager : MonoBehaviour
         if (sceneName == GameManager.MenuScene) ShowMainMenu();
         else HideMainMenu();
         hotbarSelected = int.MinValue;
+        RestartHudIntro();
     }
 
     // ---------- HUD ----------
@@ -154,19 +156,9 @@ public partial class UIManager : MonoBehaviour
         Stretch((RectTransform)hud.transform);
         var h = hud.transform;
 
-        // 왼쪽 위: 상태
-        var status = HudGlass(h, "Status", HudFrame);
-        Place(status, new Vector2(0, 1), new Vector2(24, -24), new Vector2(352, 164));
-        healthFill = MakeBar(status, "체력", 0, new Color(0.78f, 0.2f, 0.16f), out healthValue);
-        hungerFill = MakeBar(status, "배고픔", 1, new Color(0.85f, 0.58f, 0.2f), out hungerValue);
-        thirstFill = MakeBar(status, "갈증", 2, new Color(0.28f, 0.55f, 0.85f), out thirstValue);
-        staminaFill = MakeBar(status, "스테미너", 3, new Color(0.56f, 0.78f, 0.32f), out staminaValue);
-
-        // 오른쪽 위: 턴·시간·전력
-        var info = HudGlass(h, "Info", HudFrame);
-        Place(info, new Vector2(1, 1), new Vector2(-24, -24), new Vector2(270, 92));
-        infoText = NewText(info, "", 28, TextAnchor.MiddleRight, Text, FontSemiBold);
-        Stretch(infoText.rectTransform, 20, 8);
+        // 왼쪽 위: 상태 막대 / 오른쪽 위: 남은 시간·턴 계기판 (UIManager.Hud)
+        BuildStatusPanel(h);
+        BuildTimePanel(h);
 
         // 오른쪽 아래: 손전등
         var flash = HudGlass(h, "Flashlight", HudFrame);
@@ -176,17 +168,19 @@ public partial class UIManager : MonoBehaviour
         Stretch(flashlightText.rectTransform, 10, 0);
 
         // 왼쪽 아래: 조작 안내
-        var hints = NewText(h, "WASD 이동   Shift 달리기   C 앉기   F 상호작용   Q 손전등\n1~8·휠 선택   우클릭 사용   G 버리기   좌클릭 공격   Tab 가방   Esc 메뉴", 16, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.5f));
-        Place(hints.rectTransform, new Vector2(0, 0), new Vector2(24, 20), new Vector2(620, 50));
-        hints.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.6f);
 
         // 가운데 아래: 핫바 (유리 받침 위에 칸 8개)
         const float slot = 68, gap = 8;
         float barWidth = SlotCount * slot + (SlotCount - 1) * gap;
         var tray = HudGlass(h, "HotbarTray", HudFrame);
         Place(tray, new Vector2(0.5f, 0), new Vector2(0, 16), new Vector2(barWidth + 20, slot + 20));
+        hotbarTray = tray;
+        // 핫바는 살짝 비쳐 보이게 (받침은 더 투명하게)
+        tray.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
         var bar = NewRect("Hotbar", h);
         Place(bar, new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(barWidth, slot));
+        hotbarBar = bar;
+        bar.gameObject.AddComponent<CanvasGroup>().alpha = 0.82f;
         for (int i = 0; i < SlotCount; i++)
         {
             var v = NewItemSlot(bar, "Slot" + i, 7);
@@ -229,13 +223,7 @@ public partial class UIManager : MonoBehaviour
         itemNameText.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.7f);
 
         // 가운데: 조준점, 상호작용 안내, 알림
-        var cross = NewRect("Crosshair", h);
-        Place(cross, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(5, 5));
-        var crossImg = cross.gameObject.AddComponent<Image>();
-        crossImg.sprite = UIStyle.Fill;
-        crossImg.color = new Color(1, 1, 1, 0.7f);
-        crossImg.raycastTarget = false;
-        cross.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.6f);
+        BuildCrosshair(h);
 
         promptBox = HudGlass(h, "Prompt", new Color(Accent.r, Accent.g, Accent.b, 0.55f));
         Place(promptBox, new Vector2(0.5f, 0.5f), new Vector2(0, -95), new Vector2(300, 46));
@@ -245,49 +233,13 @@ public partial class UIManager : MonoBehaviour
 
         var toast = HudGlass(h, "Toast", HudFrame);
         Place(toast, new Vector2(0.5f, 0.5f), new Vector2(0, 230), new Vector2(980, 60));
+        toastRect = toast;
         AccentBar(toast);
         toastGroup = toast.gameObject.AddComponent<CanvasGroup>();
         toastGroup.alpha = 0;
         toastGroup.blocksRaycasts = false;
         toastText = NewText(toast, "", 23, TextAnchor.MiddleCenter, Text);
         Stretch(toastText.rectTransform, 24, 4);
-    }
-
-    RectTransform MakeBar(RectTransform parent, string label, int index, Color color, out UnityEngine.UI.Text value)
-    {
-        float y = -32 - index * 34; // 줄의 가운데
-        // 왼쪽 색 표시 + 이름
-        var pip = NewRect(label + "Pip", parent).gameObject.AddComponent<Image>();
-        Place(pip.rectTransform, new Vector2(0, 1), new Vector2(16, y + 9), new Vector2(4, 18));
-        pip.sprite = UIStyle.Fill;
-        pip.type = Image.Type.Sliced;
-        pip.pixelsPerUnitMultiplier = 5;
-        pip.color = color;
-        pip.raycastTarget = false;
-        var lbl = NewText(parent, label, 18, TextAnchor.MiddleLeft, Dim);
-        Place(lbl.rectTransform, new Vector2(0, 1), new Vector2(28, y + 12), new Vector2(84, 24));
-
-        var bg = NewRect(label + "Bar", parent);
-        Place(bg, new Vector2(0, 1), new Vector2(112, y + 5), new Vector2(180, 10));
-        var bgImg = bg.gameObject.AddComponent<Image>();
-        bgImg.sprite = UIStyle.Fill;
-        bgImg.type = Image.Type.Sliced;
-        bgImg.pixelsPerUnitMultiplier = 3;
-        bgImg.color = new Color(1, 1, 1, 0.08f);
-        bgImg.raycastTarget = false;
-        var fill = NewRect("Fill", bg);
-        fill.anchorMin = Vector2.zero;
-        fill.anchorMax = Vector2.one;
-        fill.offsetMin = fill.offsetMax = Vector2.zero;
-        var img = fill.gameObject.AddComponent<Image>();
-        img.sprite = UIStyle.Fill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 3;
-        img.color = color;
-        img.raycastTarget = false;
-        value = NewText(parent, "", 19, TextAnchor.MiddleRight, Text, FontSemiBold);
-        Place(value.rectTransform, new Vector2(0, 1), new Vector2(294, y + 12), new Vector2(44, 24));
-        return fill;
     }
 
     // HUD용 반투명 유리판 (블러 없음): 어두운 채우기 + 은은한 테두리 + 윗면의 얇은 반사광
@@ -333,7 +285,12 @@ public partial class UIManager : MonoBehaviour
         var s = gm.State;
 
         hud.SetActive(PlayerController.Instance != null);
-        if (hud.activeSelf) UpdateHud(gm, s);
+        if (hud.activeSelf)
+        {
+            UpdateHud(gm, s);
+            UpdateCrosshair();
+            AnimateHud();
+        }
 
         if (toastTimer > 0)
         {
@@ -341,11 +298,15 @@ public partial class UIManager : MonoBehaviour
             toastGroup.alpha = Mathf.Clamp01(toastTimer * 2);
         }
 
-        // 피격 효과 + 체력이 낮을 때 붉은 맥박
+        // 피격 효과 + 체력이 낮을 때 붉은 맥박. 일시정지·메뉴·컷씬처럼 게임을 하고 있지 않을 때는 보이지 않는다
         damageAlpha = Mathf.MoveTowards(damageAlpha, 0, Time.unscaledDeltaTime * 1.2f);
-        bool inGame = PlayerController.Instance != null && !gm.IsGameOver;
+        bool inGame = PlayerController.Instance != null && !gm.IsGameOver && !IsPaused && !IsCutscenePlaying && !gm.InMenu;
+        if (!inGame) damageAlpha = 0;
         float lowHealth = s.Health < 30 && inGame ? (0.12f + 0.08f * Mathf.Sin(Time.unscaledTime * 6)) * (1 - s.Health / 30f) : 0;
         damageOverlay.color = new Color(0.45f, 0, 0, Mathf.Max(damageAlpha, lowHealth));
+        // 붉은 밤: 화면 가장자리가 붉게 고동친다
+        float rn = inGame ? redNight : 0;
+        redNightOverlay.color = new Color(0.55f, 0.03f, 0.02f, rn * (0.55f + 0.2f * Mathf.Sin(Time.unscaledTime * 2.4f)));
 
         // FPS 표시 (설정에서 켜고 끈다)
         fpsFrames++;
@@ -357,6 +318,8 @@ public partial class UIManager : MonoBehaviour
             fpsTimer = 0;
         }
 
+        UpdateSleepText();
+        UpdateJournal();
         if (IsPanelOpen) UpdatePanel();
         if (IsWorkbenchOpen) UpdateWorkbench();
         if (IsCutscenePlaying) UpdateCutscene();
@@ -370,34 +333,8 @@ public partial class UIManager : MonoBehaviour
 
     void UpdateHud(GameManager gm, GameState s)
     {
-        SetBar(0, healthFill, healthValue, s.Health, s.MaxHealth);
-        SetBar(1, hungerFill, hungerValue, s.Hunger);
-        SetBar(2, thirstFill, thirstValue, s.Thirst);
-        var pc = PlayerController.Instance;
-        SetBar(3, staminaFill, staminaValue, pc != null ? 100f * pc.Stamina / GameBalance.Data.staminaMax : 100f);
-
-        var city = CityDirector.Instance;
-        if (city != null)
-        {
-            int t = (int)Mathf.Max(0, city.TimeLeft);
-            int key = (t * 1000 + s.Turn) * 2 + 1;
-            if (key != infoKey)
-            {
-                infoKey = key;
-                infoText.text = $"남은 시간  {t / 60}:{t % 60:00}\n<size=19><color=#a8a294>턴 {s.Turn} / {GameState.MaxTurns}</color></size>";
-                infoText.color = t < 60 ? Danger : Text;
-            }
-        }
-        else
-        {
-            int key = (Mathf.RoundToInt(s.Power) * 100000 + s.Turn) * 2;
-            if (key != infoKey)
-            {
-                infoKey = key;
-                infoText.text = $"턴  {s.Turn} / {GameState.MaxTurns}\n<size=19><color=#a8a294>전력 {s.Power:0}%</color></size>";
-                infoText.color = Text;
-            }
-        }
+        UpdateStatusPanel(s);
+        UpdateTimePanel(gm, s);
 
         bool hasLight = s.Carried.Count("flashlight") > 0;
         flashBox.SetActive(hasLight);
@@ -414,36 +351,59 @@ public partial class UIManager : MonoBehaviour
         UpdateHotbar(s);
     }
 
+    readonly List<KeyValuePair<string, int>> hotbarItems = new List<KeyValuePair<string, int>>(SlotCount);
+
     void UpdateHotbar(GameState s)
     {
         var hotbar = PlayerHotbar.Instance;
-        var items = s.Carried.Sorted();
+        hotbarItems.Clear();
+        int offBar = 0;
+        for (int i = 0; i < SlotCount; i++)
+        {
+            string id = s.Hotbar[i];
+            hotbarItems.Add(new KeyValuePair<string, int>(id, id != null ? s.Carried.Count(id) : 0));
+        }
+        foreach (var kv in s.Carried.Sorted())
+            if (s.HotbarIndex(kv.Key) < 0) offBar++;
         int selected = hotbar != null ? hotbar.SelectedIndex : -1;
+        // 고른 칸이 바뀌면 부드럽게 커지고 작아진다 (매 프레임)
+        for (int i = 0; i < SlotCount; i++)
+        {
+            float target = i == selected ? 1.1f : 1f;
+            var rt = hotbarSlots[i].Rect;
+            float sc = Mathf.Lerp(rt.localScale.x, target, Time.unscaledDeltaTime * 14f);
+            rt.localScale = Vector3.one * sc;
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, Mathf.Lerp(rt.anchoredPosition.y, i == selected ? 6f : 0f, Time.unscaledDeltaTime * 14f));
+        }
         // 새총을 들고 있으면 남은 발 수가 바뀔 때도 다시 쓴다
-        if (selected == hotbarSelected && s.SlingShots == hotbarSlingShots && SameHotbarItems(items)) return;
+        if (selected == hotbarSelected && s.SlingShots == hotbarSlingShots && SameHotbarItems(hotbarItems)) return;
+        // 칸에 아이템이 새로 들어오거나 개수가 늘면 그 칸이 톡 튄다
+        for (int i = 0; i < SlotCount && hotbarShown.Count == SlotCount; i++)
+            if (hotbarItems[i].Key != null && (hotbarItems[i].Key != hotbarShown[i].Key || hotbarItems[i].Value > hotbarShown[i].Value))
+                hotbarSlots[i].Rect.localScale = Vector3.one * 1.28f;
         hotbarSelected = selected;
         hotbarSlingShots = s.SlingShots;
         hotbarShown.Clear();
-        hotbarShown.AddRange(items);
+        hotbarShown.AddRange(hotbarItems);
 
         for (int i = 0; i < SlotCount; i++)
         {
-            bool has = i < items.Count;
+            bool has = hotbarItems[i].Key != null;
             bool isSel = i == selected;
-            SetItemSlot(hotbarSlots[i], has ? items[i].Key : null);
-            slotCounts[i].text = has && items[i].Value > 1 ? items[i].Value.ToString() : "";
+            SetItemSlot(hotbarSlots[i], hotbarItems[i].Key);
+            slotCounts[i].text = has && hotbarItems[i].Value > 1 ? hotbarItems[i].Value.ToString() : "";
             slotGlows[i].enabled = slotSelects[i].enabled = isSel;
             slotKeys[i].color = isSel ? Accent : new Color(1, 1, 1, 0.45f);
-            hotbarSlots[i].Rect.localScale = Vector3.one * (isSel ? 1.08f : 1f);
         }
 
-        if (selected >= 0 && selected < items.Count)
+        if (selected >= 0 && hotbarItems[selected].Key != null)
         {
-            var def = ItemDatabase.Get(items[selected].Key);
+            var def = ItemDatabase.Get(hotbarItems[selected].Key);
             string action = PlayerHotbar.ActionHint(def.Id);
-            itemNameText.text = $"{ColoredName(def.Id)} x{items[selected].Value}   <size=17>{RarityTag(def.Rarity)}   <color=#a8a294>{action}</color></size>";
+            itemNameText.text = $"{ColoredName(def.Id)} x{hotbarItems[selected].Value}   <size=17>{RarityTag(def.Rarity)}   <color=#a8a294>{action}</color></size>";
         }
-        else itemNameText.text = items.Count > SlotCount ? $"<size=17><color=#a8a294>+{items.Count - SlotCount}개 더 (Tab)</color></size>" : "";
+        else itemNameText.text = offBar > 0 ? $"<size=17><color=#a8a294>핫바에 없는 아이템 {offBar}종 · {KeyBindings.Label(GameAction.Inventory)}에서 끌어다 놓기</color></size>" : "";
+        itemNameFade = 0;
     }
 
     // 그려 둔 핫바와 같은 아이템·개수인가
@@ -461,6 +421,29 @@ public partial class UIManager : MonoBehaviour
         if (kb == null || gm.IsTransitioning) return;
         bool inGame = PlayerController.Instance != null && !gm.IsGameOver;
 
+        // 설정 → 컨트롤: 새 키를 기다리는 중이면 다음에 누른 키를 그 동작에 정한다 (Esc는 취소)
+        if (rebinding.HasValue)
+        {
+            if (!IsPanelOpen) { rebinding = null; return; }
+            if (kb.escapeKey.wasPressedThisFrame) { rebinding = null; RefreshPanel(); return; }
+            int code = KeyBindings.ReadAnyPressed();
+            if (code >= 0)
+            {
+                KeyBindings.Set(rebinding.Value, code);
+                rebinding = null;
+                ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.5f, 1f, SoundCategory.UI);
+                RefreshPanel();
+            }
+            return;
+        }
+
+        // 탐험 일지: Esc·스페이스·엔터로 (다 적혔으면) 덮는다
+        if (IsJournalOpen)
+        {
+            if (kb.escapeKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame) JournalClick();
+            return;
+        }
+
         if (kb.escapeKey.wasPressedThisFrame)
         {
             if (IsPatchNotesOpen) ClosePatchNotes();
@@ -470,24 +453,11 @@ public partial class UIManager : MonoBehaviour
             else if (IsPanelOpen) { if (panelCloseButton.activeSelf) ClosePanel(); }
             else if (inGame) SetPaused(!IsPaused);
         }
-        else if (kb.tabKey.wasPressedThisFrame && inGame && !IsPaused)
+        else if (KeyBindings.Pressed(GameAction.Inventory) && inGame && !IsPaused)
         {
             if (IsInventoryOpen) CloseInventory();
             else if (!IsPanelOpen && !IsWorkbenchOpen && !IsTruckOpen) OpenInventory();
         }
-    }
-
-    // 막대 길이는 매 프레임, 숫자는 바뀔 때만 다시 쓴다
-    void SetBar(int index, RectTransform fill, UnityEngine.UI.Text value, float v, float max = 100f)
-    {
-        fill.anchorMax = new Vector2(Mathf.Clamp01(v / max), 1);
-        int shown = Mathf.CeilToInt(v);
-        bool low = v < 25;
-        int key = shown * 2 + (low ? 1 : 0);
-        if (key == barShown[index]) return;
-        barShown[index] = key;
-        value.text = shown.ToString();
-        value.color = low ? Danger : Text;
     }
 
     public void SetPrompt(string text)
@@ -497,6 +467,8 @@ public partial class UIManager : MonoBehaviour
             promptBox.gameObject.SetActive(false);
             return;
         }
+        if (text != promptShown || !promptBox.gameObject.activeSelf) promptPop = 0;
+        promptShown = text;
         promptText.text = text;
         promptBox.sizeDelta = new Vector2(promptText.preferredWidth + 56, 46);
         promptBox.gameObject.SetActive(true);
@@ -508,7 +480,39 @@ public partial class UIManager : MonoBehaviour
         toastTimer = duration;
     }
 
-    public void FlashDamage(float strength) => damageAlpha = Mathf.Max(damageAlpha, 0.25f + 0.35f * strength);
+    // 붉은 밤 화면 효과 (0 = 없음, 1 = 가득)
+    public void SetRedNight(float amount) => redNight = Mathf.Clamp01(amount);
+
+    public void FlashDamage(float strength)
+    {
+        damageAlpha = Mathf.Max(damageAlpha, 0.25f + 0.35f * strength);
+        statusShake = Mathf.Max(statusShake, 0.5f + strength);
+    }
+
+    // 잠잘 때 검은 화면 가운데 글자 (null이면 감춘다)
+    UnityEngine.UI.Text sleepText;
+    float sleepTextAlpha, sleepTextTarget;
+
+    public void ShowSleepText(string text)
+    {
+        if (sleepText == null)
+        {
+            sleepText = NewText(root, "", 40, TextAnchor.MiddleCenter, new Color(0.85f, 0.85f, 0.95f, 0), FontSemiBold);
+            Place(sleepText.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 80));
+        }
+        sleepText.transform.SetAsLastSibling();
+        if (!string.IsNullOrEmpty(text)) sleepText.text = text;
+        sleepTextTarget = string.IsNullOrEmpty(text) ? 0 : 1;
+    }
+
+    void UpdateSleepText()
+    {
+        if (sleepText == null) return;
+        sleepTextAlpha = Mathf.MoveTowards(sleepTextAlpha, sleepTextTarget, Time.unscaledDeltaTime * 1.2f);
+        sleepText.color = new Color(0.85f, 0.85f, 0.95f, sleepTextAlpha);
+        // 천천히 떠오르며 흔들린다
+        sleepText.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(Time.unscaledTime * 1.3f) * 6f, Mathf.Sin(Time.unscaledTime * 0.9f) * 8f);
+    }
 
     public IEnumerator Fade(float target, float duration)
     {

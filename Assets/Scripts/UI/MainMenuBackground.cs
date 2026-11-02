@@ -31,6 +31,7 @@ public class MainMenuBackground : MonoBehaviour
     AudioSource Loop(AudioClip clip, float volume)
     {
         var src = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(src, SoundCategory.Ambient);
         src.clip = clip;
         src.loop = true;
         src.volume = volume;
@@ -58,7 +59,7 @@ public class MainMenuBackground : MonoBehaviour
         {
             groanTimer = Random.Range(10f, 22f);
             var pos = cameraTransform.position + Quaternion.Euler(0, Random.Range(-60f, 60f), 0) * cameraTransform.forward * Random.Range(25f, 40f);
-            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), pos, 0.6f, Random.Range(0.8f, 0.95f), 1f, 60f);
+            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), pos, 0.6f, Random.Range(0.8f, 0.95f), 1f, 60f, SoundCategory.Ambient);
         }
     }
 }

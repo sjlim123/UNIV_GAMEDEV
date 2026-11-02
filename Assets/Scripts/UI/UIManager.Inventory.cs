@@ -4,9 +4,9 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 소지품 창 (Tab): 제작대 창과 같은 흐린 유리판 위에
+// 소지품 창 (소지품 키, 기본 E): 제작대 창과 같은 흐린 유리판 위에
 // 왼쪽은 장비 칸(가방·방어구)과 소지 무게·최대 체력, 가운데는 소지품 카드 격자(휠로 스크롤),
-// 오른쪽은 고른 것의 자세한 정보와 사용·장착·해제·버리기 버튼을 보여 준다.
+// 오른쪽은 고른 것의 자세한 정보와 사용·장착·해제·버리기 버튼을 보여 준다. 가운데 아래 핫바 줄로 아이템을 끌어 놓는다 (UIManager.HotbarDrag)
 // 장착 규칙은 GameState(Equip/Unequip), 장착 알림·소리는 PlayerHotbar(Equip/Unequip), 버리기는 PlayerHotbar.Drop
 public partial class UIManager
 {
@@ -40,6 +40,7 @@ public partial class UIManager
     {
         if (invRoot != null) invRoot.SetActive(false);
         invClickKey = null;
+        CancelItemDrag();
     }
 
     public void OpenInventory()
@@ -157,7 +158,7 @@ public partial class UIManager
         view.anchorMin = new Vector2(0, 0);
         view.anchorMax = new Vector2(0, 1);
         view.pivot = new Vector2(0, 1);
-        view.offsetMin = new Vector2(gridX, 36);
+        view.offsetMin = new Vector2(gridX, 36 + InvBarHeight);
         view.offsetMax = new Vector2(gridX + InvGridWidth, -160);
         view.gameObject.AddComponent<RectMask2D>();
         view.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.01f); // 휠 스크롤을 받는 영역
@@ -182,6 +183,7 @@ public partial class UIManager
         invEmpty = NewText(view, "가진 것이 없다.\n<size=17>도시에서 주운 물건이 여기에 들어온다.</size>", 22, TextAnchor.MiddleCenter, Dim);
         invEmpty.lineSpacing = 1.3f;
         Place(invEmpty.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -140), new Vector2(InvGridWidth, 90));
+        BuildInventoryHotbar(glass, gridX);
 
         // 오른쪽: 고른 것의 자세한 정보 (유리 카드 안)
         var card = Box(glass, "DetailCard", new Color(1, 1, 1, 0.035f), new Color(1, 1, 1, 0.09f));
@@ -229,6 +231,7 @@ public partial class UIManager
         for (int i = 0; i < items.Count; i++)
             ItemCard(items[i].Key, items[i].Value, i, invSlot == EquipSlot.None && i == invIndex, items[i].Key == held);
 
+        RefreshInventoryHotbar(s);
         if (invSlot != EquipSlot.None) EquipDetail(s, invSlot);
         else if (invItem != null) ItemDetail(s, invItem, s.Carried.Count(invItem), invIndex, invItem == held);
         else
@@ -255,6 +258,7 @@ public partial class UIManager
         var hb = PlayerHotbar.Instance;
         var sb = new StringBuilder();
         sb.Append(s.EquippedBackpack).Append('|').Append(s.EquippedArmor).Append('|').Append(hb != null ? hb.SelectedId : null).Append('|');
+        foreach (var id in s.Hotbar) sb.Append(id).Append(';');
         foreach (var kv in items) sb.Append(kv.Key).Append(':').Append(kv.Value).Append(',');
         return sb.ToString();
     }
@@ -335,7 +339,7 @@ public partial class UIManager
         Place(asub.rectTransform, new Vector2(0, 1), new Vector2(0, -530), new Vector2(380, 26));
 
         // 아래: 조작 안내
-        var hint = NewText(p, "아이템을 두 번 누르면 바로 사용·장착한다\nTab·Esc로 닫는다   ·   휠로 목록을 넘긴다", 16, TextAnchor.LowerLeft, new Color(Dim.r, Dim.g, Dim.b, 0.8f));
+        var hint = NewText(p, $"아이템을 두 번 누르면 바로 사용·장착한다\n{KeyBindings.Label(GameAction.Inventory)}·Esc로 닫는다   ·   휠로 목록을 넘긴다", 16, TextAnchor.LowerLeft, new Color(Dim.r, Dim.g, Dim.b, 0.8f));
         hint.lineSpacing = 1.2f;
         Place(hint.rectTransform, new Vector2(0, 0), Vector2.zero, new Vector2(380, 52));
     }
@@ -418,14 +422,19 @@ public partial class UIManager
         var rc = ItemRarityInfo.Color(def.Rarity);
         int k = index;
         var rt = SelectCard(invGrid, "Item", selected, new Color(rc.r, rc.g, rc.b, 0.22f), () => ClickInventoryItem(id, k));
+        // 끌어서 핫바 칸에 놓을 수 있다
+        var drag = rt.gameObject.AddComponent<InvDragSource>();
+        drag.Id = id;
+        drag.UI = this;
 
         var slot = NewItemSlot(rt, "Slot", 8);
         Place(slot.Rect, new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(94, 94));
         SetItemSlot(slot, id);
         if (count > 1) InvBadge(slot.Rect, "x" + count, 17, TextAnchor.LowerRight, Text);
-        // 핫바 1~8번 칸에 들어가는 아이템은 번호를 단다 (손에 든 것은 금색)
-        if (index < PlayerHotbar.Slots)
-            InvBadge(slot.Rect, (index + 1).ToString(), 14, TextAnchor.UpperLeft, held ? Accent : new Color(1, 1, 1, 0.5f));
+        // 핫바 칸에 놓인 아이템은 그 칸 번호를 단다 (손에 든 것은 금색)
+        int bar = GameManager.Instance.State.HotbarIndex(id);
+        if (bar >= 0)
+            InvBadge(slot.Rect, (bar + 1).ToString(), 14, TextAnchor.UpperLeft, held ? Accent : new Color(1, 1, 1, 0.5f));
 
         var name = NewText(rt, def.Name, 18, TextAnchor.MiddleCenter, rc, FontSemiBold);
         // 긴 이름(부싯돌과 라이터 등)은 한 줄에 들어가게 글자를 줄인다
@@ -457,8 +466,8 @@ public partial class UIManager
         float y = -356;
         DetailRow(ref y, "보유", $"{count}개   ·   {GameManager.Instance.State.Carried.UnitWeight(def.Id) * count:0.0} kg");
         DetailRow(ref y, "쓰는 법", PlayerHotbar.ActionHint(id));
-        bool onBar = index < PlayerHotbar.Slots;
-        DetailRow(ref y, "핫바", onBar ? $"{index + 1}번 칸" + (held ? "   ·   손에 들고 있다" : "") : "칸 밖 (8칸이 넘는다)", onBar ? Text : Dim);
+        int bar = s.HotbarIndex(id);
+        DetailRow(ref y, "핫바", bar >= 0 ? $"{bar + 1}번 칸" + (held ? "   ·   손에 들고 있다" : "") : "없음 (아래 핫바 칸으로 끌어다 놓기)", bar >= 0 ? Text : Dim);
 
         // 위: 사용 / 장착 (장비 칸에 다른 것이 있으면 바꿔 낀다)
         if (def.IsConsumable)
