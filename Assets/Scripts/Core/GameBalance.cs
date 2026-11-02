@@ -37,6 +37,9 @@ public class GameBalance : ScriptableObject
     public float powerPerTurn = 3f;
     [Tooltip("배고픔이나 갈증이 0일 때 턴마다 잃는 체력")]
     public float starveDamagePerTurn = 8f;
+    [Tooltip("배고픔이나 갈증이 0이면 starveInterval초마다 이만큼 체력을 잃는다")]
+    public float starveDamage = 5f;
+    public float starveInterval = 3f;
     public float restHeal = 30f;
 
     [Header("시작 상태")]
@@ -50,7 +53,9 @@ public class GameBalance : ScriptableObject
     public float speedUnit = 0.4f;
 
     [Header("플레이어 (피 100 / 데미지 10 / 속도 8 / 딜레이 1)")]
+    [Tooltip("방어구를 입으면 방어구마다 더 늘어난다 (ItemDatabase의 HealthBonus)")]
     public float playerMaxHealth = 100f;
+    [Tooltip("맨주먹. 무기의 공격력·공격 간격은 ItemDatabase에서 정한다")]
     public float playerDamage = 10f;
     public float playerSpeed = 8f;
     public float playerAttackDelay = 1f;
@@ -58,9 +63,6 @@ public class GameBalance : ScriptableObject
     public float runMultiplier = 1.8f;
     [Tooltip("앉아 걷기 = 걷기 × 이 배율")]
     public float crouchMultiplier = 0.5f;
-    [Tooltip("둔기를 들었을 때")]
-    public float clubDamage = 30f;
-    public float clubAttackDelay = 1.2f;
 
     [Header("스태미나")]
     public float staminaMax = 100f;
@@ -72,8 +74,8 @@ public class GameBalance : ScriptableObject
     public float staminaMinToRun = 15f;
 
     [Header("짐")]
+    [Tooltip("가방 없이 들 수 있는 무게. 가방을 메면 가방마다 더 늘어난다 (ItemDatabase의 CarryBonus)")]
     public float carryCapacity = 5f;
-    public float backpackBonus = 5f;
     [Tooltip("배터리 1개로 손전등을 켤 수 있는 시간(초)")]
     public float flashlightSecondsPerBattery = 300f;
     public float fuelPower = 35f;

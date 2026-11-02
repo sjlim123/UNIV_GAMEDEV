@@ -20,7 +20,7 @@ public class CityDirector : MonoBehaviour
     public float rangedWeight = 15f;
     public float heavyWeight = 8f;
     [Tooltip("2층 좀비 자리 중 탐험 시작 때 좀비를 세워 둘 비율")]
-    [Range(0, 1)] public float upstairsFill = 0.5f;
+    [Range(0, 1)] public float upstairsFill = 0.25f;
 
     GameBalance balance;
     float timeLimit;
@@ -161,7 +161,7 @@ public class CityDirector : MonoBehaviour
             Vector2 r = Random.insideUnitCircle.normalized * Random.Range(25f, 45f);
             var pos = player.transform.position + new Vector3(r.x, 1, r.y);
             var clip = Random.value < 0.25f ? ProceduralAudio.Scream() : ProceduralAudio.Groan();
-            ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.6f, 0.85f), 1f, 60f);
+            ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f);
         }
     }
 
@@ -213,20 +213,18 @@ public class CityDirector : MonoBehaviour
         return z;
     }
 
-    // 2층 좀비 자리 절반쯤에 좀비를 미리 세워 둔다 (기본 시작 좀비와 별개로, 전리품을 지킨다)
+    // 2층 좀비 자리마다 upstairsFill 확률로 좀비를 미리 세워 둔다 (반드시 나오지는 않는다. 기본 시작 좀비와 별개로, 전리품을 지킨다)
     void SpawnUpstairsZombies(int turn)
     {
         if (zombiePrefab == null) return;
         var points = new List<ZombieSpawnPoint>();
         foreach (var p in zombiePoints)
             if (p != null && p.upstairs) points.Add(p);
-        int count = Mathf.CeilToInt(points.Count * upstairsFill);
         var player = PlayerController.Instance;
-        for (int i = 0; i < count && points.Count > 0; i++)
+        foreach (var point in points)
         {
-            int k = Random.Range(0, points.Count);
-            var pos = points[k].transform.position;
-            points.RemoveAt(k);
+            if (Random.value >= upstairsFill) continue;
+            var pos = point.transform.position;
             if (player != null && Vector3.Distance(pos, player.transform.position) < balance.safeRadius * 0.5f) continue;
             // 반경을 작게 잡아야 아래층 바닥에 붙지 않는다
             if (!NavMesh.SamplePosition(pos, out var hit, 1f, NavMesh.AllAreas)) continue;

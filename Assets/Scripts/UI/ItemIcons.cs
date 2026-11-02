@@ -30,6 +30,9 @@ public static class ItemIcons
         return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
     }
 
+    // 납작한 아이템(합금판)은 윗면이 잘 보이게 카메라 쪽으로 조금 세워서 찍는다
+    static float IconTilt(string id) => id == "alloy_plate" ? -30f : 0f;
+
     static Sprite Render(string id)
     {
         var stage = new GameObject("IconStage");
@@ -37,7 +40,7 @@ public static class ItemIcons
         var item = new GameObject("Item");
         item.transform.SetParent(stage.transform, false);
         ItemVisuals.Build(id, item.transform);
-        item.transform.localRotation = Quaternion.Euler(0, 35, 0);
+        item.transform.localRotation = Quaternion.Euler(IconTilt(id), 35, 0);
 
         var bounds = new Bounds(stage.transform.position, Vector3.zero);
         bool first = true;

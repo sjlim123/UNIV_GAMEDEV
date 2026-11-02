@@ -12,19 +12,25 @@ public static class ZombieLooks
     static readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
     static Material glowSource; // 발광이 켜진 좀비 눈 재질을 복사해 쓴다 (빌드에서 발광 셰이더가 빠지지 않도록)
 
-    // 원거리 좀비 독액 재질
-    public static Material Spit => Glow(new Color(0.55f, 1f, 0.3f), new Color(1.6f, 3.6f, 0.5f));
+    // 원거리 좀비가 새총으로 쏘는 돌멩이 재질
+    public static Material Stone => RuntimeVisuals.Mat(new Color(0.42f, 0.41f, 0.38f), 0.15f);
 
-    // 겉모습을 바꾼다. 약탈자면 야구방망이 Transform을 돌려준다
-    public static Transform Apply(Zombie z, ZombieKind kind)
+    // 겉모습을 바꾼다. 약탈자면 야구방망이, 원거리 좀비면 새총 Transform을 돌려준다
+    public static Transform Apply(Zombie z, ZombieKind kind) => Apply(z, kind, out _);
+
+    // 원거리 좀비면 slingshot에 새총(고무줄을 당기는 데 쓴다)을 돌려준다
+    public static Transform Apply(Zombie z, ZombieKind kind, out Slingshot slingshot)
     {
+        slingshot = null;
         var map = Collect(z.transform);
         if (kind == ZombieKind.Normal) return null;
         Material cloth = First(map, "Torso"), skin = First(map, "Skull");
         switch (kind)
         {
             case ZombieKind.Leather: Leather(z, map, cloth); break;
-            case ZombieKind.Ranged: Ranged(z, map); break;
+            case ZombieKind.Ranged:
+                slingshot = Ranged(z, map, cloth);
+                return slingshot?.Fork;
             case ZombieKind.Heavy: Heavy(z, map, cloth, skin); break;
             case ZombieKind.Raider: return Raider(z, map, cloth);
         }
@@ -59,44 +65,140 @@ public static class ZombieLooks
         Part(PrimitiveType.Sphere, "Cap", z.head, new Vector3(0, 0.2f, 0), new Vector3(0.26f, 0.19f, 0.28f), plate);
     }
 
-    // 원거리 좀비: 깡마르고 병든 초록빛, 몸 곳곳에 빛나는 고름 주머니
-    static void Ranged(Zombie z, Dictionary<string, List<Renderer>> map)
+    // 원거리 좀비: 깡마른 넝마주이. 빛바랜 빨간 모자, 코를 가린 두건, 너덜너덜한 점퍼,
+    // 허리에 돌멩이 주머니, 왼손에 새총
+    static Slingshot Ranged(Zombie z, Dictionary<string, List<Renderer>> map, Material cloth)
     {
-        foreach (var n in SkinParts) Recolor(map, n, new Color(0.42f, 0.58f, 0.28f));
-        Recolor(map, "Torso", new Color(0.36f, 0.37f, 0.29f));
-        Recolor(map, "Rag", new Color(0.3f, 0.32f, 0.24f));
+        foreach (var n in SkinParts) Recolor(map, n, new Color(0.6f, 0.57f, 0.49f)); // 핏기 없는 누런 살갗
+        Recolor(map, "Torso", new Color(0.42f, 0.37f, 0.24f));                      // 빛바랜 카키 점퍼
+        Recolor(map, "Rag", new Color(0.3f, 0.26f, 0.17f));
+        Recolor(map, "Leg", new Color(0.27f, 0.25f, 0.22f));
         Resize(map, "Torso", new Vector3(0.78f, 1.04f, 0.8f));
         Resize(map, "Arm", new Vector3(0.72f, 1f, 0.72f));
         Resize(map, "Leg", new Vector3(0.75f, 1f, 0.75f));
-        var eye = Glow(new Color(0.6f, 1f, 0.4f), new Color(0.9f, 2.4f, 0.4f));
-        SetMaterial(map, "EyeL", eye);
-        SetMaterial(map, "EyeR", eye);
 
-        var pus = Glow(new Color(0.5f, 1f, 0.3f), new Color(1.2f, 3f, 0.4f));
-        Pustule(z.body, new Vector3(0.11f, 0.45f, 0.1f), 0.075f, pus);
-        Pustule(z.body, new Vector3(-0.09f, 0.26f, 0.1f), 0.09f, pus);
-        Pustule(z.body, new Vector3(0.04f, 0.12f, 0.095f), 0.06f, pus);
-        Pustule(z.body, new Vector3(-0.15f, 0.52f, 0.02f), 0.065f, pus);
-        Pustule(z.body, new Vector3(0.06f, 0.3f, -0.1f), 0.07f, pus);
-        Pustule(z.head, new Vector3(0.08f, 0.21f, 0.07f), 0.05f, pus);
-        Pustule(z.head, new Vector3(-0.1f, 0.08f, 0.05f), 0.045f, pus);
-        Pustule(z.armR, new Vector3(0.05f, -0.22f, 0.04f), 0.055f, pus);
-        Pustule(z.armL, new Vector3(-0.04f, -0.42f, 0.04f), 0.045f, pus);
-        // 목에 부풀어 오른 독주머니
-        Part(PrimitiveType.Sphere, "ThroatSac", z.body, new Vector3(0, 0.64f, 0.06f), new Vector3(0.12f, 0.1f, 0.1f), pus, null, false);
+        var tatter = Tint(cloth, new Color(0.33f, 0.29f, 0.19f));
+        var cap = Tint(cloth, new Color(0.46f, 0.13f, 0.1f));
+        var scarf = Tint(cloth, new Color(0.2f, 0.25f, 0.34f));
+        var leather = RuntimeVisuals.Mat(new Color(0.27f, 0.17f, 0.09f), 0.3f);
 
-        // 몸에서 새어 나오는 희미한 초록 빛
-        if (z.body != null)
+        // 찢어져 늘어진 옷자락·소매와 덧댄 천
+        Part(PrimitiveType.Cube, "Tatter", z.body, new Vector3(-0.1f, -0.03f, 0.1f), new Vector3(0.1f, 0.16f, 0.02f), tatter, new Vector3(6, 0, -12));
+        Part(PrimitiveType.Cube, "Tatter", z.body, new Vector3(0.11f, -0.05f, -0.1f), new Vector3(0.09f, 0.2f, 0.02f), tatter, new Vector3(-8, 0, 10));
+        Part(PrimitiveType.Cube, "Tatter", z.body, new Vector3(-0.17f, -0.01f, -0.04f), new Vector3(0.02f, 0.14f, 0.08f), tatter, new Vector3(0, 0, 8));
+        Part(PrimitiveType.Cube, "Patch", z.body, new Vector3(0.07f, 0.42f, 0.106f), new Vector3(0.1f, 0.09f, 0.01f), Tint(cloth, new Color(0.25f, 0.3f, 0.22f)), new Vector3(0, 0, 12), false);
+        Part(PrimitiveType.Cube, "Sleeve", z.armL, new Vector3(0, -0.12f, 0), new Vector3(0.1f, 0.17f, 0.1f), tatter, new Vector3(0, 0, -6));
+        Part(PrimitiveType.Cube, "Sleeve", z.armR, new Vector3(0, -0.14f, 0), new Vector3(0.1f, 0.2f, 0.1f), tatter, new Vector3(0, 0, 9));
+
+        // 챙이 달린 모자
+        Part(PrimitiveType.Sphere, "Cap", z.head, new Vector3(0, 0.205f, 0), new Vector3(0.245f, 0.15f, 0.265f), cap);
+        Part(PrimitiveType.Cube, "Brim", z.head, new Vector3(0, 0.205f, 0.15f), new Vector3(0.19f, 0.016f, 0.12f), cap, new Vector3(8, 0, 0));
+        // 코와 입을 가린 두건 (뒤통수에 매듭)
+        Part(PrimitiveType.Cube, "Bandana", z.head, new Vector3(0, 0.08f, 0.03f), new Vector3(0.235f, 0.075f, 0.235f), scarf);
+        Part(PrimitiveType.Cube, "BandanaFlap", z.head, new Vector3(0, 0.045f, 0.138f), new Vector3(0.1f, 0.1f, 0.02f), scarf, new Vector3(10, 0, 45), false);
+        Part(PrimitiveType.Cube, "Knot", z.head, new Vector3(0, 0.085f, -0.1f), new Vector3(0.05f, 0.04f, 0.03f), scarf, null, false);
+        Part(PrimitiveType.Cube, "KnotTail", z.head, new Vector3(-0.02f, 0.035f, -0.105f), new Vector3(0.03f, 0.08f, 0.01f), scarf, new Vector3(0, 0, -15), false);
+        Part(PrimitiveType.Cube, "KnotTail", z.head, new Vector3(0.02f, 0.04f, -0.105f), new Vector3(0.03f, 0.07f, 0.01f), scarf, new Vector3(0, 0, 18), false);
+
+        // 어깨에 멘 돌멩이 주머니
+        Part(PrimitiveType.Cube, "BagStrap", z.body, new Vector3(0, 0.33f, 0), new Vector3(0.04f, 0.74f, 0.225f), leather, new Vector3(0, 0, 28));
+        Part(PrimitiveType.Cube, "StoneBag", z.body, new Vector3(0.2f, 0.03f, 0.02f), new Vector3(0.1f, 0.12f, 0.09f), leather, new Vector3(0, 0, -6));
+        Part(PrimitiveType.Sphere, "BagStone", z.body, new Vector3(0.19f, 0.095f, 0.03f), new Vector3(0.05f, 0.04f, 0.045f), Stone, null, false);
+        Part(PrimitiveType.Sphere, "BagStone", z.body, new Vector3(0.22f, 0.09f, 0f), new Vector3(0.04f, 0.035f, 0.04f), Stone, null, false);
+
+        return BuildSlingshot(z.armL);
+    }
+
+    // 왼손에 쥔 새총: Y자 나무 손잡이 + 고무줄 두 가닥 + 가죽 주머니
+    static Slingshot BuildSlingshot(Transform arm)
+    {
+        if (arm == null) return null;
+        // 주먹을 관통해 쥔다. 팔을 앞으로 뻗으면 갈래가 위를, 주머니가 몸 쪽을 향한다
+        var fork = new GameObject("Slingshot").transform;
+        fork.SetParent(arm, false);
+        fork.localPosition = new Vector3(0, -0.68f, 0);
+        fork.localRotation = Quaternion.Euler(90, 0, 0);
+
+        var wood = RuntimeVisuals.Mat(new Color(0.43f, 0.29f, 0.16f), 0.3f);
+        var rubber = RuntimeVisuals.Mat(new Color(0.58f, 0.32f, 0.12f), 0.55f);
+        var leather = RuntimeVisuals.Mat(new Color(0.22f, 0.13f, 0.07f), 0.25f);
+        Part(PrimitiveType.Cylinder, "Grip", fork, new Vector3(0, 0.015f, 0), new Vector3(0.032f, 0.075f, 0.032f), wood);
+        Part(PrimitiveType.Cylinder, "ProngL", fork, new Vector3(-0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, 24.8f));
+        Part(PrimitiveType.Cylinder, "ProngR", fork, new Vector3(0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, -24.8f));
+        // 갈래 끝에 감은 고무 매듭
+        Part(PrimitiveType.Sphere, "WrapL", fork, Slingshot.TipL, Vector3.one * 0.032f, rubber, null, false);
+        Part(PrimitiveType.Sphere, "WrapR", fork, Slingshot.TipR, Vector3.one * 0.032f, rubber, null, false);
+
+        // 고무줄 (길이·방향은 Slingshot.Pose가 매 프레임 정한다)
+        var bandL = Part(PrimitiveType.Cube, "BandL", fork, Vector3.zero, Vector3.one * 0.01f, rubber, null, false);
+        var bandR = Part(PrimitiveType.Cube, "BandR", fork, Vector3.zero, Vector3.one * 0.01f, rubber, null, false);
+        // 가죽 주머니와 그 안의 돌 (주머니 +z가 갈래 쪽)
+        var pouch = new GameObject("Pouch").transform;
+        pouch.SetParent(fork, false);
+        Part(PrimitiveType.Cube, "PouchLeather", pouch, Vector3.zero, new Vector3(0.05f, 0.034f, 0.016f), leather, null, false);
+        var stone = Part(PrimitiveType.Sphere, "PouchStone", pouch, new Vector3(0, 0, 0.018f), new Vector3(0.05f, 0.042f, 0.046f), Stone, null, false);
+
+        var sling = new Slingshot(fork, pouch, bandL, bandR, stone);
+        sling.Relax();
+        return sling;
+    }
+
+    // 원거리 좀비의 새총. 고무줄 두 가닥을 Y자 끝과 가죽 주머니 사이에 매 프레임 늘여 놓는다.
+    // Zombie가 Pose로 주머니를 오른손 쪽으로 당기면 고무줄이 늘어나고, 놓으면 튕겨 돌아간다
+    public class Slingshot
+    {
+        // Y자 기준 좌표 (y = 갈래 쪽, z = 겨누는 쪽)
+        public static readonly Vector3 TipL = new Vector3(-0.06f, 0.22f, 0f), TipR = new Vector3(0.06f, 0.22f, 0f);
+        static readonly Vector3 RestPouch = new Vector3(0f, 0.19f, -0.04f);
+        const float BandWidth = 0.013f;
+
+        public readonly Transform Fork;
+        readonly Transform pouch, bandL, bandR, stone;
+
+        public Slingshot(Transform fork, Transform pouch, Transform bandL, Transform bandR, Transform stone)
         {
-            var go = new GameObject("PustuleGlow");
-            go.transform.SetParent(z.body, false);
-            go.transform.localPosition = new Vector3(0, 0.4f, 0.3f);
-            var l = go.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(0.5f, 1f, 0.3f);
-            l.range = 2.5f;
-            l.intensity = 1.5f;
-            l.shadows = LightShadows.None;
+            Fork = fork;
+            this.pouch = pouch;
+            this.bandL = bandL;
+            this.bandR = bandR;
+            this.stone = stone;
+        }
+
+        // 돌이 날아가기 시작하는 곳 (두 갈래 끝 사이)
+        public Vector3 Muzzle => Fork.TransformPoint((TipL + TipR) * 0.5f);
+
+        // 당기지 않았을 때 주머니가 있는 곳 (오른손이 주머니를 집으러 가는 곳)
+        public Vector3 Rest => Fork.TransformPoint(RestPouch);
+
+        // 고무줄이 느슨하게 Y자에 붙어 있는 상태 (돌 없음)
+        public void Relax() => Pose(Vector3.zero, 0f, false);
+
+        // draw 0 = 주머니가 Y자 바로 뒤, 1 = 주머니가 pullTo(오른손)까지 당겨짐. loaded면 주머니에 돌이 보인다.
+        // 음수면 놓은 고무줄이 튕겨 Y자 앞으로 넘어간 상태 (-0.5까지)
+        public void Pose(Vector3 pullTo, float draw, bool loaded)
+        {
+            if (Fork == null || pouch == null) return;
+            Vector3 tipL = Fork.TransformPoint(TipL), tipR = Fork.TransformPoint(TipR);
+            Vector3 p = Vector3.LerpUnclamped(Fork.TransformPoint(RestPouch), pullTo, Mathf.Clamp(draw, -0.5f, 1f));
+            pouch.position = p;
+            Vector3 face = (tipL + tipR) * 0.5f - p;
+            if (face.sqrMagnitude > 1e-6f) pouch.rotation = Quaternion.LookRotation(face, Fork.up);
+            Stretch(bandL, tipL, p);
+            Stretch(bandR, tipR, p);
+            if (stone != null && stone.gameObject.activeSelf != loaded) stone.gameObject.SetActive(loaded);
+        }
+
+        void Stretch(Transform band, Vector3 from, Vector3 to)
+        {
+            if (band == null) return;
+            Vector3 d = to - from;
+            float len = d.magnitude;
+            band.position = (from + to) * 0.5f;
+            if (len > 1e-4f) band.rotation = Quaternion.LookRotation(d, Fork.up);
+            float s = Mathf.Max(1e-4f, Fork.lossyScale.x); // 좀비 크기 (부모 배율은 모두 균일)
+            float local = len / s;
+            float w = BandWidth * Mathf.Lerp(1f, 0.6f, Mathf.Clamp01(local / 0.7f)); // 늘어날수록 가늘어진다
+            band.localScale = new Vector3(w, w, Mathf.Max(0.001f, local));
         }
     }
 
@@ -213,9 +315,6 @@ public static class ZombieLooks
         if (!map.TryGetValue(name, out var list)) return;
         foreach (var r in list) r.enabled = false;
     }
-
-    static void Pustule(Transform parent, Vector3 pos, float size, Material m) =>
-        Part(PrimitiveType.Sphere, "Pustule", parent, pos, Vector3.one * size, m, null, false);
 
     // 원래 재질(텍스처 유지)에 색만 바꾼 복사본. 같은 조합은 공유한다
     static Material Tint(Material src, Color color)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -14,6 +15,7 @@ public static partial class GameSceneBuilder
 
     static readonly float[] RoadCenters = { -69f, -23f, 23f, 69f };
     static readonly Vector3 SpawnPos = new Vector3(-23f, 0.05f, -22.5f);
+    static readonly Vector3 CityHatchPos = new Vector3(-23f, 0, -26.5f);
 
     static void BuildCityScene(GameObject playerPrefab, GameObject zombiePrefab, GameObject dogPrefab)
     {
@@ -35,7 +37,7 @@ public static partial class GameSceneBuilder
                 BuildBlock(geo, points, new Vector3(bx, 0, bz));
 
         BuildStreetProps(geo, points);
-        BuildHatch(geo, new Vector3(-23f, 0, -26.5f));
+        BuildHatch(geo, CityHatchPos);
         BuildBoundary(geo);
 
         // 도로 위 좀비 등장 지점
@@ -82,6 +84,8 @@ public static partial class GameSceneBuilder
         AssetDatabase.DeleteAsset(navPath);
         AssetDatabase.CreateAsset(surface.navMeshData, navPath);
 
+        UnbatchInteractables();
+        Debug.Log($"[GameSceneBuilder] City: 같은 면에 겹친 상자 {FixCoplanarFaces()}곳을 고침");
         AssetDatabase.SaveAssets();
         EditorSceneManager.SaveScene(scene, SceneDir + "/City.unity");
 
@@ -123,11 +127,20 @@ public static partial class GameSceneBuilder
             {
                 bool trader = c.x == 0 && c.z == -46 && ix == 0 && iz == 1;
                 bool nearSpawn = c.x == -46 && c.z == -46 && ix == 1 && iz == 1;
+                bool truckYard = c.x == 0 && c.z == 0 && ix == 0 && iz == 0; // 해치 교차로 북동쪽 모퉁이
                 double r = rng.NextDouble();
+                int blockKids = b.childCount, pointKids = points.childCount;
                 if (trader || nearSpawn || r < 0.5) EnterableBuilding(b, points, ix, iz, trader);
                 else if (r < 0.75) TallBuilding(b, points, ix, iz);
                 else if (r < 0.9) CollapsedBuilding(b, points, ix, iz);
                 else EmptyLot(b, points, ix, iz);
+                // 트럭 정비소 자리: 원래 건물을 같은 난수로 지은 뒤 지운다 (도시 난수가 예전과 똑같이 흘러 나머지 배치가 그대로다)
+                if (truckYard)
+                {
+                    RemoveChildrenFrom(b, blockKids);
+                    RemoveChildrenFrom(points, pointKids);
+                    BuildTruckYard(b, points);
+                }
             }
 
         // 모퉁이 가로등
@@ -822,6 +835,23 @@ public static partial class GameSceneBuilder
         FireBarrel(props, new Vector3(1.5f, 0, -21f));
         FireBarrel(props, new Vector3(24f, 0, 26f));
         FireBarrel(props, new Vector3(-26f, 0, 40f));
+
+        // 길가 잡동사니 (Poly Haven CC0 모델): 쓰레기 봉투·눕힌 타이어·연료통·군용 상자.
+        // 따로 난수를 써서 도시의 다른 배치는 바뀌지 않게 한다
+        var junk = new System.Random(77);
+        float J(float a, float b) => a + (float)junk.NextDouble() * (b - a);
+        string[] kinds = { "trashbag", "trashbag", "trashbag", "old_tyre", "old_tyre", "metal_jerrycan", "old_military_crate" };
+        for (int i = 0; i < 40; i++)
+        {
+            float rc = RoadCenters[junk.Next(RoadCenters.Length)] + (junk.NextDouble() < 0.5 ? -1 : 1) * J(4.6f, 5.4f);
+            float along = J(-72f, 72f);
+            var p = junk.NextDouble() < 0.5 ? new Vector3(rc, 0, along) : new Vector3(along, 0, rc);
+            string id = kinds[junk.Next(kinds.Length)];
+            float yaw = J(0, 360);
+            if (Vector3.Distance(p, SpawnPos) < 6 || Vector3.Distance(p, CityHatchPos) < 9) continue;
+            if (id == "old_tyre") PolyProp(id, props, p + Vector3.up * 0.085f, yaw, 0.35f, 0, true, new Vector3(90, 0, 0)); // 바닥에 눕힌다
+            else PolyProp(id, props, p, yaw, id == "trashbag" ? 0.55f : 0.35f, id == "metal_jerrycan" ? 0.3f : 0f);
+        }
     }
 
     static void BuildHatch(Transform geo, Vector3 pos)
@@ -864,6 +894,529 @@ public static partial class GameSceneBuilder
         Flicker(l, 0.12f, 6f, false);
         Box("Goods1", g, new Vector3(-0.8f, 0.2f, 0.4f), new Vector3(0.5f, 0.4f, 0.4f), M["wood"], 1f, true, new Vector3(0, -20, 0));
         Prim(PrimitiveType.Cylinder, "Goods2", g, new Vector3(-0.8f, 0.55f, 0.4f), new Vector3(0.12f, 0.12f, 0.12f), M["metal"]);
+    }
+
+    // ================= 트럭 정비소 =================
+    // 해치 교차로 북동쪽 모퉁이 구역 (블록 (0,0)의 남서쪽 13x13m). 남·서쪽은 인도와 도로, 북·동쪽은 같은 블록 건물 사이 빈터.
+    // 반쯤 열린 차고: 뒤(북)·옆(동) 벽과 골함석 지붕 아래 바퀴 없는 픽업트럭, 작업등, 공구 수레, 간판.
+    // 남서쪽 모퉁이가 열려 있어 해치에서 바로 보이고 걸어 들어온다 (바닥판이 내비메시에 들어가 좀비도 돌아다닌다)
+
+    const float YardHalf = 6.25f;
+
+    // keep번째 뒤에 붙은 자식을 모두 지운다 (정비소 자리에 지었던 원래 건물)
+    static void RemoveChildrenFrom(Transform parent, int keep)
+    {
+        for (int i = parent.childCount - 1; i >= keep; i--) Object.DestroyImmediate(parent.GetChild(i).gameObject);
+    }
+
+    static void BuildTruckYard(Transform block, Transform points)
+    {
+        // 도시 난수와 따로 둔 난수를 쓴다 (나머지 도시 배치가 예전과 똑같이 나온다)
+        var cityRng = rng;
+        rng = new System.Random(4646);
+
+        // 정비소 로컬 좌표: 원점 = 구역 가운데 인도 높이, +x 동쪽, +z 북쪽
+        var yard = Group("TruckYard", block, new Vector3(-14.5f + YardHalf, 0.15f, -14.5f + YardHalf));
+        Box("Pad", yard, new Vector3(0, 0.02f, 0), new Vector3(YardHalf * 2, 0.04f, YardHalf * 2), M["dirty"], 3f);
+        // 기름 얼룩 (엔진 밑에는 꼭 하나)
+        Box("OilStain", yard, new Vector3(-1.4f, 0.042f, 3.3f), new Vector3(1.3f, 0.004f, 0.9f), M["tire"], 1f, false, new Vector3(0, R(0, 180), 0));
+        for (int i = 0; i < 5; i++)
+            Box("OilStain", yard, new Vector3(R(-5f, 5f), 0.043f + i * 0.001f, R(-5f, 1.5f)), new Vector3(R(0.4f, 1.2f), 0.004f, R(0.3f, 0.9f)), M["tire"], 1f, false, new Vector3(0, R(0, 180), 0));
+
+        // 차고: 뒤(북)·옆(동) 벽돌 벽 + 앞이 낮은 골함석 지붕 (판 하나는 떨어져 나가 엔진 칸에 달빛이 든다)
+        Wall(yard, "BackWall", new Vector3(-YardHalf, 0, 6.1f), 0, YardHalf * 2, 3.6f, 0.25f, M["brick"], new[] { WinOp(9.6f, 1.6f) });
+        Wall(yard, "SideWall", new Vector3(6.1f, 0, -1.5f), -90, 7.75f, 3.6f, 0.25f, M["brick"], Solid);
+        float roofX0 = -5.2f, roofX1 = YardHalf, roofZ0 = 0.4f, roofZ1 = 6.2f, yFront = 3.05f, yBack = 3.68f;
+        float slope = Mathf.Atan2(yBack - yFront, roofZ1 - roofZ0) * Mathf.Rad2Deg;
+        float run = (roofZ1 - roofZ0) / Mathf.Cos(slope * Mathf.Deg2Rad);
+        var roofRot = Quaternion.Euler(-slope, 0, 0);
+        const int panels = 4;
+        float pw = (roofX1 - roofX0) / panels;
+        var ridges = new List<CombineInstance>();
+        var ridge = BoxMesh(new Vector3(0.05f, 0.035f, run), 1f);
+        for (int i = 0; i < panels; i++)
+        {
+            if (i == 1) continue; // 떨어져 나간 판
+            var c = new Vector3(roofX0 + (i + 0.5f) * pw, (yFront + yBack) / 2, (roofZ0 + roofZ1) / 2);
+            Box("RoofSheet", yard, c, new Vector3(pw + 0.04f, 0.03f, run), M["metal"], 1.5f, false, new Vector3(-slope, 0, 0));
+            for (float dx = -pw / 2 + 0.1f; dx < pw / 2; dx += 0.2f)
+                ridges.Add(new CombineInstance { mesh = ridge, transform = Matrix4x4.TRS(c + roofRot * new Vector3(dx, 0.03f, 0), roofRot, Vector3.one) });
+        }
+        CombineInto(yard, "RoofRidges", ridges, M["metal"]);
+        Box("RoofBeam", yard, new Vector3((roofX0 + roofX1) / 2, yFront - 0.1f, roofZ0), new Vector3(roofX1 - roofX0, 0.18f, 0.18f), M["metal"], 1.5f, false);
+        foreach (var px in new[] { roofX0 + 0.1f, -0.9f, 3.3f })
+            Box("RoofPost", yard, new Vector3(px, (yFront - 0.19f) / 2, roofZ0), new Vector3(0.16f, yFront - 0.19f, 0.16f), M["metal"], 1f);
+        Box("FallenSheet", yard, new Vector3(5.68f, 1.25f, -0.4f), new Vector3(0.03f, 2.6f, pw), M["metal"], 1.5f, true, new Vector3(0, R(-4, 4), -14));
+
+        // 나머지 둘레는 골함석 울타리. 남서쪽 모퉁이(해치 쪽)는 비워 입구로 쓴다
+        YardFence(yard, new Vector3(-6.1f, 0, 0.7f), new Vector3(-6.1f, 0, 6.0f));
+        YardFence(yard, new Vector3(0.7f, 0, -6.1f), new Vector3(6.0f, 0, -6.1f));
+        YardFence(yard, new Vector3(6.1f, 0, -6.0f), new Vector3(6.1f, 0, -1.6f));
+
+        // 입구 바닥에 쓰러진 철망 문 (밟고 지나간다)
+        var gate = Group("FallenGate", yard, new Vector3(-2.6f, 0.07f, -4.6f), R(10f, 25f));
+        gate.localRotation *= Quaternion.Euler(0, 0, R(2f, 5f));
+        foreach (var gz in new[] { -0.9f, 0f, 0.9f })
+            Box("Rail", gate, new Vector3(0, 0, gz), new Vector3(3f, 0.04f, 0.04f), M["metal"], 1f, false);
+        foreach (var gx in new[] { -1.5f, 0f, 1.5f })
+            Box("Stile", gate, new Vector3(gx, 0, 0), new Vector3(0.04f, 0.04f, 1.84f), M["metal"], 1f, false);
+        RubblePile(yard, new Vector3(-4.6f, 0.04f, -2.4f), 4, 0.6f);
+
+        // 트럭: 지붕 아래, 열린 보닛이 입구(서쪽)를 본다
+        BuildPickupTruck(yard, new Vector3(0.6f, 0.04f, 3.3f), -90);
+
+        // 작업등: 삼각대 위 따뜻한 등이 열린 보닛을 비춘다 (그림자 없음, 가끔 깜빡임)
+        var lampPos = new Vector3(-3.3f, 0.04f, 2.0f);
+        var aim = new Vector3(-1.3f, 0, 3.3f) - lampPos;
+        float lampYaw = Mathf.Atan2(aim.x, aim.z) * Mathf.Rad2Deg;
+        var lamp = Group("WorkLamp", yard, lampPos, lampYaw);
+        ColliderBox("LampCollider", lamp, new Vector3(0, 0.95f, 0), new Vector3(0.5f, 1.9f, 0.5f), Vector3.zero);
+        var joint = new Vector3(0, 1.45f, 0);
+        for (int i = 0; i < 3; i++)
+        {
+            float a = (i * 120 + 60) * Mathf.Deg2Rad;
+            YardRod(lamp, "Leg", joint, new Vector3(Mathf.Sin(a) * 0.5f, 0, Mathf.Cos(a) * 0.5f), 0.018f, M["metal"]);
+        }
+        YardRod(lamp, "Mast", joint, joint + Vector3.up * 0.32f, 0.02f, M["metal"]);
+        var head = Group("Head", lamp, joint + Vector3.up * 0.42f);
+        head.localRotation = Quaternion.Euler(14, 0, 0);
+        Box("Housing", head, Vector3.zero, new Vector3(0.34f, 0.26f, 0.14f), M["metal"], 1f, false);
+        Box("Glow", head, new Vector3(0, 0, 0.075f), new Vector3(0.28f, 0.2f, 0.02f), M["lantern"], 1f, false);
+        var workLight = PointLight("WorkLight", head, new Vector3(0, 0, 0.4f), new Color(1f, 0.72f, 0.42f), 9f, 11f);
+        Flicker(workLight, 0.22f, 9f, true);
+        // 전선: 등에서 바닥으로 내려와 뒤 벽까지
+        var plug = lampPos + Quaternion.Euler(0, lampYaw, 0) * new Vector3(0, 0.02f, -0.45f);
+        YardRod(lamp, "Cable", joint + new Vector3(0, 0.3f, -0.06f), new Vector3(0, 0.02f, -0.45f), 0.01f, M["tire"]);
+        YardRod(yard, "Cable", plug, new Vector3(-2.7f, 0.06f, 5.95f), 0.01f, M["tire"]);
+
+        // 공구 수레: 위 칸 공구함 옆에 아이템 자리, 가운데 칸에 렌치·기름통
+        var cart = Group("ToolCart", yard, new Vector3(-3.8f, 0.04f, 5.2f), R(-12f, 12f));
+        // 판정 윗면 = 위 칸 윗면 (0.95). 더 높으면 위 칸의 아이템이 떠 보인다
+        ColliderBox("CartCollider", cart, new Vector3(0, 0.475f, 0), new Vector3(0.95f, 0.95f, 0.6f), Vector3.zero);
+        foreach (var lx in new[] { -0.42f, 0.42f })
+            foreach (var lz in new[] { -0.25f, 0.25f })
+            {
+                Box("Leg", cart, new Vector3(lx, 0.5f, lz), new Vector3(0.035f, 0.84f, 0.035f), M["metal"], 1f, false);
+                Prim(PrimitiveType.Cylinder, "Caster", cart, new Vector3(lx, 0.045f, lz), new Vector3(0.09f, 0.02f, 0.09f), M["tire"], new Vector3(0, 0, 90));
+            }
+        Box("Top", cart, new Vector3(0, 0.93f, 0), new Vector3(0.92f, 0.04f, 0.58f), M["paintRed"], 1f, false);
+        Box("Middle", cart, new Vector3(0, 0.52f, 0), new Vector3(0.88f, 0.03f, 0.54f), M["metal"], 1f, false);
+        Box("Bottom", cart, new Vector3(0, 0.14f, 0), new Vector3(0.88f, 0.03f, 0.54f), M["metal"], 1f, false);
+        Box("Handle", cart, new Vector3(0.52f, 0.98f, 0), new Vector3(0.03f, 0.03f, 0.48f), M["metal"], 1f, false);
+        var toolbox = Box("Toolbox", cart, new Vector3(-0.18f, 1.06f, 0), new Vector3(0.48f, 0.22f, 0.26f), M["paintRed"], 1f, false, new Vector3(0, R(-8f, 8f), 0), false);
+        Box("Grip", toolbox.transform, new Vector3(0, 0.14f, 0), new Vector3(0.22f, 0.03f, 0.03f), M["metal"], 1f, false, null, false);
+        for (int i = 0; i < 3; i++)
+            Box("Wrench", cart, new Vector3(R(-0.3f, 0.3f), 0.545f, R(-0.15f, 0.15f)), new Vector3(0.025f, 0.012f, R(0.2f, 0.3f)), M["metal"], 1f, false, new Vector3(0, R(0, 180), 0));
+        Prim(PrimitiveType.Cylinder, "OilCan", cart, new Vector3(-0.28f, 0.66f, 0.08f), new Vector3(0.14f, 0.12f, 0.14f), M["paintBlue"]);
+        Box("Rag", cart, new Vector3(0.22f, 0.16f, 0.05f), new Vector3(0.32f, 0.03f, 0.22f), M["cloth"], 1f, false, new Vector3(0, R(0, 90), 0));
+        Spawn<ItemSpawnPoint>(points, cart.TransformPoint(new Vector3(0.25f, 0.97f, 0.02f)));
+
+        // 뒤 구석의 드럼통
+        Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(5.3f, 0.47f, 5.35f), new Vector3(0.6f, 0.43f, 0.6f), M["paintBlue"], null, true);
+        Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(4.6f, 0.47f, 5.5f), new Vector3(0.6f, 0.43f, 0.6f), M["metal"], new Vector3(0, R(0, 90), 0), true);
+
+        // 간판: 남서쪽 모퉁이 기둥 위에서 해치 쪽(남서)을 본다. 작은 등이 글자를 비춘다
+        var sign = Group("Sign", yard, new Vector3(-5.55f, 0, -5.55f), 45);
+        Prim(PrimitiveType.Cylinder, "Pole", sign, new Vector3(0, 1.7f, 0), new Vector3(0.14f, 1.7f, 0.14f), M["metal"], null, true);
+        var board = Group("Board", sign, new Vector3(0, 3.75f, 0));
+        board.localRotation = Quaternion.Euler(0, 0, R(-3f, 3f));
+        Box("Frame", board, Vector3.zero, new Vector3(2.5f, 0.82f, 0.08f), M["metal"], 1f, false);
+        Prim(PrimitiveType.Quad, "Face", board, new Vector3(0, 0, -0.045f), new Vector3(2.4f, 0.75f, 1f), YardSignMaterial());
+        Box("LampArm", board, new Vector3(0, 0.5f, -0.15f), new Vector3(0.04f, 0.04f, 0.3f), M["metal"], 1f, false);
+        Box("Lamp", board, new Vector3(0, 0.5f, -0.32f), new Vector3(0.3f, 0.07f, 0.16f), M["metal"], 1f, false);
+        Box("Bulb", board, new Vector3(0, 0.46f, -0.32f), new Vector3(0.2f, 0.02f, 0.1f), M["lantern"], 1f, false);
+        var signLight = PointLight("SignLight", board, new Vector3(0, 0.3f, -0.55f), new Color(1f, 0.75f, 0.45f), 2.5f, 4.5f);
+        Flicker(signLight, 0.12f, 5f, false);
+
+        // 시간이 지나면 좀비가 나오는 자리 (출발 지점과 가까워 처음에는 안전 거리 때문에 나오지 않는다)
+        Spawn<ZombieSpawnPoint>(points, yard.TransformPoint(new Vector3(3.5f, 0, -3.5f)));
+
+        rng = cityRng;
+    }
+
+    // 바퀴 없이 받침목에 올린 고장 난 픽업트럭 (로컬 +z가 보닛 쪽, 원점 = 바닥 가운데).
+    // 넣은 재료만큼 바퀴·덧댄 철판·엔진 부품·배선·배터리·옆 깔판의 연료통이 하나씩 보인다 (TruckSite.Refresh)
+    static void BuildPickupTruck(Transform parent, Vector3 pos, float yaw)
+    {
+        var t = Group("PickupTruck", parent, pos, yaw);
+        var site = t.gameObject.AddComponent<TruckSite>();
+        var paint = M["paintBlue"];
+
+        // 받침목(엇갈려 쌓은 나무토막) 위 차축과 브레이크 드럼
+        foreach (var z in new[] { -1.75f, 1.75f })
+        {
+            foreach (var x in new[] { -0.45f, 0.45f })
+            {
+                Box("Crib", t, new Vector3(x, 0.1f, z), new Vector3(0.22f, 0.2f, 0.55f), M["wood"], 1f);
+                Box("Crib", t, new Vector3(x, 0.3f, z), new Vector3(0.5f, 0.2f, 0.22f), M["wood"], 1f, true, new Vector3(0, R(-6f, 6f), 0));
+            }
+            Prim(PrimitiveType.Cylinder, "Axle", t, new Vector3(0, 0.42f, z), new Vector3(0.08f, 0.88f, 0.08f), M["metal"], new Vector3(0, 0, 90));
+            foreach (var s in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cylinder, "Drum", t, new Vector3(s * 0.84f, 0.42f, z), new Vector3(0.34f, 0.06f, 0.34f), M["metal"], new Vector3(0, 0, 90));
+        }
+        foreach (var x in new[] { -0.45f, 0.45f })
+            Box("FrameRail", t, new Vector3(x, 0.55f, 0), new Vector3(0.12f, 0.2f, 5.0f), M["metal"], 1.5f);
+
+        // 운전석
+        Box("CabLower", t, new Vector3(0, 0.95f, 0.2f), new Vector3(1.9f, 0.6f, 1.9f), paint, 1.5f);
+        Box("CabUpper", t, new Vector3(0, 1.65f, 0), new Vector3(1.8f, 0.8f, 1.5f), paint, 1.5f);
+        Box("Windshield", t, new Vector3(0, 1.66f, 0.76f), new Vector3(1.62f, 0.6f, 0.02f), M["glass"], 1f, false);
+        Box("RearWindow", t, new Vector3(0, 1.72f, -0.76f), new Vector3(1.4f, 0.4f, 0.02f), M["glass"], 1f, false);
+        foreach (var s in new[] { -1f, 1f })
+        {
+            Box("SideWindow", t, new Vector3(s * 0.905f, 1.7f, 0.05f), new Vector3(0.02f, 0.48f, 1.0f), M["glass"], 1f, false);
+            Box("DoorHandle", t, new Vector3(s * 0.96f, 1.15f, -0.3f), new Vector3(0.02f, 0.04f, 0.16f), M["metal"], 1f, false);
+            Box("Mirror", t, new Vector3(s * 1.04f, 1.55f, 0.68f), new Vector3(0.06f, 0.16f, 0.12f), M["metal"], 1f, false);
+        }
+
+        // 엔진 칸: 열린 보닛, 바퀴 자리가 파인 펜더, 그릴, 비어 있는 바닥
+        foreach (var s in new[] { -1f, 1f })
+        {
+            Box("Fender", t, new Vector3(s * 0.82f, 1.05f, 1.9f), new Vector3(0.26f, 0.38f, 1.5f), paint, 1.5f);
+            Box("Apron", t, new Vector3(s * 0.82f, 0.74f, 2.43f), new Vector3(0.26f, 0.24f, 0.44f), paint, 1f);
+            Box("Headlight", t, new Vector3(s * 0.82f, 1.08f, 2.665f), new Vector3(0.2f, 0.15f, 0.03f), M["glass"], 1f, false);
+        }
+        Box("Grille", t, new Vector3(0, 0.95f, 2.6f), new Vector3(1.38f, 0.5f, 0.1f), M["metal"], 1f);
+        for (int i = 0; i < 4; i++)
+            Box("Slat", t, new Vector3(0, 0.8f + i * 0.1f, 2.656f), new Vector3(1.3f, 0.03f, 0.02f), M["tire"], 1f, false);
+        Box("Bumper", t, new Vector3(0, 0.6f, 2.74f), new Vector3(2.0f, 0.18f, 0.14f), M["metal"], 1f);
+        Box("BayFloor", t, new Vector3(0, 0.7f, 1.9f), new Vector3(1.38f, 0.06f, 1.4f), M["tire"], 1f);
+        var hinge = Group("HoodHinge", t, new Vector3(0, 1.25f, 1.17f));
+        hinge.localRotation = Quaternion.Euler(-62, 0, 0);
+        Box("Hood", hinge, new Vector3(0, 0.025f, 0.75f), new Vector3(1.86f, 0.05f, 1.5f), paint, 1.5f);
+        YardRod(t, "HoodProp", new Vector3(0.62f, 1.24f, 2.45f), t.InverseTransformPoint(hinge.TransformPoint(new Vector3(0.62f, 0, 1.42f))), 0.012f, M["metal"]);
+        var bay = Group("EngineBay", t, new Vector3(0, 1.0f, 1.9f));
+
+        // 짐칸 (뒷문은 한쪽 사슬이 끊겨 비스듬히 늘어졌다)
+        Box("BedFloor", t, new Vector3(0, 0.9f, -1.7f), new Vector3(1.9f, 0.1f, 1.9f), paint, 1.5f);
+        foreach (var s in new[] { -1f, 1f })
+        {
+            Box("BedSide", t, new Vector3(s * 0.91f, 1.2f, -1.7f), new Vector3(0.08f, 0.5f, 1.9f), paint, 1.5f);
+            Box("Taillight", t, new Vector3(s * 0.87f, 1.2f, -2.67f), new Vector3(0.12f, 0.2f, 0.04f), M["paintRed"], 1f, false);
+        }
+        Box("BedFront", t, new Vector3(0, 1.2f, -0.79f), new Vector3(1.9f, 0.5f, 0.08f), paint, 1.5f);
+        var tailHinge = Group("TailgateHinge", t, new Vector3(0, 0.93f, -2.65f));
+        tailHinge.localRotation = Quaternion.Euler(-125, 0, R(-7f, 7f));
+        Box("Tailgate", tailHinge, new Vector3(0, 0.25f, 0), new Vector3(1.8f, 0.5f, 0.06f), paint, 1.5f);
+        Box("RearBumper", t, new Vector3(0, 0.6f, -2.75f), new Vector3(1.9f, 0.14f, 0.12f), M["metal"], 1f);
+        Prim(PrimitiveType.Cylinder, "Exhaust", t, new Vector3(0.6f, 0.5f, -2.55f), new Vector3(0.07f, 0.3f, 0.07f), M["metal"], new Vector3(90, 0, 0));
+        Box("Crate", t, new Vector3(0.35f, 1.15f, -2.0f), new Vector3(0.6f, 0.4f, 0.5f), M["wood"], 1f, true, new Vector3(0, R(-20f, 20f), 0));
+
+        // 바퀴 4: 앞왼·앞오른·뒤왼·뒤오른 순서로 끼워진다
+        var wheels = new List<GameObject>();
+        foreach (var z in new[] { 1.75f, -1.75f })
+            foreach (var s in new[] { -1f, 1f })
+            {
+                var w = Group("Wheel", t, new Vector3(s * 0.92f, 0.42f, z));
+                Prim(PrimitiveType.Cylinder, "Tire", w, Vector3.zero, new Vector3(0.84f, 0.13f, 0.84f), M["tire"], new Vector3(0, 0, 90));
+                Prim(PrimitiveType.Cylinder, "Rim", w, new Vector3(s * 0.005f, 0, 0), new Vector3(0.5f, 0.132f, 0.5f), M["metal"], new Vector3(0, 0, 90));
+                Prim(PrimitiveType.Cylinder, "Hub", w, new Vector3(s * 0.01f, 0, 0), new Vector3(0.16f, 0.135f, 0.16f), M["metal"], new Vector3(0, 0, 90));
+                wheels.Add(w.gameObject);
+            }
+
+        // 녹슬어 뚫린 구멍 8곳: 트럭을 다 고치면 철판을 덧대 리벳으로 박은 모습이 된다
+        var plates = new List<GameObject>();
+        var holes = new[]
+        {
+            new Vector4(1.0f, 0.15f, 0.34f, 0.5f),   // 문 (y, z, 높이, 폭)
+            new Vector4(1.05f, 2.0f, 0.26f, 0.42f),  // 앞 펜더
+            new Vector4(1.2f, -1.15f, 0.3f, 0.45f),  // 짐칸 앞
+            new Vector4(1.15f, -2.2f, 0.34f, 0.4f),  // 짐칸 뒤
+        };
+        foreach (var hole in holes)
+            foreach (var s in new[] { -1f, 1f })
+                plates.Add(TruckRustPatch(t, s, hole.x, hole.y, hole.z, hole.w));
+
+        // 엔진 1: 엔진 블록·헤드 커버·공기 필터·라디에이터가 한꺼번에 들어간다
+        var engine = new List<GameObject>();
+        var block = Group("EngineBlock", bay, new Vector3(0, -0.27f, -0.05f));
+        Box("Block", block, new Vector3(0, 0.21f, 0), new Vector3(0.62f, 0.42f, 0.7f), M["metal"], 1f, false, null, false);
+        Box("Manifold", block, new Vector3(0.34f, 0.28f, 0), new Vector3(0.06f, 0.12f, 0.5f), M["metal"], 1f, false, null, false);
+        Prim(PrimitiveType.Cylinder, "Pulley", block, new Vector3(0, 0.2f, 0.37f), new Vector3(0.2f, 0.03f, 0.2f), M["tire"], new Vector3(90, 0, 0));
+        engine.Add(block.gameObject);
+        var cover = Group("ValveCover", bay, new Vector3(0, 0.15f, -0.05f));
+        Box("Cover", cover, Vector3.zero, new Vector3(0.56f, 0.1f, 0.62f), M["paintRed"], 1f, false, null, false);
+        Prim(PrimitiveType.Cylinder, "AirFilter", cover, new Vector3(0, 0.1f, -0.05f), new Vector3(0.36f, 0.05f, 0.36f), M["metal"]);
+        engine.Add(cover.gameObject);
+        var radiator = Group("Radiator", bay, new Vector3(0, -0.03f, 0.58f));
+        Box("Core", radiator, Vector3.zero, new Vector3(1.1f, 0.4f, 0.06f), M["tire"], 1f, false, null, false);
+        Box("Tank", radiator, new Vector3(0, 0.22f, 0), new Vector3(1.2f, 0.06f, 0.08f), M["metal"], 1f, false, null, false);
+        YardRod(radiator, "Hose", new Vector3(0.3f, 0.2f, -0.04f), new Vector3(0.2f, 0.12f, -0.33f), 0.03f, M["tire"]);
+        engine.Add(radiator.gameObject);
+
+        // 모터 1: 시동 모터와 함께 배터리 2개·배선이 들어간다 (방화벽 앞 양쪽 구석의 배터리)
+        var batteries = new List<GameObject>();
+        foreach (var s in new[] { -1f, 1f })
+        {
+            var b = Group("Battery", t, new Vector3(s * 0.52f, 0.73f, 1.35f));
+            Box("Case", b, new Vector3(0, 0.12f, 0), new Vector3(0.3f, 0.24f, 0.2f), M["tire"], 1f, false, null, false);
+            Prim(PrimitiveType.Cylinder, "Plus", b, new Vector3(-0.09f, 0.25f, 0), new Vector3(0.04f, 0.015f, 0.04f), M["paintRed"]);
+            Prim(PrimitiveType.Cylinder, "Minus", b, new Vector3(0.09f, 0.25f, 0), new Vector3(0.04f, 0.015f, 0.04f), M["metal"]);
+            batteries.Add(b.gameObject);
+        }
+
+        // 모터와 함께 들어가는 배선: 방화벽·펜더 안쪽·그릴 위를 따라 이어진다 (빨강·노랑·검정)
+        var wires = new List<GameObject>();
+        var wireMats = new[] { M["paintRed"], M["line"], M["tire"] };
+        var wireRuns = new[]
+        {
+            (new Vector3(-0.62f, 1.22f, 1.2f), new Vector3(0.62f, 1.22f, 1.2f)),
+            (new Vector3(-0.52f, 0.98f, 1.35f), new Vector3(-0.4f, 1.22f, 1.2f)),
+            (new Vector3(-0.66f, 1.22f, 1.25f), new Vector3(-0.66f, 1.2f, 2.45f)),
+            (new Vector3(0.52f, 0.98f, 1.35f), new Vector3(0.4f, 1.22f, 1.2f)),
+            (new Vector3(0.66f, 1.22f, 1.25f), new Vector3(0.66f, 1.2f, 2.45f)),
+            (new Vector3(-0.66f, 1.23f, 2.56f), new Vector3(0.66f, 1.23f, 2.56f)),
+        };
+        for (int i = 0; i < wireRuns.Length; i++)
+            wires.Add(YardRod(t, "Wire", wireRuns[i].Item1, wireRuns[i].Item2, 0.014f, wireMats[i % wireMats.Length]));
+
+        // 연료통 4: 짐칸 옆(입구 쪽) 나무 깔판 위
+        var pallet = Group("Pallet", t, new Vector3(-1.85f, 0, -1.9f), R(-10f, 10f));
+        ColliderBox("PalletCollider", pallet, new Vector3(0, 0.07f, 0), new Vector3(1.2f, 0.14f, 0.8f), Vector3.zero);
+        // 연료통은 굽기 때 숨겨져 있어 내비메시에 안 들어간다. 깔판 자리를 못 걷는 곳으로 구워 좀비가 연료통을 뚫고 지나가지 않게 한다
+        var palletMod = pallet.gameObject.AddComponent<NavMeshModifier>();
+        palletMod.overrideArea = true;
+        palletMod.area = 1; // Not Walkable
+        foreach (var px in new[] { -0.5f, 0f, 0.5f })
+            Box("Runner", pallet, new Vector3(px, 0.05f, 0), new Vector3(0.1f, 0.1f, 0.8f), M["wood"], 1f, false);
+        foreach (var pz in new[] { -0.3f, 0f, 0.3f })
+            Box("Slat", pallet, new Vector3(0, 0.12f, pz), new Vector3(1.2f, 0.03f, 0.16f), M["wood"], 1f, false);
+        var cans = new List<GameObject>();
+        foreach (var cz in new[] { -0.2f, 0.2f })
+            foreach (var cx in new[] { -0.3f, 0.3f })
+            {
+                var can = Group("FuelCan", pallet, new Vector3(cx, 0.135f, cz), R(-8f, 8f));
+                Box("Body", can, new Vector3(0, 0.23f, 0), new Vector3(0.2f, 0.46f, 0.34f), M["paintRed"], 1f, true, null, false);
+                Box("Grip", can, new Vector3(0, 0.49f, -0.04f), new Vector3(0.04f, 0.05f, 0.18f), M["paintRed"], 1f, false, null, false);
+                Prim(PrimitiveType.Cylinder, "Spout", can, new Vector3(0, 0.49f, 0.12f), new Vector3(0.05f, 0.04f, 0.05f), M["metal"], new Vector3(30, 0, 0));
+                cans.Add(can.gameObject);
+            }
+
+        // 네비게이션 1: 앞유리 아래 대시보드 턱 위의 화면
+        var navi = Group("Navigation", t, new Vector3(0.42f, 1.25f, 0.95f));
+        Box("Mount", navi, new Vector3(0, 0.03f, 0), new Vector3(0.08f, 0.06f, 0.08f), M["tire"], 1f, false, null, false);
+        Box("Body", navi, new Vector3(0, 0.15f, 0), new Vector3(0.3f, 0.2f, 0.05f), M["tire"], 1f, false, new Vector3(-12, 0, 0), false);
+        Box("Screen", navi, new Vector3(0, 0.152f, 0.027f), new Vector3(0.26f, 0.16f, 0.005f), M["bulb"], 1f, false, new Vector3(-12, 0, 0), false);
+
+        // 다 고치면 켜지는 전조등과 구멍을 덧댄 철판
+        var complete = new List<GameObject>(plates);
+        foreach (var s in new[] { -1f, 1f })
+            complete.Add(Box("HeadlightOn", t, new Vector3(s * 0.82f, 1.08f, 2.69f), new Vector3(0.21f, 0.16f, 0.03f), M["bulb"], 1f, false, null, false));
+        var beam = new GameObject("HeadlightBeam");
+        beam.transform.SetParent(t, false);
+        beam.transform.localPosition = new Vector3(0, 1.1f, 2.8f);
+        var spot = beam.AddComponent<Light>();
+        spot.type = LightType.Spot;
+        spot.color = new Color(1f, 0.92f, 0.75f);
+        spot.intensity = 8f;
+        spot.range = 20f;
+        spot.spotAngle = 70f;
+        spot.innerSpotAngle = 35f;
+        spot.shadows = LightShadows.None;
+        complete.Add(beam);
+
+        site.parts = new[]
+        {
+            new TruckSite.PartPieces { id = "wheel", pieces = wheels.ToArray() },
+            new TruckSite.PartPieces { id = "engine", pieces = engine.ToArray() },
+            new TruckSite.PartPieces { id = "motor", pieces = batteries.Concat(wires).ToArray() },
+            new TruckSite.PartPieces { id = "navigation", pieces = new[] { navi.gameObject } },
+            new TruckSite.PartPieces { id = "fuel", pieces = cans.ToArray() },
+        };
+        site.whenComplete = complete.ToArray();
+        site.soundPoint = bay;
+        // 처음에는 모두 숨긴다 (내비메시도 빈 트럭 모양으로 굽는다). 실행되면 TruckSite.Start가 저장된 만큼 켠다
+        foreach (var part in site.parts)
+            foreach (var go in part.pieces) go.SetActive(false);
+        foreach (var go in complete) go.SetActive(false);
+    }
+
+    // 옆면(side: -1 왼쪽 / 1 오른쪽)의 녹슨 구멍과, 그 위에 덧댈 철판(처음에는 숨김)을 만든다. 철판을 돌려준다
+    static GameObject TruckRustPatch(Transform truck, float side, float y, float z, float h, float w)
+    {
+        const float skin = 0.95f; // 차체 옆면
+        Box("Rust", truck, new Vector3(side * (skin + 0.002f), y, z), new Vector3(0.004f, h + 0.1f, w + 0.12f), M["metal"], 1f, false, new Vector3(R(-8f, 8f), 0, 0));
+        Box("Hole", truck, new Vector3(side * (skin + 0.008f), y, z), new Vector3(0.004f, h, w), M["tire"], 1f, false, new Vector3(R(-15f, 15f), 0, 0));
+        Box("Hole", truck, new Vector3(side * (skin + 0.009f), y + R(-0.05f, 0.05f), z + R(-0.08f, 0.08f)), new Vector3(0.004f, h * 0.7f, w * 0.75f), M["tire"], 1f, false, new Vector3(R(20f, 50f), 0, 0));
+        var plate = Box("Plate", truck, new Vector3(side * (skin + 0.024f), y, z), new Vector3(0.02f, h + 0.16f, w + 0.18f), M["metal"], 1f, false, new Vector3(R(-5f, 5f), 0, 0), false);
+        foreach (var py in new[] { -1f, 1f })
+            foreach (var pz in new[] { -1f, 1f })
+                Box("Rivet", plate.transform, new Vector3(side * 0.012f, py * (h / 2 + 0.04f), pz * (w / 2 + 0.05f)), new Vector3(0.012f, 0.03f, 0.03f), M["tire"], 1f, false, null, false);
+        return plate;
+    }
+
+    // a에서 b까지 이어진 가는 원통 (다리·전선·배선 등, 충돌 없음)
+    static GameObject YardRod(Transform parent, string name, Vector3 a, Vector3 b, float radius, Material mat)
+    {
+        var d = b - a;
+        var go = Prim(PrimitiveType.Cylinder, name, parent, (a + b) / 2, new Vector3(radius * 2, d.magnitude / 2, radius * 2), mat);
+        go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, d);
+        return go;
+    }
+
+    // 골함석 판을 기둥 사이에 댄 울타리 (a → b). 판 하나는 빠져 바닥에 떨어져 있기도 하다 (그 틈으로도 드나든다)
+    static void YardFence(Transform parent, Vector3 a, Vector3 b)
+    {
+        var d = b - a;
+        float len = d.magnitude;
+        var g = Group("Fence", parent, a, Mathf.Atan2(-d.z, d.x) * Mathf.Rad2Deg);
+        int n = Mathf.Max(1, Mathf.RoundToInt(len / 1.8f));
+        float step = len / n;
+        int missing = Chance(0.6) ? rng.Next(n) : -1;
+        for (int i = 0; i <= n; i++)
+            Box("Post", g, new Vector3(i * step, 1.1f, 0), new Vector3(0.08f, 2.2f, 0.08f), M["metal"], 1f, true, new Vector3(R(-3f, 3f), 0, R(-3f, 3f)));
+        for (int i = 0; i < n; i++)
+        {
+            float h = R(1.75f, 2.1f);
+            var mat = Chance(0.25) ? M["paintBlue"] : M["metal"];
+            if (i == missing)
+            {
+                Box("FallenSheet", g, new Vector3((i + 0.5f) * step + R(-0.3f, 0.3f), 0.06f, R(0.6f, 1.1f) * (Chance(0.5) ? 1 : -1)), new Vector3(step, 0.03f, h), mat, 1.5f, false, new Vector3(R(-4f, 4f), R(-20f, 20f), 0));
+                continue;
+            }
+            Box("Sheet", g, new Vector3((i + 0.5f) * step, h / 2 + 0.05f, 0), new Vector3(step - 0.04f, h, 0.04f), mat, 1.5f, true, new Vector3(R(-3f, 3f), 0, R(-1.5f, 1.5f)));
+        }
+        Box("Wire", g, new Vector3(len / 2, 2.22f, 0), new Vector3(len, 0.015f, 0.015f), M["metal"], 1f, false);
+    }
+
+    // 정비소 간판 그림: 낡은 흰 칠 위에 렌치 그림과 '트럭 정비소' 글자. 텍스처·재질은 도시 메시 에셋 안에 같이 저장한다
+    // (폰트 Resources/Fonts/Pretendard-Bold가 없으면 렌치 그림만 그린다)
+    static Material YardSignMaterial()
+    {
+        const int w = 640, h = 200;
+        var px = new Color[w * h];
+        var paint = new Color(0.8f, 0.76f, 0.64f);
+        var grime = new Color(0.52f, 0.48f, 0.4f);
+        var rust = new Color(0.42f, 0.24f, 0.12f);
+        for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+            {
+                float edge = Mathf.Min(Mathf.Min(i, w - 1 - i), Mathf.Min(j, h - 1 - j));
+                var c = Color.Lerp(paint, grime, Mathf.PerlinNoise(i * 0.025f + 3.1f, j * 0.025f + 7.7f) * 0.7f);
+                if (edge < 12) c = Color.Lerp(rust, c, edge / 12f * 0.7f); // 테두리 녹
+                px[j * w + i] = c;
+            }
+        // 위에서 흘러내린 녹물 자국
+        for (int k = 0; k < 16; k++)
+        {
+            int x0 = rng.Next(12, w - 12), len = rng.Next(20, 110), sw = rng.Next(2, 6);
+            for (int j = 0; j < len; j++)
+                for (int i = x0; i < Mathf.Min(w, x0 + sw); i++)
+                {
+                    int k2 = (h - 1 - j) * w + i;
+                    px[k2] = Color.Lerp(px[k2], rust, 0.55f * (1 - j / (float)len));
+                }
+        }
+
+        // 렌치: 자루 + 입 벌린 머리(위) + 동그란 고리(아래). 2x2로 나눠 찍어 가장자리를 부드럽게
+        var ink = new Color(0.15f, 0.15f, 0.16f);
+        Vector2 p0 = new Vector2(62, 48), p1 = new Vector2(150, 136), dir = (p1 - p0).normalized;
+        Vector2 headC = p1 + dir * 10, slotC = headC + dir * 20;
+        for (int j = 10; j < h - 10; j++)
+            for (int i = 10; i < 240; i++)
+            {
+                int hit = 0;
+                for (int sj = 0; sj < 2; sj++)
+                    for (int si = 0; si < 2; si++)
+                    {
+                        var p = new Vector2(i + 0.25f + si * 0.5f, j + 0.25f + sj * 0.5f);
+                        float along = Mathf.Clamp(Vector2.Dot(p - p0, dir), 0, (p1 - p0).magnitude);
+                        bool body = (p - (p0 + dir * along)).magnitude < 12 || (p - headC).magnitude < 34 || (p - p0).magnitude < 24;
+                        float slotAlong = Vector2.Dot(p - slotC, dir);
+                        bool slot = slotAlong > -16 && (p - (slotC + dir * Mathf.Max(0, slotAlong))).magnitude < 15;
+                        bool ring = (p - p0).magnitude < 11;
+                        if (body && !slot && !ring) hit++;
+                    }
+                if (hit > 0) px[j * w + i] = Color.Lerp(px[j * w + i], ink, hit / 4f);
+            }
+
+        // 글자
+        var font = Resources.Load<Font>("Fonts/Pretendard-Bold");
+        const string title = "트럭 정비소", sub = "수리 · 부품 · 견인";
+        if (font != null)
+        {
+            for (int pass = 0; pass < 2; pass++) // 글자판이 다시 만들어져도 두 크기가 다 남도록 두 번
+            {
+                font.RequestCharactersInTexture(title, 76, FontStyle.Normal);
+                font.RequestCharactersInTexture(sub, 32, FontStyle.Normal);
+            }
+            var src = font.material != null ? font.material.mainTexture : null;
+            if (src != null)
+            {
+                var rt = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+                var prev = RenderTexture.active;
+                Graphics.Blit(src, rt);
+                RenderTexture.active = rt;
+                var atlas = new Texture2D(src.width, src.height, TextureFormat.RGBA32, false, true);
+                atlas.ReadPixels(new Rect(0, 0, src.width, src.height), 0, 0);
+                atlas.Apply();
+                RenderTexture.active = prev;
+                RenderTexture.ReleaseTemporary(rt);
+                // 글자 모양은 보통 알파에 담기지만, 빨강 채널에 담겼으면 그쪽을 쓴다
+                var all = atlas.GetPixels32();
+                double sumA = 0, sumR = 0;
+                foreach (var c in all) { sumA += c.a; sumR += c.r; }
+                bool red = sumA / all.Length > 150 && sumR < sumA;
+                YardSignText(px, w, h, font, atlas, red, title, 76, 425, 122, new Color(0.55f, 0.1f, 0.07f));
+                YardSignText(px, w, h, font, atlas, red, sub, 32, 425, 50, new Color(0.22f, 0.21f, 0.2f));
+                Object.DestroyImmediate(atlas);
+            }
+        }
+        for (int k = 0; k < px.Length; k++) px[k].a = 1;
+
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, true) { name = "TruckYardSign", wrapMode = TextureWrapMode.Clamp, anisoLevel = 4 };
+        tex.SetPixels(px);
+        tex.Apply(true, false);
+        AssetDatabase.AddObjectToAsset(tex, meshContainer);
+        var m = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "M_TruckYardSign" };
+        m.SetTexture("_BaseMap", tex);
+        m.SetTexture("_MainTex", tex);
+        m.SetColor("_BaseColor", Color.white);
+        m.SetColor("_Color", Color.white);
+        m.SetFloat("_Smoothness", 0.12f);
+        AssetDatabase.AddObjectToAsset(m, meshContainer);
+        return m;
+    }
+
+    // 간판 글자를 픽셀에 직접 그린다. (cx, cy): 글자 줄 가운데 (픽셀)
+    static void YardSignText(Color[] px, int w, int h, Font font, Texture2D atlas, bool red, string text, int size, float cx, float cy, Color color)
+    {
+        float width = 0, top = float.MinValue, bottom = float.MaxValue;
+        foreach (char ch in text)
+        {
+            if (!font.GetCharacterInfo(ch, out CharacterInfo ci, size, FontStyle.Normal)) continue;
+            width += ci.advance;
+            if (ci.maxY > ci.minY)
+            {
+                top = Mathf.Max(top, ci.maxY);
+                bottom = Mathf.Min(bottom, ci.minY);
+            }
+        }
+        if (top < bottom) return;
+
+        float pen = Mathf.Round(cx - width / 2), baseline = Mathf.Round(cy - (top + bottom) / 2);
+        foreach (char ch in text)
+        {
+            if (!font.GetCharacterInfo(ch, out CharacterInfo ci, size, FontStyle.Normal)) continue;
+            float gx0 = pen + ci.minX, gx1 = pen + ci.maxX, gy0 = baseline + ci.minY, gy1 = baseline + ci.maxY;
+            if (gx1 > gx0 && gy1 > gy0)
+            {
+                int jMax = Mathf.Min(h, Mathf.CeilToInt(gy1)), iMax = Mathf.Min(w, Mathf.CeilToInt(gx1));
+                for (int j = Mathf.Max(0, Mathf.FloorToInt(gy0)); j < jMax; j++)
+                    for (int i = Mathf.Max(0, Mathf.FloorToInt(gx0)); i < iMax; i++)
+                    {
+                        float s = (i + 0.5f - gx0) / (gx1 - gx0), t = (j + 0.5f - gy0) / (gy1 - gy0);
+                        if (s < 0 || s > 1 || t < 0 || t > 1) continue;
+                        var uv = Vector2.Lerp(Vector2.Lerp(ci.uvBottomLeft, ci.uvBottomRight, s), Vector2.Lerp(ci.uvTopLeft, ci.uvTopRight, s), t);
+                        var g = atlas.GetPixelBilinear(uv.x, uv.y);
+                        float a = (red ? g.r : g.a) * color.a;
+                        if (a <= 0) continue;
+                        int k = j * w + i;
+                        px[k] = Color.Lerp(px[k], new Color(color.r, color.g, color.b, 1f), a);
+                    }
+            }
+            pen += ci.advance;
+        }
     }
 
     static void BuildBoundary(Transform geo)

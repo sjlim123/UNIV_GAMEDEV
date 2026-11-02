@@ -57,11 +57,9 @@ public class Trader : Interactable
     static bool FitsAfterTrade(GameState s, TradeOffer offer)
     {
         float after = s.Carried.Weight;
-        foreach (var kv in offer.Give) after -= ItemDatabase.Get(kv.Key).Weight * kv.Value;
-        after += ItemDatabase.Get(offer.GetId).Weight * offer.GetCount;
-        float cap = s.CarryCapacity;
-        if (offer.GetId == "backpack" && s.Carried.Count("backpack") == 0) cap += GameBalance.Data.backpackBonus;
-        return after <= cap + 0.001f;
+        foreach (var kv in offer.Give) after -= s.Carried.UnitWeight(kv.Key) * kv.Value;
+        after += s.Carried.UnitWeight(offer.GetId) * offer.GetCount;
+        return after <= s.CarryCapacity + 0.001f;
     }
 
     void Update()

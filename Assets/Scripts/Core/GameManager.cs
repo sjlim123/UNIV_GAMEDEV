@@ -34,6 +34,9 @@ public class GameManager : MonoBehaviour
 
     Dictionary<string, int> expeditionStartItems;
     int expeditionStartTurn;
+    float starveTimer;
+    // 죽거나 엔딩을 본 뒤 메인 메뉴로 돌아가기까지(초). 그 전에 버튼을 눌러도 된다
+    const float EndScreenSeconds = 8f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Bootstrap()
@@ -77,6 +80,20 @@ public class GameManager : MonoBehaviour
 
     public bool InShelter => SceneManager.GetActiveScene().name == ShelterScene;
 
+    // 배고픔이나 갈증이 0이면 starveInterval초마다 체력이 준다 (일시정지(timeScale 0)·컷씬·씬 이동 중에는 멈춘다. 소지품 등 창을 열어 두어도 계속 준다)
+    void Update()
+    {
+        if (State == null || IsGameOver || IsTransitioning || PlayerController.Instance == null || UI.IsPaused) { starveTimer = 0; return; }
+        if (State.Hunger > 0 && State.Thirst > 0) { starveTimer = 0; return; }
+        var b = GameBalance.Data;
+        starveTimer += Time.deltaTime;
+        if (starveTimer < b.starveInterval) return;
+        starveTimer -= b.starveInterval;
+        bool hungry = State.Hunger <= 0;
+        UI.ShowMessage(hungry ? "굶주림으로 몸이 점점 약해진다... 무언가 먹어야 한다." : "목이 타들어 간다... 물을 마셔야 한다.", 2.5f);
+        Damage(b.starveDamage, hungry ? "끝내 굶주림을 견디지 못했다." : "끝내 갈증을 견디지 못했다.");
+    }
+
     // 방공호에 있을 때만 저장한다 (도시 탐험 도중 상태는 저장하지 않음)
     public void SaveGame()
     {
@@ -114,14 +131,13 @@ public class GameManager : MonoBehaviour
         }
         if (s.Turn >= GameState.MaxTurns)
         {
-            IsGameOver = true;
-            SaveSystem.Delete();
-            UI.ShowEndScreen($"{GameState.MaxTurns}턴 생존", $"방공호에서 {GameState.MaxTurns}턴을 버텨냈다.\n(엔딩은 스토리와 함께 정해질 예정)");
+            Ending($"{GameState.MaxTurns}턴 생존", $"방공호에서 {GameState.MaxTurns}턴을 버텨냈다.\n(엔딩은 스토리와 함께 정해질 예정)");
             return false;
         }
         return true;
     }
 
+    // 받는 피해 (방어구는 피해를 줄이지 않고 최대 체력을 늘린다)
     public void Damage(float amount, string cause)
     {
         if (IsGameOver || IsTransitioning) return;
@@ -140,7 +156,7 @@ public class GameManager : MonoBehaviour
         var def = ItemDatabase.Get(id);
         if (!def.IsConsumable || !from.Remove(id)) return false;
         var s = State;
-        s.Health = Mathf.Clamp(s.Health + def.Heal, 1, GameBalance.Data.playerMaxHealth);
+        s.Health = Mathf.Clamp(s.Health + def.Heal, 1, s.MaxHealth);
         s.Hunger = Mathf.Min(100, s.Hunger + def.Hunger);
         s.Thirst = Mathf.Min(100, s.Thirst + def.Thirst);
         UI.ShowMessage($"{def.Name} 사용 ({def.Description})");
@@ -151,12 +167,13 @@ public class GameManager : MonoBehaviour
 
     // 새 게임: 저장을 지우고 도입 컷씬(사진 3장)을 보여 준 뒤 방공호로.
     // 죽고 나서 '처음부터 다시'는 컷씬 없이 바로 시작한다
-    public void NewGame(bool playIntro = true)
+    public void NewGame(int slot, bool playIntro = true)
     {
         if (IsTransitioning) return;
         IsGameOver = false;
+        SaveSystem.CurrentSlot = slot;
         State = new GameState();
-        if (!playIntro) SaveSystem.Delete();
+        if (!playIntro) SaveSystem.Delete(slot);
         StartCoroutine(playIntro ? NewGameRoutine() : LoadRoutine(ShelterScene, false));
     }
 
@@ -166,20 +183,30 @@ public class GameManager : MonoBehaviour
         UI.ClosePanel();
         UI.SetPaused(false);
         yield return UI.Fade(1, 0.6f);
+        SilenceScene(); // 메인 메뉴 배경의 바람·좀비 소리를 끈다
         bool done = false;
         UI.PlayCutscene(() => done = true);
         yield return UI.Fade(0, 0.6f);
         while (!done) yield return null;
         // 컷씬 도중 게임을 꺼도 예전 저장이 남도록, 저장은 컷씬이 끝난 뒤에 지운다
-        SaveSystem.Delete();
+        SaveSystem.Delete(SaveSystem.CurrentSlot);
         yield return LoadRoutine(ShelterScene, false);
     }
 
     // 이어하기: 저장된 상태로 바로 방공호에서 시작 (컷씬 없음)
-    public void ContinueGame()
+    // 지금 씬에서 나는 소리를 모두 끈다 (UIManager·GameManager의 소리는 그대로)
+    static void SilenceScene()
+    {
+        MainMenuBackground.Silence();
+        var scene = SceneManager.GetActiveScene();
+        foreach (var src in FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+            if (src.gameObject.scene == scene) src.Stop();
+    }
+
+    public void ContinueGame(int slot)
     {
         if (IsTransitioning) return;
-        var loaded = SaveSystem.Load();
+        var loaded = SaveSystem.Load(slot);
         if (loaded == null)
         {
             UI.OpenPanel("이어하기", c => UI.Line(c, "저장된 게임을 불러오지 못했다. 저장 파일이 손상되었을 수 있다."));
@@ -194,6 +221,7 @@ public class GameManager : MonoBehaviour
             notice = "탐험 도중 정신을 잃었다가 간신히 방공호로 돌아왔다. 가져간 물건을 모두 잃었다.";
         }
         IsGameOver = false;
+        SaveSystem.CurrentSlot = slot;
         State = loaded;
         StartCoroutine(ContinueRoutine(notice));
     }
@@ -249,7 +277,7 @@ public class GameManager : MonoBehaviour
         bool alive = AdvanceTurn();
         if (alive)
         {
-            State.Health = Mathf.Min(GameBalance.Data.playerMaxHealth, State.Health + RestHeal);
+            State.Health = Mathf.Min(State.MaxHealth, State.Health + RestHeal);
             UI.ShowMessage($"잠시 눈을 붙였다. 체력 +{RestHeal:0}  (턴 {State.Turn}/{GameState.MaxTurns})", 3f);
             SaveGame();
         }
@@ -258,7 +286,33 @@ public class GameManager : MonoBehaviour
         yield return UI.Fade(0, 0.8f);
     }
 
-    public void Restart() => NewGame(false);
+    public void Restart() => NewGame(SaveSystem.CurrentSlot, false);
+
+    // 트럭을 다 고쳐 탈출한다 (진짜 엔딩)
+    public void TruckEscape()
+    {
+        if (IsGameOver || IsTransitioning || !State.TruckComplete) return;
+        Ending("탈출", $"트럭에 시동을 걸었다. 낡은 엔진이 으르렁거리며 깨어난다.\n폐허가 된 도시를 뒤로하고, 라디오가 말한 서울시 ○○으로 향한다.\n\n탈출까지 걸린 턴: {State.Turn} / {GameState.MaxTurns}");
+    }
+
+    // 엔딩: 저장을 지우고 엔딩 화면을 보여 준 뒤 메인 메뉴로 돌아간다
+    void Ending(string title, string body)
+    {
+        if (IsGameOver) return;
+        IsGameOver = true;
+        SaveSystem.Delete();
+        UI.ShowEndScreen(title, body, EndScreenSeconds);
+        StartCoroutine(ReturnToMenuAfter(EndScreenSeconds));
+    }
+
+    // 끝 화면을 잠깐 보여 준 뒤 자동으로 메인 메뉴로 (그 사이 버튼을 눌러 먼저 나갔으면 아무것도 안 한다)
+    IEnumerator ReturnToMenuAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        if (IsGameOver && !IsTransitioning && !InMenu) GoToMainMenu();
+    }
+
+    public bool InMenu => SceneManager.GetActiveScene().name == MenuScene;
 
     public void QuitGame()
     {
@@ -274,7 +328,8 @@ public class GameManager : MonoBehaviour
         if (IsGameOver) return;
         IsGameOver = true;
         SaveSystem.Delete(); // 죽으면 저장도 사라진다
-        UI.ShowEndScreen(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}");
+        UI.ShowEndScreen(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}", EndScreenSeconds);
+        StartCoroutine(ReturnToMenuAfter(EndScreenSeconds));
     }
 
     IEnumerator LoadRoutine(string scene, bool showResult)

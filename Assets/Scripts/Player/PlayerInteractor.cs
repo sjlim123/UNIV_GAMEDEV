@@ -19,6 +19,7 @@ public class PlayerInteractor : MonoBehaviour
         }
 
         gm.UI.SetPrompt(current != null ? "[F] " + current.Prompt : "");
+        InteractOutline.Show(current);
         var kb = Keyboard.current;
         if (current != null && kb != null && kb.fKey.wasPressedThisFrame) current.Interact(this);
     }

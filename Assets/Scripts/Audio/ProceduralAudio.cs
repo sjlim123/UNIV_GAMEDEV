@@ -78,6 +78,22 @@ public static class ProceduralAudio
         };
     }
 
+    // 빗소리 (반복): 쏴아 하는 고른 소음 + 바닥·물웅덩이에 떨어지는 빗방울 톡톡 소리
+    public static AudioClip Rain()
+    {
+        var hiss = Biquad.BandPass(2600, 0.5f);
+        var body = Biquad.LowPass(1100);
+        var drop = Biquad.BandPass(3400, 3f);
+        float dropEnv = 0;
+        return Make("rain", 10f, t =>
+        {
+            if (rng.NextDouble() < 0.0018) dropEnv = 0.35f + (float)rng.NextDouble() * 0.65f;
+            dropEnv *= 0.993f;
+            float swell = 0.85f + 0.15f * Mathf.Sin(2 * Mathf.PI * t / 5f);
+            return (hiss.Process(Noise()) * 0.55f + body.Process(Noise()) * 0.35f) * swell + drop.Process(Noise()) * dropEnv * 1.4f;
+        }, 0.8f, 1.2f);
+    }
+
     public static AudioClip Wind()
     {
         float brown = 0;
@@ -91,8 +107,11 @@ public static class ProceduralAudio
         }, 0.9f, 1.5f);
     }
 
+    // 멀리서 들리는 신음 (녹음한 좀비 신음이 있으면 그것을 쓴다)
     public static AudioClip Groan()
     {
+        var real = ZombieVoices.Groan();
+        if (real != null) return real;
         int v = rng.Next(3);
         return Make("groan" + v, 1.9f, MakeVoice(70 + v * 14, 1.9f, 0.25f, new[] { 420f, 820f, 2400f }, 3f));
     }
@@ -227,19 +246,29 @@ public static class ProceduralAudio
     // ---------- 적 소리 ----------
     // 낮은 웅웅거림만 있으면 방향을 알 수 없어서 300~3000Hz(쉰 소리·긁는 소리)를 일부러 두껍게 넣는다
 
+    // 좀비 목소리는 녹음(ZombieVoices)을 먼저 쓰고, 없을 때만 합성한다
     public static AudioClip ZombieGroan()
     {
+        var real = ZombieVoices.Groan();
+        if (real != null) return real;
         int v = rng.Next(4);
         return Make("zgroan" + v, 1.7f, MakeRasp(105 + v * 18, 1.7f, 0.2f - v * 0.08f, new[] { 520f + v * 60, 1150f + v * 90, 2500f }, 0.9f, 5f), 0.95f);
     }
 
+    public static AudioClip ZombieHurt() => ZombieVoices.Hurt() ?? Hurt();
+
+    // 덤벼들 때 내는 짧은 소리 (녹음이 없으면 소리 없음)
+    public static AudioClip ZombieAttack() => ZombieVoices.Attack();
+
     public static AudioClip ZombieScream()
     {
+        var real = ZombieVoices.Alert();
+        if (real != null) return real;
         int v = rng.Next(2);
         return Make("zscream" + v, 1.2f, MakeRasp(330 + v * 45, 1.2f, 0.45f, new[] { 950f, 1700f + v * 150, 3100f }, 1.2f, 6f), 0.95f);
     }
 
-    // 원거리 좀비가 독액을 끌어올리는 꾸르륵 소리
+    // 구역질하며 꾸르륵거리는 소리
     public static AudioClip Retch()
     {
         return Make("retch", 0.75f, MakeRasp(170, 0.75f, 0.5f, new[] { 700f, 1400f, 2800f }, 1.6f, 5f), 0.95f);
@@ -291,14 +320,14 @@ public static class ProceduralAudio
             Mathf.Sin(2 * Mathf.PI * 52 * t) * Mathf.Exp(-t * 16) + lp.Process(Noise()) * 1.5f * Mathf.Exp(-t * 22) + bp.Process(Noise()) * Mathf.Exp(-t * 30));
     }
 
-    // 독액을 뱉는 소리
+    // 무언가를 퉤 뱉는 소리
     public static AudioClip Spit()
     {
         var bp = Biquad.BandPass(1500, 1.5f);
         return Make("spit", 0.25f, t => bp.Process(Noise()) * Mathf.Exp(-t * 24) + Mathf.Sin(2 * Mathf.PI * 140 * t) * Mathf.Exp(-t * 40) * 0.4f, 0.85f);
     }
 
-    // 독액이 터지는 질척한 소리
+    // 질척한 것이 터지는 소리
     public static AudioClip Splat()
     {
         var lp = Biquad.LowPass(2000);
@@ -308,6 +337,71 @@ public static class ProceduralAudio
             float pop = rng.NextDouble() < 0.006 ? 3f : 0f;
             return lp.Process(Noise()) * Mathf.Exp(-t * 18) + bubble.Process(pop + Noise() * 0.2f) * Mathf.Exp(-t * 6);
         }, 0.85f);
+    }
+
+    // 새총 고무줄을 당기는 소리: 고무가 늘어나며 끼이익 하고 가죽 주머니가 사각거린다 (원거리 좀비가 겨눌 때)
+    public static AudioClip SlingStretch()
+    {
+        const float dur = 0.6f;
+        var r1 = Biquad.BandPass(950, 10);
+        var r2 = Biquad.BandPass(2100, 8);
+        var leather = Biquad.BandPass(3000, 1.5f);
+        float phase = 0;
+        return Make("slingstretch", dur, t =>
+        {
+            float u = t / dur;
+            float rate = 35 + 120 * u + Noise() * 8; // 당길수록 빨라지는 마찰 떨림
+            phase += rate / SR;
+            float imp = 0;
+            if (phase >= 1) { phase -= 1; imp = 1; }
+            float env = Mathf.Clamp01((u - 0.12f) * 5) * Mathf.Clamp01((1 - u) * 8);
+            float creak = (r1.Process(imp) + r2.Process(imp) * 0.5f) * 30;
+            return (creak + leather.Process(Noise()) * 0.3f) * env;
+        }, 0.6f);
+    }
+
+    // 새총 고무줄을 놓는 소리: 탁! 튕기며 짧게 부르르 떨린다
+    public static AudioClip SlingSnap()
+    {
+        var click = Biquad.BandPass(2800, 1.5f);
+        var air = Biquad.BandPass(900, 1.2f);
+        float phase = 0;
+        return Make("slingsnap", 0.3f, t =>
+        {
+            float f = 110 + 320 * Mathf.Exp(-t * 45); // 튕기며 뚝 떨어지는 음
+            phase += f / SR;
+            float wobble = 1 + 0.35f * Mathf.Sin(2 * Mathf.PI * 34 * t) * Mathf.Exp(-t * 10);
+            float thwap = Mathf.Sin(2 * Mathf.PI * phase) * Mathf.Exp(-t * 22) * wobble;
+            float snap = click.Process(Noise()) * Mathf.Exp(-t * 140) * 2.5f + (t < 0.0015f ? 1f : 0f);
+            float whoosh = air.Process(Noise()) * Mathf.Exp(-t * 30) * 0.6f;
+            return thwap + snap + whoosh;
+        }, 0.9f);
+    }
+
+    // 돌멩이가 벽·바닥에 부딪히는 소리: 딱 + 둔탁한 쿵, 작게 한 번 더 튄다
+    public static AudioClip StoneHit()
+    {
+        int v = rng.Next(3);
+        return Make("stonehit" + v, 0.3f, MakeStoneHit(v), 0.9f);
+    }
+
+    static System.Func<float, float> MakeStoneHit(int v)
+    {
+        var r1 = Biquad.BandPass(1900 + v * 380, 9);
+        var r2 = Biquad.BandPass(3400 + v * 450, 7);
+        var crack = Biquad.BandPass(4500, 1f);
+        var lp = Biquad.LowPass(1000);
+        float bounce = 0.055f + v * 0.02f;
+        float thudF = 90 + v * 14;
+        return t =>
+        {
+            float t2 = t - bounce;
+            float burst = Noise() * (Mathf.Exp(-t * 500) + (t2 > 0 ? 0.35f * Mathf.Exp(-t2 * 600) : 0));
+            float tock = r1.Process(burst) + r2.Process(burst) * 0.7f;
+            float thud = Mathf.Sin(2 * Mathf.PI * thudF * t) * Mathf.Exp(-t * 38);
+            float grit = lp.Process(Noise()) * Mathf.Exp(-t * 32);
+            return tock * 10 + crack.Process(burst) * 1.5f + thud * 0.55f + grit * 0.8f;
+        };
     }
 
     // 개가 무는 소리 (이빨 딱)

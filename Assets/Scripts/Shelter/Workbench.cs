@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 제작대: F로 제작 창을 연다 (화면은 UIManager.Workbench.cs). 조합 규칙은 여기에 모아 둔다
+// 제작대: F로 제작 창을 연다 (화면은 UIManager.Workbench.cs). 조합 규칙은 여기에 모아 둔다 (화로도 함께 쓴다)
 public class Workbench : Interactable
 {
     public override string Prompt => "제작대 - 조합하기";
@@ -18,7 +18,12 @@ public class Workbench : Interactable
         return true;
     }
 
-    public static bool CanCraft(GameState s, Recipe recipe) => IsPowered(s) && HasIngredients(s, recipe);
+    // 화로(설치)는 아이템이 아니라 방공호에 하나만 놓는다
+    public static bool IsInstall(Recipe recipe) => recipe.ResultId == ItemDatabase.FurnaceId;
+
+    public static bool AlreadyInstalled(GameState s, Recipe recipe) => IsInstall(recipe) && s.FurnaceBuilt;
+
+    public static bool CanCraft(GameState s, Recipe recipe) => IsPowered(s) && HasIngredients(s, recipe) && !AlreadyInstalled(s, recipe);
 
     // 재료를 쓰고 난 뒤 완성품을 몸에 지닐 수 있는지 미리 본다 (Craft와 같은 규칙: 재료는 창고에서 먼저 쓴다)
     public static bool ResultFitsInHand(GameState s, Recipe recipe)
@@ -27,12 +32,17 @@ public class Workbench : Interactable
         foreach (var kv in recipe.Ingredients)
         {
             int fromCarried = Mathf.Clamp(kv.Value - s.Storage.Count(kv.Key), 0, s.Carried.Count(kv.Key));
-            weight -= ItemDatabase.Get(kv.Key).Weight * fromCarried;
+            weight -= s.Carried.UnitWeight(kv.Key) * fromCarried;
         }
-        // 첫 가방은 메는 순간 들 수 있는 무게가 늘어난다 (GameState.CanCarry와 같은 규칙)
-        float cap = s.CarryCapacity;
-        if (recipe.ResultId == "backpack" && s.Carried.Count("backpack") == 0) cap += GameBalance.Data.backpackBonus;
-        return weight + ItemDatabase.Get(recipe.ResultId).Weight * recipe.ResultCount <= cap + 0.001f;
+        return weight + s.Carried.UnitWeight(recipe.ResultId) * recipe.ResultCount <= s.CarryCapacity + 0.001f;
+    }
+
+    // 완성품을 들 수 있으면 소지품에, 무거우면(또는 toStorage면) 창고에 넣는다. 소지품에 넣었으면 true
+    public static bool StoreResult(GameState s, Recipe recipe, bool toStorage = false)
+    {
+        bool toHand = !toStorage && s.CanCarry(recipe.ResultId, recipe.ResultCount);
+        (toHand ? s.Carried : s.Storage).Add(recipe.ResultId, recipe.ResultCount);
+        return toHand;
     }
 
     // 재료를 쓰고, 완성품은 들 수 있으면 소지품에, 무거우면 창고에 넣는다. soundAt이 없으면 2D 소리
@@ -42,8 +52,15 @@ public class Workbench : Interactable
         var s = gm.State;
         if (!CanCraft(s, recipe)) return false;
         foreach (var kv in recipe.Ingredients) s.ConsumeFromAnywhere(kv.Key, kv.Value);
-        bool toHand = s.CanCarry(recipe.ResultId, recipe.ResultCount);
-        (toHand ? s.Carried : s.Storage).Add(recipe.ResultId, recipe.ResultCount);
+        if (IsInstall(recipe))
+        {
+            s.FurnaceBuilt = true;
+            if (Furnace.Instance != null) Furnace.Instance.RefreshBuilt();
+            gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)}{PlayerHotbar.Eul(ItemDatabase.Name(recipe.ResultId))} 거실 벽 앞에 설치했다. 부싯돌과 라이터가 있으면 불을 붙일 수 있다.", 4f);
+            ProceduralAudio.Play2D(ProceduralAudio.Clang(), 0.7f);
+            return true;
+        }
+        bool toHand = StoreResult(s, recipe);
         gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)} x{recipe.ResultCount} 제작 완료" + (toHand ? "" : " (무거워서 창고에 넣었다)"));
         if (soundAt.HasValue) ProceduralAudio.PlayAt(ProceduralAudio.Clang(), soundAt.Value, 0.7f);
         else ProceduralAudio.Play2D(ProceduralAudio.Clang(), 0.7f);

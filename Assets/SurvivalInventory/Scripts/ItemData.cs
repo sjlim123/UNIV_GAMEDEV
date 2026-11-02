@@ -19,8 +19,8 @@ namespace SurvivalInventory
         Rare,       // 희귀 - 파랑
         Advanced,   // 고급 - 초록
         Heroic,     // 영웅 - 보라
-        Legendary,  // 전설 - 노랑
-        Mythic      // 신화 - 빨강
+        Legendary,  // 전설 - 빨강
+        Mythic      // 신화 - 노랑
     }
 
     [CreateAssetMenu(fileName = "NewItem", menuName = "Survival Inventory/Item Data")]
@@ -68,8 +68,8 @@ namespace SurvivalInventory
             ItemRarity.Rare => new Color32(0x4A, 0x8F, 0xE6, 0xFF),
             ItemRarity.Advanced => new Color32(0x5B, 0xBD, 0x55, 0xFF),
             ItemRarity.Heroic => new Color32(0xA8, 0x67, 0xE0, 0xFF),
-            ItemRarity.Legendary => new Color32(0xE8, 0xB8, 0x36, 0xFF),
-            ItemRarity.Mythic => new Color32(0xE0, 0x4A, 0x42, 0xFF),
+            ItemRarity.Legendary => new Color32(0xE0, 0x4A, 0x42, 0xFF),
+            ItemRarity.Mythic => new Color32(0xE8, 0xB8, 0x36, 0xFF),
             _ => Color.gray
         };
 
