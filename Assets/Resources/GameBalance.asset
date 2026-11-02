@@ -17,6 +17,8 @@ MonoBehaviour:
   thirstPerTurn: 4
   powerPerTurn: 3
   starveDamagePerTurn: 8
+  starveDamage: 5
+  starveInterval: 3
   restHeal: 30
   startHealth: 100
   startHunger: 90
@@ -29,18 +31,16 @@ MonoBehaviour:
   playerAttackDelay: 1
   runMultiplier: 1.8
   crouchMultiplier: 0.5
-  clubDamage: 30
-  clubAttackDelay: 1.2
   staminaMax: 100
   staminaRunCostPerSecond: 20
-  staminaRegenPerHalfSecond: 5
+  staminaRegenAmount: 5
+  staminaRegenInterval: 0.3
   staminaMinToRun: 15
   carryCapacity: 5
-  backpackBonus: 5
   flashlightSecondsPerBattery: 300
   fuelPower: 35
   expeditionSeconds: 300
-  itemSpawnChance: 0.45
+  itemSpawnChance: 0.55
   startZombies: 3
   maxZombies: 10
   dogCount: 2
@@ -74,7 +74,7 @@ MonoBehaviour:
     displayName: "\uAC70\uB300 \uC880\uBE44"
     health: 300
     damage: 30
-    speed: 10
+    speed: 8
     attackDelay: 3
     fromTurn: 30
   dog:

@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// 핫바: 1~8 / 마우스 휠로 아이템 선택, 우클릭 사용, G 버리기. 선택한 아이템은 오른손에 든다.
+// 핫바: 1~8 / 마우스 휠로 칸 선택, 사용 키(기본 우클릭) 사용, 버리기 키(기본 G). 선택한 칸의 아이템은 오른손에 든다.
+// 칸마다 무엇을 놓을지는 GameState.Hotbar (소지품 창에서 끌어다 놓아 바꾼다)
 // 가방·방어구는 우클릭하면 장비 칸에 착용한다 (장비 칸으로 가면 소지품·핫바에서 빠진다)
 public class PlayerHotbar : MonoBehaviour
 {
@@ -22,35 +23,28 @@ public class PlayerHotbar : MonoBehaviour
     void Update()
     {
         var s = GameManager.Instance.State;
-        var items = s.Carried.Sorted();
-
-        // 아이템 순서가 바뀌어도 고른 아이템을 계속 들고 있게 한다
-        int keep = SelectedId != null ? items.FindIndex(kv => kv.Key == SelectedId) : -1;
-        if (keep >= 0) SelectedIndex = keep;
+        s.SyncHotbar();
 
         if (!PlayerController.Instance.InputBlocked)
         {
             bool changed = false;
-            var kb = Keyboard.current;
-            if (kb != null)
-            {
-                for (int i = 0; i < Slots; i++)
-                    if (kb[Key.Digit1 + i].wasPressedThisFrame) SelectedIndex = i;
-                if (kb.gKey.wasPressedThisFrame && SelectedId != null) { Drop(SelectedId); changed = true; }
-            }
+            for (int i = 0; i < Slots; i++)
+                if (KeyBindings.Pressed(GameAction.Slot1 + i)) SelectedIndex = i;
+            if (KeyBindings.Pressed(GameAction.DropItem) && SelectedId != null) { Drop(SelectedId); changed = true; }
             var mouse = Mouse.current;
             if (mouse != null)
             {
                 float scroll = mouse.scroll.ReadValue().y;
                 if (scroll > 0.1f) SelectedIndex = (SelectedIndex + Slots - 1) % Slots;
                 else if (scroll < -0.1f) SelectedIndex = (SelectedIndex + 1) % Slots;
-                if (mouse.rightButton.wasPressedThisFrame && SelectedId != null) { UseSelected(); changed = true; }
             }
-            // 사용·장착·버리기로 소지품이 바뀌었으면 목록을 다시 읽는다 (장착한 가방·방어구는 소지품에서 빠진다)
-            if (changed) items = s.Carried.Sorted();
+            if (KeyBindings.Pressed(GameAction.UseItem) && SelectedId != null) { UseSelected(); changed = true; }
+            // 사용·장착·버리기로 소지품이 바뀌었으면 핫바를 다시 맞춘다 (장착한 가방·방어구는 소지품에서 빠진다)
+            if (changed) s.SyncHotbar();
         }
 
-        SelectedId = SelectedIndex < items.Count && SelectedIndex < Slots ? items[SelectedIndex].Key : null;
+        SelectedIndex = Mathf.Clamp(SelectedIndex, 0, Slots - 1);
+        SelectedId = s.Hotbar[SelectedIndex];
     }
 
     void UseSelected()
@@ -58,7 +52,8 @@ public class PlayerHotbar : MonoBehaviour
         var gm = GameManager.Instance;
         var def = ItemDatabase.Get(SelectedId);
         if (def.IsConsumable) gm.UseItem(def.Id, gm.State.Carried);
-        else if (def.Id == "flashlight") gm.UI.ShowMessage("손전등은 Q로 켜고 끈다.");
+        else if (def.Id == "flashlight") gm.UI.ShowMessage($"손전등은 {KeyBindings.Label(GameAction.Flashlight)}로 켜고 끈다.");
+        else if (def.Id == ItemDatabase.LighterId) gm.UI.ShowMessage($"라이터를 들고 {KeyBindings.Label(GameAction.Attack)}하면 적에게 불을 붙인다. 방공호에서는 화로에 불을 붙인다.");
         else if (def.IsWeapon) gm.UI.ShowMessage($"{def.Name}{Eun(def.Name)} 좌클릭으로 " + (def.Weapon == WeaponKind.Sling ? $"돌을 쏜다. 돌 1개로 {ItemDatabase.ShotsPerStone}발." : "공격한다."));
         else if (def.Slot != EquipSlot.None) Equip(def.Id); // 가방·방어구는 우클릭하면 장비 칸에 착용한다
         else if (def.Id == "fuel") gm.UI.ShowMessage("연료통은 방공호 발전기에 넣는다 (F). 트럭 재료로도 쓴다.");
@@ -128,12 +123,12 @@ public class PlayerHotbar : MonoBehaviour
         if (def.Weapon == WeaponKind.Sling) return $"좌클릭: 쏘기 · 공격력 {def.Damage:0} · {SlingAmmoText()}";
         if (def.Weapon == WeaponKind.Stab) return $"좌클릭: 찌르기 · 공격력 {def.Damage:0}";
         if (def.IsWeapon) return $"좌클릭: 휘두르기 · 공격력 {def.Damage:0}";
-        if (def.Id == "flashlight") return "Q: 켜기/끄기";
+        if (def.Id == "flashlight") return $"{KeyBindings.Label(GameAction.Flashlight)}: 켜기/끄기";
         if (def.Slot == EquipSlot.Backpack) return "우클릭: 장비 칸에 메기";
         if (def.Slot == EquipSlot.Armor) return "우클릭: 장비 칸에 입기";
         if (def.Id == "fuel") return "방공호 발전기 연료 · 트럭 재료";
         if (def.Id == ItemDatabase.StonePouchId) return "가지고 있으면 돌 무게 0";
-        if (def.Id == ItemDatabase.LighterId) return "화로에 불을 붙인다";
+        if (def.Id == ItemDatabase.LighterId) return $"{KeyBindings.Label(GameAction.Attack)}: 불붙이기 ({GameBalance.Data.burnSeconds:0}초 화상) · 화로 불";
         string use = MaterialUse(def.Id);
         return def.Id == ItemDatabase.SlingAmmoId ? "새총 총알 · " + use : use;
     }

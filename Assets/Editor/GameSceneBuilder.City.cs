@@ -37,6 +37,7 @@ public static partial class GameSceneBuilder
                 BuildBlock(geo, points, new Vector3(bx, 0, bz));
 
         BuildStreetProps(geo, points);
+        AddStreetsideItemPoints(points);
         BuildHatch(geo, CityHatchPos);
         BuildBoundary(geo);
 
@@ -220,7 +221,12 @@ public static partial class GameSceneBuilder
         }
         FacadeWindows(g, x0 - t / 2, z0 - t / 2, w + t, d + t, roofY + 0.3f, floors - 1);
 
-        if (!trader && Chance(0.7)) AddDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, Pick(M["wood"], M["metal"]));
+        // 출입구: 문을 달거나(70%), 그중 일부는 판자로 막아 앉아서만 기어 들어가게 한다 (도시 배치 난수와 따로 둔 난수)
+        bool door = !trader && Chance(0.7);
+        var crawlRng = new System.Random(4200 + ix * 7 + iz * 13 + Mathf.RoundToInt(block.localPosition.x) * 17 + Mathf.RoundToInt(block.localPosition.z) * 101);
+        bool crawl = !trader && crawlRng.NextDouble() < 0.3;
+        if (crawl) BoardedDoorway(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, CrawlGap, crawlRng);
+        else if (door) AddDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, Pick(M["wood"], M["metal"]));
 
         // 내부: 선반, 탁자/계산대, 상자, 잔해. 계단 벽 쪽 띠(계단 + 지나갈 길)는 비워 둔다
         Vector3 center = new Vector3(x0 + w / 2, 0, z0 + d / 2);
@@ -274,6 +280,10 @@ public static partial class GameSceneBuilder
         for (int i = 0; i < 4; i++)
             Box("Debris", g, Inside(R(0, 1), R(0, 1)) + Vector3.up * 0.05f, new Vector3(R(0.1f, 0.5f), 0.06f, R(0.1f, 0.4f)), Pick(M["cracked"], M["wood"], M["metal"]), 1f, false, new Vector3(R(-10, 10), R(0, 180), 0));
 
+        // 기어 들어가야 하는 건물은 아이템 자리가 더 있다 (보상)
+        if (crawl)
+            for (int i = 0; i < 3; i++)
+                Spawn<ItemSpawnPoint>(points, g.TransformPoint(Inside((float)crawlRng.NextDouble(), (float)crawlRng.NextDouble())) + Vector3.up * 0.1f);
         if (Chance(0.3) && !trader) Spawn<ZombieSpawnPoint>(points, g.TransformPoint(center));
         if (Chance(0.25) && !trader)
         {
@@ -656,7 +666,7 @@ public static partial class GameSceneBuilder
         float sx = xSide == 2 ? x0 - 0.06f : x0 + w + 0.06f;
         Box("ShutterX", g, new Vector3(sx, 1.4f, z0 + d / 2), new Vector3(0.1f, 2.6f, Mathf.Min(6, d - 2)), M["metal"], 1.5f);
         RubblePile(g, new Vector3(sx + (xSide == 2 ? -1.2f : 1.2f), 0, z0 + R(1, d - 1)), 6, 1.0f);
-        if (Chance(0.5)) Spawn<ItemSpawnPoint>(points, g.TransformPoint(new Vector3(sx + (xSide == 2 ? -0.8f : 0.8f), 0.1f, z0 + d * 0.3f)));
+        if (Chance(0.5)) OutdoorItemPoint(points, g.TransformPoint(new Vector3(sx + (xSide == 2 ? -0.8f : 0.8f), 0.1f, z0 + d * 0.3f)));
     }
 
     static void CollapsedBuilding(Transform block, Transform points, int ix, int iz)
@@ -688,7 +698,7 @@ public static partial class GameSceneBuilder
         Box("FallenSlab", g, c + new Vector3(R(-2, 2), 1.0f, R(-2, 2)), new Vector3(w * 0.55f, 0.25f, d * 0.35f), M["dirty"], 3f, true, new Vector3(R(18, 32), R(0, 360), 0));
         Box("Beam", g, c + new Vector3(R(-3, 3), 0.8f, R(-3, 3)), new Vector3(0.25f, 0.25f, 4.5f), M["metal"], 1.5f, true, new Vector3(R(10, 25), R(0, 360), 0));
         for (int i = 0; i < 3; i++)
-            Spawn<ItemSpawnPoint>(points, g.TransformPoint(c + new Vector3(R(-w / 2 + 1, w / 2 - 1), 0.5f, R(-d / 2 + 1, d / 2 - 1))));
+            OutdoorItemPoint(points, g.TransformPoint(c + new Vector3(R(-w / 2 + 1, w / 2 - 1), 0.5f, R(-d / 2 + 1, d / 2 - 1))));
         if (Chance(0.4)) Spawn<ZombieSpawnPoint>(points, g.TransformPoint(c + new Vector3(2.5f, 0, -2.5f)));
         if (Chance(0.35)) FireBarrel(g, c + new Vector3(R(-3, 3), 0, R(-3, 3)));
     }
@@ -703,7 +713,7 @@ public static partial class GameSceneBuilder
         // 쓰러진 철조망 울타리
         for (int i = 0; i < 6; i++)
             Box("FencePost", g, new Vector3(x0 + 1 + i * (w - 2) / 5f, 0.9f, z0 + 0.5f), new Vector3(0.06f, 1.8f, 0.06f), M["metal"], 1f, true, new Vector3(R(-12, 12), 0, R(-12, 12)));
-        Spawn<ItemSpawnPoint>(points, g.TransformPoint(c + new Vector3(-2, 0.4f, 2.5f)));
+        OutdoorItemPoint(points, g.TransformPoint(c + new Vector3(-2, 0.4f, 2.5f)));
         Spawn<ZombieSpawnPoint>(points, g.TransformPoint(c));
     }
 
@@ -803,6 +813,39 @@ public static partial class GameSceneBuilder
         if (flipped) g.localPosition += Vector3.up * yBase;
     }
 
+    // 건물 주위 바닥(인도·건물 사이 골목)에 아이템 자리를 더 둔다. 따로 난수를 써서 도시의 다른 배치는 바뀌지 않는다.
+    // 벽·잔해·소품 안에 묻히지 않게 빈 자리만 고른다
+    static void AddStreetsideItemPoints(Transform points)
+    {
+        Physics.SyncTransforms();
+        var r = new System.Random(53);
+        float F(float a, float b) => a + (float)r.NextDouble() * (b - a);
+        int added = 0;
+        foreach (var bx in new[] { -46f, 0f, 46f })
+            foreach (var bz in new[] { -46f, 0f, 46f })
+            {
+                int want = 12, tries = 0;
+                while (want > 0 && tries++ < 60)
+                {
+                    // 3/4은 블록 가장자리 인도, 1/4은 블록 안 건물 사이 골목
+                    Vector3 local;
+                    if (r.NextDouble() < 0.75)
+                    {
+                        float along = F(-15.5f, 15.5f), edge = F(15.0f, 16.4f) * (r.NextDouble() < 0.5 ? -1 : 1);
+                        local = r.NextDouble() < 0.5 ? new Vector3(along, 0, edge) : new Vector3(edge, 0, along);
+                    }
+                    else local = r.NextDouble() < 0.5 ? new Vector3(F(-1.2f, 1.2f), 0, F(-13f, 13f)) : new Vector3(F(-13f, 13f), 0, F(-1.2f, 1.2f));
+                    var p = new Vector3(bx, 0.15f, bz) + local;
+                    if (Physics.CheckSphere(p + Vector3.up * 0.45f, 0.4f, ~0, QueryTriggerInteraction.Ignore)) continue; // 벽·소품 안
+                    if (!Physics.Raycast(p + Vector3.up * 1f, Vector3.down, out var hit, 2f, ~0, QueryTriggerInteraction.Ignore)) continue;
+                    OutdoorItemPoint(points, hit.point + Vector3.up * 0.05f);
+                    want--;
+                    added++;
+                }
+            }
+        Debug.Log($"[GameSceneBuilder] 건물 주위 아이템 자리 {added}곳 추가");
+    }
+
     static void BuildStreetProps(Transform geo, Transform points)
     {
         var props = Group("StreetProps", geo, Vector3.zero);
@@ -815,14 +858,14 @@ public static partial class GameSceneBuilder
             if (Vector3.Distance(p, SpawnPos) < 9) continue;
             float yaw = (alongZ ? 0 : 90) + R(-25, 25) + (Chance(0.2) ? 90 : 0);
             WreckedCar(props, p, yaw, Chance(0.15));
-            if (Chance(0.45)) Spawn<ItemSpawnPoint>(points, p + Quaternion.Euler(0, yaw, 0) * new Vector3(1.4f, 0.2f, R(-1, 1)));
+            if (Chance(0.45)) OutdoorItemPoint(points, p + Quaternion.Euler(0, yaw, 0) * new Vector3(1.4f, 0.2f, R(-1, 1)));
         }
         for (int i = 0; i < 9; i++)
         {
             var p = RandomRoadPoint();
             if (Vector3.Distance(p, SpawnPos) < 8) continue;
             RubblePile(props, p, rng.Next(6, 12), R(1f, 1.8f));
-            if (Chance(0.3)) Spawn<ItemSpawnPoint>(points, p + new Vector3(1.8f, 0.3f, 0));
+            if (Chance(0.3)) OutdoorItemPoint(points, p + new Vector3(1.8f, 0.3f, 0));
         }
         for (int i = 0; i < 6; i++)
         {
@@ -874,18 +917,15 @@ public static partial class GameSceneBuilder
     static void BuildTrader(Transform parent, Vector3 pos)
     {
         var g = Group("Trader", parent, pos, R(0, 360));
-        Prim(PrimitiveType.Capsule, "Coat", g, new Vector3(0, 0.85f, 0), new Vector3(0.6f, 0.82f, 0.5f), M["coat"]);
-        var head = Group("Head", g, new Vector3(0, 1.72f, 0));
-        Prim(PrimitiveType.Sphere, "Face", head, Vector3.zero, new Vector3(0.24f, 0.27f, 0.25f), M["skin"]);
-        Prim(PrimitiveType.Cylinder, "HatBrim", head, new Vector3(0, 0.12f, 0), new Vector3(0.42f, 0.012f, 0.42f), M["coat"]);
-        Prim(PrimitiveType.Cylinder, "HatCrown", head, new Vector3(0, 0.19f, 0), new Vector3(0.25f, 0.07f, 0.25f), M["coat"]);
-        Box("Scarf", head, new Vector3(0, -0.08f, 0.08f), new Vector3(0.24f, 0.1f, 0.12f), M["paintRed"], 1f, false);
-        Box("Pack", g, new Vector3(0, 1.1f, -0.33f), new Vector3(0.5f, 0.7f, 0.3f), M["blanket"], 1f, false);
+        // 몸은 실행할 때 짓는다 (디자인 시트의 잡상인: 긴 코트·스카프·챙 넓은 모자·큰 등짐·등불·지팡이)
+        var figure = g.gameObject.AddComponent<CharacterFigure>();
+        figure.kind = FigureKind.Merchant;
+        figure.glowTemplate = M["lantern"];
         var col = g.gameObject.AddComponent<CapsuleCollider>();
         col.height = 1.9f;
-        col.radius = 0.35f;
-        col.center = new Vector3(0, 0.95f, 0);
-        g.gameObject.AddComponent<Trader>().head = head;
+        col.radius = 0.4f;
+        col.center = new Vector3(0, 0.95f, -0.05f);
+        g.gameObject.AddComponent<Trader>();
 
         var crate = Box("Crate", g, new Vector3(0.9f, 0.3f, 0.3f), new Vector3(0.7f, 0.6f, 0.6f), M["wood"], 1f, true);
         crate.transform.localRotation = Quaternion.Euler(0, 15, 0);

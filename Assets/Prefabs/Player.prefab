@@ -108,7 +108,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFlashlight
   spot: {fileID: 5922496869138398727}
-  baseIntensity: 40
+  baseIntensity: 48
 --- !u!114 &4693690962258594990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,7 +348,7 @@ Light:
   serializedVersion: 12
   m_Type: 0
   m_Color: {r: 1, g: 0.93, b: 0.8, a: 1}
-  m_Intensity: 40
+  m_Intensity: 48
   m_Range: 32
   m_SpotAngle: 60
   m_InnerSpotAngle: 22

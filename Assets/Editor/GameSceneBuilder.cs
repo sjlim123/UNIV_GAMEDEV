@@ -152,6 +152,10 @@ public static partial class GameSceneBuilder
         M["lantern"] = Emissive("M_Lantern", new Color(1f, 0.7f, 0.4f), new Color(3f, 1.6f, 0.6f));
         M["fire"] = ParticleMat("M_FireParticle", new Color(1f, 0.55f, 0.2f, 1f), true);
         M["ash"] = ParticleMat("M_AshParticle", new Color(0.55f, 0.55f, 0.53f, 0.8f), false);
+        // 실행 중에 쓰는 효과 입자 재질 (Resources/Effects: 타격 피, 화상 불꽃·연기)
+        ParticleMat("M_HitBlood", Color.white, false, EffectDir);
+        ParticleMat("M_BurnFire", Color.white, true, EffectDir);
+        ParticleMat("M_BurnSmoke", Color.white, false, EffectDir);
         // 메인 화면의 비: 빗줄기·젖은 바닥·물웅덩이
         M["rain"] = ParticleMat("M_RainParticle", new Color(0.72f, 0.78f, 0.9f, 0.6f), true);
         M["wetAsphalt"] = TexMat("M_WetAsphalt", "asphalt_02", new Color(0.42f, 0.44f, 0.48f), 0.62f);
@@ -261,9 +265,17 @@ public static partial class GameSceneBuilder
         return ps;
     }
 
-    static Material LoadOrCreate(string name, Shader shader)
+    const string EffectDir = "Assets/Resources/Effects";
+
+    static Material LoadOrCreate(string name, Shader shader, string dir = null)
     {
-        string path = $"{MatDir}/{name}.mat";
+        dir = dir ?? MatDir;
+        if (!AssetDatabase.IsValidFolder(dir))
+        {
+            int cut = dir.LastIndexOf('/');
+            AssetDatabase.CreateFolder(dir.Substring(0, cut), dir.Substring(cut + 1));
+        }
+        string path = $"{dir}/{name}.mat";
         var m = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (m == null)
         {
@@ -308,10 +320,10 @@ public static partial class GameSceneBuilder
         return m;
     }
 
-    static Material ParticleMat(string name, Color color, bool additive)
+    static Material ParticleMat(string name, Color color, bool additive, string dir = null)
     {
         var src = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
-        var m = LoadOrCreate(name, Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+        var m = LoadOrCreate(name, Shader.Find("Universal Render Pipeline/Particles/Unlit"), dir);
         if (src != null) m.CopyPropertiesFromMaterial(src);
         m.SetColor("_BaseColor", color);
         m.SetFloat("_Surface", 1);
@@ -576,13 +588,16 @@ public static partial class GameSceneBuilder
     static bool Chance(double p) => rng.NextDouble() < p;
     static T Pick<T>(params T[] items) => items[rng.Next(items.Length)];
 
-    static void Spawn<T>(Transform parent, Vector3 worldPos) where T : Component
+    static T Spawn<T>(Transform parent, Vector3 worldPos) where T : Component
     {
         var go = new GameObject(typeof(T).Name);
         go.transform.SetParent(parent, true);
         go.transform.position = worldPos;
-        go.AddComponent<T>();
+        return go.AddComponent<T>();
     }
+
+    // 건물 밖 바닥의 아이템 자리 (돌도 나올 수 있다)
+    static void OutdoorItemPoint(Transform parent, Vector3 worldPos) => Spawn<ItemSpawnPoint>(parent, worldPos).outdoor = true;
 
     // ---------- 벽 (문·창문 구멍 포함) ----------
 
@@ -636,18 +651,116 @@ public static partial class GameSceneBuilder
 
     static float ShiftFor(int side, float t) => side < 2 ? t / 2 : -t / 2;
 
-    // 경첩 문 (wall: 벽 Transform, c: 벽 로컬 기준 구멍 중심)
-    static void AddDoor(Transform wall, float c, float width, float height, Material mat)
+    // 경첩 문 (wall: 벽 Transform, c: 벽 로컬 기준 구멍 중심, wallThick: 벽 두께).
+    // mat이 쇠면 녹슨 철문(리벳·보강 띠·레버 손잡이·작은 창), 아니면 나무 판문(판자 무늬·둥근 손잡이).
+    // 벽 양면에 문틀을 두르고, 문짝의 장식은 양면에 붙인다 (문짝 면에서 조금씩 띄워 겹친 면이 생기지 않게)
+    static void AddDoor(Transform wall, float c, float width, float height, Material mat, float wallThick = 0.3f)
     {
+        bool steel = mat == M["metal"];
+        DoorCasing(wall, c, width, height, wallThick, steel ? M["metal"] : M["wood"]);
+
         var pivot = Group("Door", wall, new Vector3(c - width / 2 + 0.03f, 0, 0));
         pivot.gameObject.AddComponent<Door>();
         pivot.gameObject.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
-        var leaf = Box("Leaf", pivot, new Vector3(width / 2 - 0.03f, height / 2, 0), new Vector3(width - 0.08f, height - 0.04f, 0.06f), mat, 1.2f, true, null, false);
-        Box("Handle", leaf.transform, new Vector3(width / 2 - 0.2f, -0.1f, 0.06f), new Vector3(0.12f, 0.03f, 0.04f), M["metal"], 1f, false, null, false);
-        var obstacle = leaf.AddComponent<NavMeshObstacle>();
+        float lw = width - 0.08f, lh = height - 0.04f, lt = steel ? 0.07f : 0.06f;
+        var leafGo = Box("Leaf", pivot, new Vector3(width / 2 - 0.03f, height / 2, 0), new Vector3(lw, lh, lt), mat, 1.2f, true, null, false);
+        var leaf = leafGo.transform;
+        foreach (int s in new[] { -1, 1 }) // 문짝 양면
+        {
+            float z = s * (lt / 2);
+            if (steel)
+            {
+                // 가로 보강 띠 셋 + 띠마다 리벳, 아래 발판
+                foreach (float y in new[] { -lh * 0.32f, 0f, lh * 0.32f })
+                {
+                    Box("Band", leaf, new Vector3(0, y, z + s * 0.006f), new Vector3(lw - 0.06f, 0.07f, 0.012f), M["metal"], 1f, false, null, false);
+                    for (int i = 0; i < 5; i++)
+                        Prim(PrimitiveType.Sphere, "Rivet", leaf, new Vector3(-lw / 2 + 0.08f + i * (lw - 0.16f) / 4f, y, z + s * 0.013f), new Vector3(0.018f, 0.018f, 0.01f), M["tire"]);
+                }
+                Box("KickPlate", leaf, new Vector3(0, -lh / 2 + 0.13f, z + s * 0.005f), new Vector3(lw - 0.04f, 0.22f, 0.01f), M["dirty"], 1f, false, null, false);
+                // 레버 손잡이와 열쇠 구멍 판
+                Box("LockPlate", leaf, new Vector3(lw / 2 - 0.12f, -0.12f, z + s * 0.006f), new Vector3(0.06f, 0.2f, 0.012f), M["tire"], 1f, false, null, false);
+                Box("Lever", leaf, new Vector3(lw / 2 - 0.17f, -0.06f, z + s * 0.035f), new Vector3(0.14f, 0.025f, 0.025f), M["line"], 1f, false, null, false);
+                Prim(PrimitiveType.Cylinder, "LeverNeck", leaf, new Vector3(lw / 2 - 0.12f, -0.06f, z + s * 0.02f), new Vector3(0.025f, 0.015f, 0.025f), M["line"], new Vector3(90, 0, 0));
+            }
+            else
+            {
+                // 판자 무늬 네 칸 (위 두 칸은 길고 아래 두 칸은 짧다) + 둥근 손잡이
+                float pw = (lw - 0.24f) / 2f;
+                foreach (float x in new[] { -pw / 2 - 0.04f, pw / 2 + 0.04f })
+                {
+                    Box("Panel", leaf, new Vector3(x, lh * 0.18f, z + s * 0.005f), new Vector3(pw, lh * 0.42f, 0.01f), mat, 1f, false, null, false);
+                    Box("Panel", leaf, new Vector3(x, -lh * 0.3f, z + s * 0.005f), new Vector3(pw, lh * 0.26f, 0.01f), mat, 1f, false, null, false);
+                }
+                Prim(PrimitiveType.Sphere, "Knob", leaf, new Vector3(lw / 2 - 0.1f, -0.1f, z + s * 0.04f), new Vector3(0.06f, 0.06f, 0.05f), M["line"]);
+                Prim(PrimitiveType.Cylinder, "KnobRose", leaf, new Vector3(lw / 2 - 0.1f, -0.1f, z + s * 0.006f), new Vector3(0.07f, 0.006f, 0.07f), M["line"], new Vector3(90, 0, 0));
+            }
+        }
+        if (steel)
+        {
+            // 위쪽 작은 창: 어두운 유리가 문짝을 꿰뚫는다 (양면에서 조금 튀어나와 겹친 면이 없다)
+            float wy = lh * 0.33f + 0.12f;
+            Box("Window", leaf, new Vector3(0, wy, 0), new Vector3(0.3f, 0.22f, lt + 0.004f), M["glass"], 1f, false, null, false);
+            foreach (int s in new[] { -1, 1 }) // 창 테두리 (위·아래·왼쪽·오른쪽 막대)
+            {
+                float fz = s * (lt / 2 + 0.008f);
+                Box("WindowFrame", leaf, new Vector3(0, wy + 0.125f, fz), new Vector3(0.36f, 0.03f, 0.012f), M["tire"], 1f, false, null, false);
+                Box("WindowFrame", leaf, new Vector3(0, wy - 0.125f, fz), new Vector3(0.36f, 0.03f, 0.012f), M["tire"], 1f, false, null, false);
+                Box("WindowFrame", leaf, new Vector3(-0.165f, wy, fz), new Vector3(0.03f, 0.22f, 0.012f), M["tire"], 1f, false, null, false);
+                Box("WindowFrame", leaf, new Vector3(0.165f, wy, fz), new Vector3(0.03f, 0.22f, 0.012f), M["tire"], 1f, false, null, false);
+            }
+        }
+        var obstacle = leafGo.AddComponent<NavMeshObstacle>();
         obstacle.shape = NavMeshObstacleShape.Box;
-        obstacle.size = new Vector3(width - 0.08f, height, 0.3f);
+        obstacle.size = new Vector3(lw, height, 0.3f);
         obstacle.carving = true;
+    }
+
+    // 문틀: 벽 양면에서 구멍 둘레(왼쪽·오른쪽·위)를 감싸는 띠. 벽 면에서 2.4cm 튀어나온다
+    // 판자로 막힌 출입구: 아래 gap(m)만 비우고 위를 판자로 막는다. 앉으면(키 1.1m) 지나가고, 서 있거나 좀비(1.8m)는 못 지나간다
+    const float CrawlGap = 1.4f;
+
+    static void BoardedDoorway(Transform wall, float c, float width, float height, float gap, System.Random r, float wallThick = 0.3f)
+    {
+        DoorCasing(wall, c, width, height, wallThick, M["wood"]);
+        var g = Group("BoardedDoor", wall, new Vector3(c, 0, 0));
+        float f(float a, float b) => a + (float)r.NextDouble() * (b - a);
+        // 가로 판자: 맨 아래 판자의 아랫면이 gap 높이
+        float y = gap;
+        int i = 0;
+        while (y < height - 0.05f)
+        {
+            // 맨 아래 판자는 거의 수평으로 (기울면 한쪽 끝이 틈으로 내려와 앉은 채로도 걸린다)
+            float tilt = i == 0 ? f(-1.5f, 1.5f) : f(-5, 5), len = width + f(0.15f, 0.35f);
+            if (i == 0) y = gap + 0.085f + len / 2 * Mathf.Sin(Mathf.Abs(tilt) * Mathf.Deg2Rad);
+            var plank = Box("Plank" + i, g, new Vector3(f(-0.06f, 0.06f), y, 0), new Vector3(len, 0.17f, 0.045f), M["wood"], 1f, true, new Vector3(0, 0, tilt));
+            foreach (int s in new[] { -1, 1 })
+                foreach (float x in new[] { -len / 2 + 0.08f, len / 2 - 0.08f })
+                    Prim(PrimitiveType.Sphere, "Nail", plank.transform, new Vector3(x, 0.05f, s * 0.026f), new Vector3(0.02f, 0.02f, 0.012f), M["tire"]);
+            y += f(0.2f, 0.27f);
+            i++;
+        }
+        // 비스듬히 덧댄 판자 (틈 위쪽만 가로지른다)
+        Box("PlankDiag", g, new Vector3(0, (gap + height) / 2 + 0.05f, 0.04f), new Vector3(0.16f, Mathf.Sqrt(width * width + (height - gap) * (height - gap)) * 0.9f, 0.04f), M["wood"], 1f, true,
+            new Vector3(0, 0, Mathf.Atan2(width, height - gap) * Mathf.Rad2Deg * (r.NextDouble() < 0.5 ? 1 : -1)));
+        // 문턱의 부서진 판자 조각 (지나다닐 수 있게 낮게)
+        Box("Splinter", g, new Vector3(f(-0.4f, 0.4f), 0.03f, f(-0.5f, 0.5f)), new Vector3(0.5f, 0.03f, 0.12f), M["wood"], 1f, false, new Vector3(0, f(0, 180), 0));
+        // 앞뒤에서 "앉으면 지나갈 수 있다" 알림
+        var hint = new GameObject("CrawlHint").AddComponent<CrawlHint>();
+        hint.transform.SetParent(g, false);
+        hint.halfSize = new Vector3(width / 2 + 0.6f, 1.2f, 1.6f);
+    }
+
+    static void DoorCasing(Transform wall, float c, float width, float height, float wallThick, Material mat)
+    {
+        const float trim = 0.09f, depth = 0.024f;
+        foreach (int s in new[] { -1, 1 })
+        {
+            float z = s * (wallThick / 2 + depth / 2);
+            Box("Casing", wall, new Vector3(c - width / 2 - trim / 2, (height + trim) / 2, z), new Vector3(trim, height + trim, depth), mat, 1f, false);
+            Box("Casing", wall, new Vector3(c + width / 2 + trim / 2, (height + trim) / 2, z), new Vector3(trim, height + trim, depth), mat, 1f, false);
+            Box("Casing", wall, new Vector3(c, height + trim / 2, z), new Vector3(width, trim, depth), mat, 1f, false);
+        }
     }
 
     static void CombineInto(Transform parent, string name, List<CombineInstance> parts, Material mat)

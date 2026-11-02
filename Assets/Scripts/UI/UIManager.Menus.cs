@@ -15,6 +15,9 @@ public partial class UIManager
     UnityEngine.UI.Text pauseInfo;
     Button continueButton;
     int settingsTab;
+    // 컨트롤 탭에서 새 키를 기다리는 동작 (없으면 null)
+    GameAction? rebinding;
+    public bool IsRebinding => rebinding.HasValue;
 
     public bool IsPaused { get; private set; }
 
@@ -387,7 +390,8 @@ public partial class UIManager
         OpenPanel("설정", c =>
         {
             var tabs = Row(c, false);
-            string[] names = { "그래픽", "소리", "조작" };
+            // 탭: 0 일반(마우스·조준점) · 1 그래픽 · 2 컨트롤(조작키) · 3 소리
+            string[] names = { "일반", "그래픽", "컨트롤", "소리" };
             for (int i = 0; i < names.Length; i++)
             {
                 int k = i;
@@ -396,7 +400,7 @@ public partial class UIManager
             }
             Line(c, "", 8);
 
-            if (settingsTab == 0)
+            if (settingsTab == 1)
             {
                 Selector(c, "그래픽 품질", GameSettings.QualityNames[GameSettings.Quality], d => GameSettings.Quality = Mathf.Clamp(GameSettings.Quality + d, 0, 2));
                 Selector(c, "렌더 해상도", $"{GameSettings.RenderScale * 100:0}%", d => GameSettings.RenderScale = Step(GameSettings.RenderScale, d * 0.1f, 0.5f, 1f));
@@ -409,23 +413,50 @@ public partial class UIManager
                 Selector(c, "FPS 표시", GameSettings.ShowFps ? "켬" : "끔", d => GameSettings.ShowFps = !GameSettings.ShowFps);
                 Line(c, "저사양 PC: 품질 '낮음' + 렌더 해상도 70%를 권장합니다. (그림자·블룸·필름 효과를 끕니다)", 17, Dim);
             }
-            else if (settingsTab == 1)
+            else if (settingsTab == 3)
             {
                 Selector(c, "전체 음량", $"{GameSettings.Volume * 100:0}%", d => GameSettings.Volume = Step(GameSettings.Volume, d * 0.1f, 0f, 1f));
+                Line(c, "", 4);
+                Selector(c, "환경음 (바람·비·기계·라디오)", $"{GameSettings.VolumeAmbient * 100:0}%", d => GameSettings.VolumeAmbient = Step(GameSettings.VolumeAmbient, d * 0.1f, 0f, 1f));
+                Selector(c, "효과음 (발소리·타격·아이템·문)", $"{GameSettings.VolumeEffects * 100:0}%", d => GameSettings.VolumeEffects = Step(GameSettings.VolumeEffects, d * 0.1f, 0f, 1f));
+                Selector(c, "적·동물 소리 (좀비·들개·약탈자)", $"{GameSettings.VolumeEnemy * 100:0}%", d => GameSettings.VolumeEnemy = Step(GameSettings.VolumeEnemy, d * 0.1f, 0f, 1f));
+                Selector(c, "인터페이스 (버튼·창)", $"{GameSettings.VolumeUI * 100:0}%", d => GameSettings.VolumeUI = Step(GameSettings.VolumeUI, d * 0.1f, 0f, 1f));
+                Line(c, "전체 음량은 모든 소리에, 나머지는 그 종류에만 곱해집니다.", 17, Dim);
+            }
+            else if (settingsTab == 2)
+            {
+                Line(c, "바꿀 동작의 키를 누른 뒤, 새로 쓸 키(또는 마우스 버튼)를 누르세요. Esc는 취소. 다른 동작과 겹치면 서로 바뀝니다.", 17, Dim);
+                foreach (var action in KeyBindings.All)
+                {
+                    var a = action;
+                    var keyLine = Row(c);
+                    RowLabel(keyLine, KeyBindings.ActionName(a));
+                    bool waiting = rebinding == a;
+                    var kb = RowButton(keyLine, waiting ? "키를 누르세요..." : KeyBindings.Label(a), () => { rebinding = a; RefreshPanel(); }, true, 240);
+                    if (waiting) AccentButton(kb);
+                }
+                Line(c, "", 6);
+                var keyRow = Row(c, false);
+                RowButton(keyRow, "조작키만 기본값으로", () => { KeyBindings.ResetAll(); rebinding = null; RefreshPanel(); }, true, 260);
             }
             else
             {
                 Selector(c, "마우스 감도", $"{GameSettings.Sensitivity:0.0}", d => GameSettings.Sensitivity = Step(GameSettings.Sensitivity, d * 0.1f, 0.2f, 3f));
                 Selector(c, "마우스 Y축 반전", GameSettings.InvertY ? "켬" : "끔", d => GameSettings.InvertY = !GameSettings.InvertY);
+                Selector(c, "조준점 모양", GameSettings.CrosshairStyleNames[GameSettings.CrosshairStyle], d => GameSettings.CrosshairStyle = Cycle(GameSettings.CrosshairStyle, d, GameSettings.CrosshairStyleNames.Length));
+                Selector(c, "조준점 색", GameSettings.CrosshairColorNames[GameSettings.CrosshairColor], d => GameSettings.CrosshairColor = Cycle(GameSettings.CrosshairColor, d, GameSettings.CrosshairColors.Length));
+                Selector(c, "조준점 크기", GameSettings.CrosshairSizeNames[GameSettings.CrosshairSize], d => GameSettings.CrosshairSize = Mathf.Clamp(GameSettings.CrosshairSize + d, 0, GameSettings.CrosshairSizeNames.Length - 1));
             }
 
             Line(c, "", 8);
             var row = Row(c, false);
-            RowButton(row, "기본값으로", () => { GameSettings.ResetToDefault(); ApplyAllSettings(); RefreshPanel(); }, true, 200);
-        }, "settings");
+            RowButton(row, "기본값으로", () => { GameSettings.ResetToDefault(); rebinding = null; ApplyAllSettings(); RefreshPanel(); }, true, 200);
+        }, "settings", true, () => rebinding = null);
     }
 
     static float Step(float value, float delta, float min, float max) => Mathf.Clamp(Mathf.Round((value + delta) * 10f) / 10f, min, max);
+
+    static int Cycle(int value, int delta, int count) => (value + delta + count) % count;
 
     void Selector(RectTransform c, string label, string value, Action<int> change)
     {
@@ -443,18 +474,23 @@ public partial class UIManager
         GameSettings.Save();
         GameSettings.ApplyGlobal();
         GameSettings.ApplyScene();
+        if (GameManager.Instance != null && GameManager.Instance.UI != null) GameManager.Instance.UI.ApplyCrosshair();
     }
 
     public void OpenControls()
     {
         OpenPanel("조작법", c =>
         {
+            string K(GameAction a) => KeyBindings.Label(a);
             string[,] keys =
             {
-                { "W A S D", "이동" }, { "마우스", "시점 회전" }, { "Shift", "달리기 (소리가 커진다)" }, { "C", "앉기 (조용히 숨기)" },
-                { "F", "줍기 · 문 열기 · 시설 사용" }, { "Q", "손전등 켜기/끄기" }, { "1 ~ 8 / 휠", "핫바 아이템 선택" },
-                { "우클릭", "선택한 아이템 사용 (먹기·치료)" }, { "G", "선택한 아이템 버리기" }, { "좌클릭", "공격 (무기를 들면 더 세다 · 새총은 돌을 쏜다)" },
-                { "Tab", "가방 열기" }, { "Esc", "일시정지 · 창 닫기" },
+                { $"{K(GameAction.MoveForward)} {K(GameAction.MoveLeft)} {K(GameAction.MoveBack)} {K(GameAction.MoveRight)}", "이동" }, { "마우스", "시점 회전" },
+                { K(GameAction.Run), "달리기 (소리가 커진다 · 짐이 무거우면 스테미너가 빨리 준다)" }, { K(GameAction.Jump), "점프" },
+                { K(GameAction.Crouch), "앉기 (조용히 숨기 · 낮은 틈 지나가기)" },
+                { K(GameAction.Interact), "줍기 · 문 열기 · 시설 사용" }, { K(GameAction.Flashlight), "손전등 켜기/끄기" }, { "1 ~ 8 / 휠", "핫바 칸 선택" },
+                { K(GameAction.UseItem), "선택한 아이템 사용 (먹기·치료)" }, { K(GameAction.DropItem), "선택한 아이템 버리기" },
+                { K(GameAction.Attack), "공격 (무기를 들면 더 세다 · 새총은 돌을 쏜다 · 라이터는 불을 붙인다)" },
+                { K(GameAction.Inventory), "소지품 열기 (아이템을 핫바로 끌어다 놓기)" }, { "Esc", "일시정지 · 창 닫기" },
             };
             for (int i = 0; i < keys.GetLength(0); i++)
             {

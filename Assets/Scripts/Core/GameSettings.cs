@@ -8,6 +8,14 @@ public static class GameSettings
 {
     public static readonly string[] QualityNames = { "낮음", "중간", "높음" };
     public static readonly int[] FpsOptions = { 30, 60, 120, 144, 0 };
+    // 조준점: 모양·색·크기
+    public static readonly string[] CrosshairStyleNames = { "점", "십자", "십자 + 점", "원", "원 + 점", "없음" };
+    public static readonly string[] CrosshairColorNames = { "흰색", "초록", "노랑", "빨강", "하늘색" };
+    public static readonly Color[] CrosshairColors =
+    {
+        new Color(1f, 1f, 1f), new Color(0.45f, 1f, 0.45f), new Color(1f, 0.88f, 0.3f), new Color(1f, 0.35f, 0.3f), new Color(0.45f, 0.85f, 1f),
+    };
+    public static readonly string[] CrosshairSizeNames = { "작게", "보통", "크게" };
 
     public static int Quality;        // 0 낮음, 1 중간, 2 높음
     public static float RenderScale;  // 0.5 ~ 1.0
@@ -16,7 +24,9 @@ public static class GameSettings
     public static int FpsIndex;
     public static bool VSync, ShowFps, Fullscreen, InvertY;
     public static float Sensitivity;  // 마우스 감도 배율
-    public static float Volume;
+    public static float Volume;        // 전체 (AudioListener)
+    public static float VolumeAmbient, VolumeEffects, VolumeEnemy, VolumeUI; // 종류별 (AudioCategory)
+    public static int CrosshairStyle, CrosshairColor, CrosshairSize;
 
     static Color baseAmbient;
     static float baseExposure;
@@ -38,11 +48,19 @@ public static class GameSettings
         InvertY = PlayerPrefs.GetInt("set_invertY", 0) == 1;
         Sensitivity = PlayerPrefs.GetFloat("set_sensitivity", 1f);
         Volume = PlayerPrefs.GetFloat("set_volume", 0.8f);
+        VolumeAmbient = PlayerPrefs.GetFloat("set_volAmbient", 1f);
+        VolumeEffects = PlayerPrefs.GetFloat("set_volEffects", 1f);
+        VolumeEnemy = PlayerPrefs.GetFloat("set_volEnemy", 1f);
+        VolumeUI = PlayerPrefs.GetFloat("set_volUI", 1f);
+        CrosshairStyle = Mathf.Clamp(PlayerPrefs.GetInt("set_crossStyle", 0), 0, CrosshairStyleNames.Length - 1);
+        CrosshairColor = Mathf.Clamp(PlayerPrefs.GetInt("set_crossColor", 0), 0, CrosshairColors.Length - 1);
+        CrosshairSize = Mathf.Clamp(PlayerPrefs.GetInt("set_crossSize", 1), 0, CrosshairSizeNames.Length - 1);
     }
 
     public static void ResetToDefault()
     {
         PlayerPrefs.DeleteAll();
+        KeyBindings.Reload();
         Load();
         Save();
     }
@@ -60,7 +78,26 @@ public static class GameSettings
         PlayerPrefs.SetInt("set_invertY", InvertY ? 1 : 0);
         PlayerPrefs.SetFloat("set_sensitivity", Sensitivity);
         PlayerPrefs.SetFloat("set_volume", Volume);
+        PlayerPrefs.SetFloat("set_volAmbient", VolumeAmbient);
+        PlayerPrefs.SetFloat("set_volEffects", VolumeEffects);
+        PlayerPrefs.SetFloat("set_volEnemy", VolumeEnemy);
+        PlayerPrefs.SetFloat("set_volUI", VolumeUI);
+        PlayerPrefs.SetInt("set_crossStyle", CrosshairStyle);
+        PlayerPrefs.SetInt("set_crossColor", CrosshairColor);
+        PlayerPrefs.SetInt("set_crossSize", CrosshairSize);
         PlayerPrefs.Save();
+    }
+
+    // 소리 종류별 음량 (0~1)
+    public static float CategoryVolume(SoundCategory c)
+    {
+        switch (c)
+        {
+            case SoundCategory.Ambient: return VolumeAmbient;
+            case SoundCategory.Enemy: return VolumeEnemy;
+            case SoundCategory.UI: return VolumeUI;
+            default: return VolumeEffects;
+        }
     }
 
     // 화면 모드, FPS 제한, 음량, 렌더 해상도처럼 씬과 상관없는 설정
@@ -110,6 +147,11 @@ public static class GameSettings
         particleRates.Clear();
         foreach (var ps in Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
             particleRates[ps] = ps.emission.rateOverTimeMultiplier;
+
+        // 씬에 미리 놓인 소리(웅웅거림·라디오 잡음·문 등)는 종류를 따로 정하지 않았으면 환경음으로 친다
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        foreach (var src in Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (src.gameObject.scene == scene && !AudioCategory.IsTagged(src)) AudioCategory.Tag(src, SoundCategory.Ambient);
     }
 
     public static void ApplyScene()

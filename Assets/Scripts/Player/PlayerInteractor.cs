@@ -1,7 +1,6 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-// 화면 가운데를 보고 F를 누르면 상호작용한다
+// 화면 가운데를 보고 상호작용 키(기본 F)를 누르면 상호작용한다
 public class PlayerInteractor : MonoBehaviour
 {
     public Camera cam;
@@ -18,9 +17,8 @@ public class PlayerInteractor : MonoBehaviour
             if (current != null && !current.CanInteract) current = null;
         }
 
-        gm.UI.SetPrompt(current != null ? "[F] " + current.Prompt : "");
+        gm.UI.SetPrompt(current != null ? $"[{KeyBindings.Label(GameAction.Interact)}] " + current.Prompt : "");
         InteractOutline.Show(current);
-        var kb = Keyboard.current;
-        if (current != null && kb != null && kb.fKey.wasPressedThisFrame) current.Interact(this);
+        if (current != null && KeyBindings.Pressed(GameAction.Interact)) current.Interact(this);
     }
 }

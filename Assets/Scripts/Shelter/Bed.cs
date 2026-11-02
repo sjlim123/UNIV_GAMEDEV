@@ -1,8 +1,26 @@
 using UnityEngine;
 
+// 침대: 쉬면 1턴이 지나고 체력이 오른다. 자는 동안 베개에 누워 천장을 보며 화면이 서서히 어두워진다 (GameManager.Rest)
 public class Bed : Interactable
 {
     const string ZombieWarning = "방공호 안에 좀비가 있다. 이대로는 잠들 수 없다.";
+
+    // 누웠을 때 눈 위치: 베개(+z 끝) 위에서 천장을 보고, 화면 위쪽이 머리 방향
+    Transform sleepAnchor;
+
+    public Transform SleepAnchor
+    {
+        get
+        {
+            if (sleepAnchor != null) return sleepAnchor;
+            sleepAnchor = new GameObject("SleepEye").transform;
+            sleepAnchor.SetParent(transform, false);
+            sleepAnchor.localPosition = new Vector3(0.04f, 0.74f, 0.6f);
+            var look = new Vector3(0.08f, 1f, -0.32f).normalized;
+            sleepAnchor.localRotation = Quaternion.LookRotation(look, Vector3.forward) * Quaternion.Euler(0, 0, -8);
+            return sleepAnchor;
+        }
+    }
 
     public override string Prompt => ShelterInvasion.ZombiesInside ? "침대 - 좀비가 있어 쉴 수 없다" : "침대 - 휴식 (1턴)";
 
@@ -24,7 +42,7 @@ public class Bed : Interactable
                     ui.ClosePanel();
                     return;
                 }
-                gm.Rest();
+                gm.Rest(SleepAnchor);
             }, true, 200);
             ui.RowButton(row, "취소", ui.ClosePanel, true, 200);
         });

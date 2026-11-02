@@ -45,7 +45,7 @@ public static partial class GameSceneBuilder
         spot.spotAngle = 60f;
         spot.innerSpotAngle = 22f;
         spot.color = new Color(1f, 0.93f, 0.8f);
-        spot.intensity = 40f;
+        spot.intensity = 48f;
         spot.shadows = LightShadows.Soft;
         spot.shadowStrength = 0.95f;
         // 손을 따라 흔들리는 빛이라 그림자 자국(얼룩 줄무늬)이 지지직 떨려 보이지 않게
@@ -62,7 +62,7 @@ public static partial class GameSceneBuilder
         root.AddComponent<PlayerInteractor>().cam = cam;
         var fl = root.AddComponent<PlayerFlashlight>();
         fl.spot = spot;
-        fl.baseIntensity = 40f;
+        fl.baseIntensity = 48f;
         var combat = root.AddComponent<PlayerCombat>();
         combat.cam = cam;
         root.AddComponent<PlayerHotbar>();
@@ -89,30 +89,8 @@ public static partial class GameSceneBuilder
         col.radius = 0.33f;
         col.center = new Vector3(0, 0.9f, 0);
         var z = root.AddComponent<Zombie>();
-
-        var t = root.transform;
-        z.legL = Group("LegL", t, new Vector3(-0.12f, 0.92f, 0));
-        Prim(PrimitiveType.Cube, "Leg", z.legL, new Vector3(0, -0.46f, 0), new Vector3(0.16f, 0.92f, 0.18f), M["zPants"]);
-        z.legR = Group("LegR", t, new Vector3(0.12f, 0.92f, 0));
-        Prim(PrimitiveType.Cube, "Leg", z.legR, new Vector3(0, -0.46f, 0), new Vector3(0.16f, 0.92f, 0.18f), M["zPants"]);
-
-        z.body = Group("Body", t, new Vector3(0, 0.92f, 0));
-        Prim(PrimitiveType.Cube, "Torso", z.body, new Vector3(0, 0.33f, 0), new Vector3(0.46f, 0.64f, 0.26f), M["zCloth"]);
-        Prim(PrimitiveType.Cube, "Rag", z.body, new Vector3(0.08f, 0.02f, 0.12f), new Vector3(0.22f, 0.18f, 0.03f), M["zCloth"], new Vector3(0, 0, 18));
-        Prim(PrimitiveType.Cube, "Neck", z.body, new Vector3(0, 0.68f, 0), new Vector3(0.12f, 0.1f, 0.12f), M["zSkin"]);
-
-        z.head = Group("Head", z.body, new Vector3(0, 0.72f, 0));
-        Prim(PrimitiveType.Sphere, "Skull", z.head, new Vector3(0, 0.13f, 0.02f), new Vector3(0.23f, 0.28f, 0.25f), M["zSkin"]);
-        Prim(PrimitiveType.Cube, "Jaw", z.head, new Vector3(0, 0.0f, 0.07f), new Vector3(0.14f, 0.06f, 0.11f), M["zSkin"], new Vector3(18, 0, 0));
-        Prim(PrimitiveType.Sphere, "EyeL", z.head, new Vector3(-0.05f, 0.16f, 0.12f), new Vector3(0.035f, 0.025f, 0.02f), M["zEye"]);
-        Prim(PrimitiveType.Sphere, "EyeR", z.head, new Vector3(0.05f, 0.16f, 0.12f), new Vector3(0.035f, 0.025f, 0.02f), M["zEye"]);
-
-        z.armL = Group("ArmL", z.body, new Vector3(-0.3f, 0.6f, 0));
-        Prim(PrimitiveType.Cube, "Arm", z.armL, new Vector3(0, -0.3f, 0), new Vector3(0.12f, 0.62f, 0.12f), M["zSkin"]);
-        Prim(PrimitiveType.Cube, "Hand", z.armL, new Vector3(0, -0.66f, 0), new Vector3(0.1f, 0.13f, 0.06f), M["zSkin"]);
-        z.armR = Group("ArmR", z.body, new Vector3(0.3f, 0.6f, 0));
-        Prim(PrimitiveType.Cube, "Arm", z.armR, new Vector3(0, -0.3f, 0), new Vector3(0.12f, 0.62f, 0.12f), M["zSkin"]);
-        Prim(PrimitiveType.Cube, "Hand", z.armR, new Vector3(0, -0.66f, 0), new Vector3(0.1f, 0.13f, 0.06f), M["zSkin"]);
+        // 몸은 실행할 때 종류에 맞게 짓는다 (CharacterModels, 디자인 시트). 발광 눈 재질 원본만 넘겨 둔다
+        z.eyeTemplate = M["zEye"];
 
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabDir + "/Zombie.prefab");
         Object.DestroyImmediate(root);
@@ -134,21 +112,8 @@ public static partial class GameSceneBuilder
         col.radius = 0.25f;
         col.center = new Vector3(0, 0.5f, 0);
         var a = root.AddComponent<Animal>();
-
-        var t = root.transform;
-        Prim(PrimitiveType.Cube, "Body", t, new Vector3(0, 0.55f, 0), new Vector3(0.3f, 0.3f, 0.8f), M["fur"]);
-        Prim(PrimitiveType.Cube, "Head", t, new Vector3(0, 0.72f, 0.5f), new Vector3(0.22f, 0.22f, 0.28f), M["fur"]);
-        Prim(PrimitiveType.Cube, "Snout", t, new Vector3(0, 0.66f, 0.7f), new Vector3(0.12f, 0.1f, 0.16f), M["fur"]);
-        Prim(PrimitiveType.Cube, "EarL", t, new Vector3(-0.07f, 0.88f, 0.45f), new Vector3(0.05f, 0.1f, 0.04f), M["fur"], new Vector3(0, 0, -12));
-        Prim(PrimitiveType.Cube, "EarR", t, new Vector3(0.07f, 0.88f, 0.45f), new Vector3(0.05f, 0.1f, 0.04f), M["fur"], new Vector3(0, 0, 12));
-        Prim(PrimitiveType.Cube, "Tail", t, new Vector3(0, 0.66f, -0.5f), new Vector3(0.05f, 0.05f, 0.3f), M["fur"], new Vector3(-30, 0, 0));
-        a.legs = new Transform[4];
-        var legPos = new[] { new Vector3(-0.1f, 0.42f, 0.3f), new Vector3(0.1f, 0.42f, 0.3f), new Vector3(-0.1f, 0.42f, -0.3f), new Vector3(0.1f, 0.42f, -0.3f) };
-        for (int i = 0; i < 4; i++)
-        {
-            a.legs[i] = Group("Leg" + i, t, legPos[i]);
-            Prim(PrimitiveType.Cube, "Leg", a.legs[i], new Vector3(0, -0.21f, 0), new Vector3(0.08f, 0.42f, 0.08f), M["fur"]);
-        }
+        // 몸은 실행할 때 짓는다 (CharacterModels.Dog, 디자인 시트). 발광 눈 재질 원본만 넘겨 둔다
+        a.eyeTemplate = M["zEye"];
 
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabDir + "/Dog.prefab");
         Object.DestroyImmediate(root);

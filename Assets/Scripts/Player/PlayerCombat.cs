@@ -1,8 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-// 좌클릭 공격. 핫바에서 무기를 고르면 그 무기로(공격력·공격 간격은 ItemDatabase), 아니면 주먹으로 친다.
+// 공격 키(기본 좌클릭). 핫바에서 무기를 고르면 그 무기로(공격력·공격 간격은 ItemDatabase), 아니면 주먹으로 친다.
+// 부싯돌과 라이터를 들고 때리면 불이 붙어 5초 동안 모두 10만큼 탄다 (GameBalance.burnSeconds·burnDamage).
 // 새총은 돌을 쏜다: 메겨 둔 발이 없으면 소지품의 돌 1개를 메겨 ShotsPerStone발을 쏠 수 있다.
+// 맞히면 적이 빨갛게 번쩍이고 피가 튀며, 조준점에 X가 뜨고 화면이 아주 잠깐 멈칫한다 (HitEffects)
 public class PlayerCombat : MonoBehaviour
 {
     // 새총 돌이 날아가는 빠르기(m/s)
@@ -16,23 +17,23 @@ public class PlayerCombat : MonoBehaviour
     void Start()
     {
         source = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(source, SoundCategory.Effects);
         source.spatialBlend = 0;
     }
 
     void Update()
     {
         cooldown -= Time.deltaTime;
-        var mouse = Mouse.current;
-        if (mouse == null || !mouse.leftButton.wasPressedThisFrame || cooldown > 0 || PlayerController.Instance.InputBlocked) return;
+        if (!KeyBindings.Pressed(GameAction.Attack) || cooldown > 0 || PlayerController.Instance.InputBlocked) return;
 
         string id = PlayerHotbar.Instance != null ? PlayerHotbar.Instance.SelectedId : null;
         var weapon = id != null ? ItemDatabase.Get(id) : null;
         if (weapon != null && weapon.Weapon == WeaponKind.Sling) Shoot(weapon);
-        else Melee(weapon != null && weapon.IsWeapon ? weapon : null);
+        else Melee(weapon != null && weapon.IsWeapon ? weapon : null, id == ItemDatabase.LighterId);
     }
 
-    // weapon이 null이면 주먹
-    void Melee(ItemDef weapon)
+    // weapon이 null이면 주먹 (lighter면 라이터 불을 들이댄다)
+    void Melee(ItemDef weapon, bool lighter)
     {
         var b = GameBalance.Data;
         cooldown = weapon != null ? weapon.AttackDelay : b.playerAttackDelay;
@@ -43,6 +44,7 @@ public class PlayerCombat : MonoBehaviour
         }
         source.PlayOneShot(ProceduralAudio.Swoosh(), 0.5f);
         PlayerController.Instance.MakeNoise(1.2f);
+        GameManager.Instance.UI.KickCrosshair();
 
         float range = weapon == null ? 1.6f : weapon.Weapon == WeaponKind.Stab ? 1.9f : 2.3f;
         if (PlayerRaycast.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var hit))
@@ -51,11 +53,20 @@ public class PlayerCombat : MonoBehaviour
             if (target != null)
             {
                 target.TakeDamage(weapon != null ? weapon.Damage : b.playerDamage, cam.transform.forward);
-                source.PlayOneShot(ProceduralAudio.Hit(), 0.9f);
-                PlayerController.Instance.Shake(0.15f);
+                bool killed = IsDead(target);
+                source.PlayOneShot(killed ? ProceduralAudio.KillHit() : ProceduralAudio.FleshHit(), 1f);
+                PlayerController.Instance.Shake(killed ? 0.3f : 0.18f);
+                HitEffects.PlayerHit((Component)target, hit.point, cam.transform.forward, killed);
+                if (lighter && !killed)
+                {
+                    Burning.Apply(((Component)target).gameObject, b.burnSeconds, b.burnDamage);
+                    GameManager.Instance.UI.ShowMessage($"불이 붙었다! ({b.burnSeconds:0}초 동안 화상)", 1.6f);
+                }
             }
         }
     }
+
+    static bool IsDead(IDamageable t) => (t is Zombie z && z.IsDead) || (t is Animal a && a.IsDead);
 
     void Shoot(ItemDef sling)
     {

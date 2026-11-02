@@ -437,6 +437,135 @@ public static class ProceduralAudio
         };
     }
 
+    // ---------- 전투·이동·출입 소리 ----------
+
+    // 불이 확 붙는 소리 (훅 하는 바람 + 낮은 울림)
+    public static AudioClip Ignite()
+    {
+        var bp = Biquad.BandPass(900, 0.8f);
+        var lp = Biquad.LowPass(300);
+        return Make("ignite", 0.7f, t =>
+        {
+            float env = Mathf.Clamp01(t * 14) * Mathf.Exp(-t * 4.5f);
+            return bp.Process(Noise()) * env * 1.2f + lp.Process(Noise()) * env * 2.5f;
+        }, 0.8f);
+    }
+
+    // 타닥타닥 타는 소리 (반복 재생). 낮은 화르르 소리 위에 불규칙한 탁 소리
+    public static AudioClip Crackle()
+    {
+        var roar = Biquad.LowPass(500);
+        var pop = Biquad.BandPass(2600, 1.5f);
+        float popEnv = 0;
+        return Make("crackle", 2f, t =>
+        {
+            if (rng.NextDouble() < 0.0016) popEnv = Rand(0.4f, 1f);
+            popEnv *= 0.993f;
+            return roar.Process(Noise()) * (1.4f + 0.5f * Mathf.Sin(2 * Mathf.PI * 1.7f * t)) + pop.Process(Noise()) * popEnv * 3f;
+        }, 0.6f, 0.25f);
+    }
+
+    // 살을 때리는 묵직한 타격음 (퍽): 낮은 쿵 + 짧은 찰싹 + 젖은 소리
+    public static AudioClip FleshHit()
+    {
+        var slap = Biquad.BandPass(1400, 1.2f);
+        var wet = Biquad.BandPass(500, 2f);
+        return Make("fleshhit", 0.28f, t =>
+            Mathf.Sin(2 * Mathf.PI * (70 + 40 * Mathf.Exp(-t * 30)) * t) * Mathf.Exp(-t * 20) * 1.4f
+            + slap.Process(Noise()) * Mathf.Exp(-t * 70) * 2f
+            + wet.Process(Noise()) * Mathf.Exp(-t * 14) * 0.6f, 0.95f);
+    }
+
+    // 쓰러뜨렸을 때 더 무거운 마무리 타격음
+    public static AudioClip KillHit()
+    {
+        var crunch = Biquad.BandPass(800, 1.4f);
+        return Make("killhit", 0.45f, t =>
+            Mathf.Sin(2 * Mathf.PI * (55 + 50 * Mathf.Exp(-t * 18)) * t) * Mathf.Exp(-t * 9) * 1.5f
+            + crunch.Process(Noise()) * Mathf.Exp(-t * 22) * 1.8f, 0.95f);
+    }
+
+    // 점프할 때 옷이 스치는 소리와 짧은 숨
+    public static AudioClip JumpEffort()
+    {
+        var bp = Biquad.BandPass(1100, 1.2f);
+        return Make("jump", 0.22f, t => bp.Process(Noise()) * Mathf.Sin(Mathf.PI * t / 0.22f) * (0.7f + 0.3f * Mathf.Sin(t * 90)), 0.5f);
+    }
+
+    // 착지: 발이 바닥을 쿵 디디는 소리 + 자갈 긁힘
+    public static AudioClip Land()
+    {
+        var lp = Biquad.LowPass(900);
+        var grit = Biquad.BandPass(3000, 1.5f);
+        return Make("land", 0.3f, t =>
+            Mathf.Sin(2 * Mathf.PI * 60 * t) * Mathf.Exp(-t * 26) * 1.2f + lp.Process(Noise()) * Mathf.Exp(-t * 24) * 1.4f
+            + grit.Process(Noise()) * Mathf.Exp(-t * 40) * 0.6f, 0.85f);
+    }
+
+    // 무거운 철문·해치가 덜컥 걸리는 소리: 빗장이 철컥 → 묵직한 쿵 → 쇠가 우는 짧은 울림
+    public static AudioClip Latch()
+    {
+        var click = Biquad.BandPass(2800, 3f);
+        var body = Biquad.LowPass(240);
+        var ring1 = Biquad.BandPass(410, 30f);
+        var ring2 = Biquad.BandPass(1130, 25f);
+        return Make("latch", 1.1f, t =>
+        {
+            float c1 = t < 0.012f ? Noise() : 0;
+            float t2 = t - 0.09f;
+            float c2 = t2 > 0 && t2 < 0.01f ? Noise() : 0;
+            float t3 = t - 0.16f;
+            float thud = t3 > 0 ? (Mathf.Sin(2 * Mathf.PI * 52 * t3) * 1.6f + body.Process(Noise()) * 2.2f) * Mathf.Exp(-t3 * 11) : 0;
+            float imp = t3 > 0 && t3 < 0.004f ? 1 : 0;
+            float ring = (ring1.Process(imp + c2) * 18 + ring2.Process(imp) * 12) * (t3 > 0 ? Mathf.Exp(-t3 * 3.5f) : 1);
+            return click.Process(c1 + c2) * 2.2f + thud + ring;
+        }, 0.95f);
+    }
+
+    // 수첩·양피지를 펼치는 소리: 종이가 바스락 구겨지며 펴지는 짧은 소리 여러 번
+    public static AudioClip PaperUnfold()
+    {
+        var hi = Biquad.BandPass(3800, 0.9f);
+        var lo = Biquad.BandPass(1200, 1.2f);
+        float crinkle = 0;
+        return Make("paperunfold", 0.75f, t =>
+        {
+            if (rng.NextDouble() < 0.004) crinkle = Rand(0.5f, 1f);
+            crinkle *= 0.996f;
+            float env = Mathf.Clamp01(t * 12) * Mathf.Clamp01((0.75f - t) * 3f);
+            float flap = Mathf.Exp(-Mathf.Pow((t - 0.45f) / 0.06f, 2)) * 0.8f; // 종이가 펄럭 펴지는 순간
+            return (hi.Process(Noise()) * crinkle * 1.6f + lo.Process(Noise()) * (0.25f + flap)) * env;
+        }, 0.7f);
+    }
+
+    // 펜이 종이를 긁는 소리 (사각): 거친 고음 잡음이 빠르게 떨린다. 여러 번 이어 울려 글 쓰는 소리를 낸다
+    public static AudioClip PenScratch()
+    {
+        var bp = Biquad.BandPass(5200, 1.4f);
+        var body = Biquad.BandPass(2400, 2f);
+        float grain = 0;
+        return Make("penscratch", 0.11f, t =>
+        {
+            if (rng.NextDouble() < 0.02) grain = Rand(0.3f, 1f);
+            float env = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / 0.11f));
+            float wobble = 0.6f + 0.4f * Mathf.Sin(t * 2 * Mathf.PI * 70);
+            return (bp.Process(Noise()) * (0.6f + grain) + body.Process(Noise()) * 0.35f) * env * wobble;
+        }, 0.55f);
+    }
+
+    // 잠잘 때 느린 숨소리 (들숨·날숨 한 번)
+    public static AudioClip SleepBreath()
+    {
+        var bp = Biquad.BandPass(700, 0.9f);
+        return Make("sleepbreath", 3.2f, t =>
+        {
+            float inhale = t < 1.3f ? Mathf.Sin(Mathf.PI * t / 1.3f) : 0;
+            float t2 = t - 1.5f;
+            float exhale = t2 > 0 && t2 < 1.6f ? Mathf.Sin(Mathf.PI * t2 / 1.6f) * 0.8f : 0;
+            return bp.Process(Noise()) * (inhale * 0.7f + exhale);
+        }, 0.5f);
+    }
+
     // 적 소리용 감쇠 곡선 (가로축 = 거리 / maxDistance). 15~20m에서도 또렷하고 maxDistance에서 사라진다
     static AnimationCurve enemyRolloff;
 
@@ -450,9 +579,11 @@ public static class ProceduralAudio
         return enemyRolloff;
     }
 
-    // 좀비·들개 같은 적 소리용 AudioSource 설정: 완전 3D, 방향이 또렷하게(spread 0), 도플러 없음
-    public static void Setup3D(AudioSource src, float maxDistance = 36f, int priority = 64)
+    // 좀비·들개 같은 적 소리용 AudioSource 설정: 완전 3D, 방향이 또렷하게(spread 0), 도플러 없음.
+    // tag면 계속 켜 두는 소리로 보고 '적 소리' 음량을 따른다
+    public static void Setup3D(AudioSource src, float maxDistance = 36f, int priority = 64, bool tag = true)
     {
+        if (tag) AudioCategory.Tag(src, SoundCategory.Enemy);
         src.playOnAwake = false;
         src.spatialBlend = 1;
         src.spread = 0;
@@ -467,18 +598,20 @@ public static class ProceduralAudio
     // PlayAt과 같지만 적 소리용 3D 설정을 쓴다
     public static AudioSource PlayAt3D(AudioClip clip, Vector3 pos, float volume = 1f, float pitch = 1f, float maxDistance = 36f)
     {
-        var src = PlayAt(clip, pos, volume, pitch, 1f, maxDistance);
-        Setup3D(src, maxDistance);
+        var src = PlayAt(clip, pos, volume, pitch, 1f, maxDistance, SoundCategory.Enemy);
+        Setup3D(src, maxDistance, 64, false);
         return src;
     }
 
-    public static void Play2D(AudioClip clip, float volume = 1f, float pitch = 1f)
+    public static void Play2D(AudioClip clip, float volume = 1f, float pitch = 1f, SoundCategory category = SoundCategory.Effects)
     {
-        PlayAt(clip, Vector3.zero, volume, pitch, 0f);
+        PlayAt(clip, Vector3.zero, volume, pitch, 0f, 35f, category);
     }
 
-    public static AudioSource PlayAt(AudioClip clip, Vector3 pos, float volume = 1f, float pitch = 1f, float spatial = 1f, float maxDistance = 35f)
+    // 한 번 울리고 사라지는 소리. 음량에 소리 종류 음량(설정)을 곱한다
+    public static AudioSource PlayAt(AudioClip clip, Vector3 pos, float volume = 1f, float pitch = 1f, float spatial = 1f, float maxDistance = 35f, SoundCategory category = SoundCategory.Effects)
     {
+        volume *= GameSettings.CategoryVolume(category);
         var go = new GameObject("SFX_" + clip.name);
         go.transform.position = pos;
         var src = go.AddComponent<AudioSource>();

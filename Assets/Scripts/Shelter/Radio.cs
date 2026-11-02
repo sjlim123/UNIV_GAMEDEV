@@ -30,6 +30,7 @@ public class Radio : Interactable
     void Awake()
     {
         voice = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(voice, SoundCategory.Ambient);
         voice.playOnAwake = false;
         voice.spatialBlend = 1;
         voice.rolloffMode = AudioRolloffMode.Linear;

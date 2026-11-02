@@ -21,7 +21,7 @@ public class ShelterExit : Interactable
         ui.OpenPanel("탐험 출발", c =>
         {
             ui.Line(c, $"현재 턴 {s.Turn} / {GameState.MaxTurns}. 나가는 데 1턴, 돌아오는 데 1턴이 지난다.");
-            ui.Line(c, $"제한시간 {CityDirector.DefaultTimeLimit / 60:0}분 안에 해치로 돌아와야 한다. 시간이 갈수록 놈들이 늘어난다.");
+            ui.Line(c, $"{CityDirector.DefaultTimeLimit / 60:0}분이 지나면 붉은 밤이 와서 {GameBalance.Data.redNightInterval:0}초마다 체력이 {GameBalance.Data.redNightDamage:0}씩 준다. 시간이 갈수록 놈들이 늘어난다.");
             ui.Line(c, $"소지 무게 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg", 22, UIManager.Dim);
             if (s.Carried.Count("flashlight") == 0) ui.Line(c, "! 손전등이 없다. 바깥은 칠흑같이 어둡다.", 22, UIManager.Danger);
             if (!HasWeapon(s)) ui.Line(c, "! 무기가 없다. 맨주먹으로는 버티기 힘들다.", 22, UIManager.Danger);

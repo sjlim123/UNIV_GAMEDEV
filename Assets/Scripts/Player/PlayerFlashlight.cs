@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public class PlayerFlashlight : MonoBehaviour
 {
     public Light spot;
-    public float baseIntensity = 40f;
+    public float baseIntensity = 48f;
 
     bool on;
     float flickerSeed;
@@ -25,8 +25,7 @@ public class PlayerFlashlight : MonoBehaviour
         bool has = s.Carried.Count("flashlight") > 0;
         if (!has) on = false;
 
-        var kb = Keyboard.current;
-        if (has && kb != null && kb.qKey.wasPressedThisFrame && !PlayerController.Instance.InputBlocked)
+        if (has && KeyBindings.Pressed(GameAction.Flashlight) && !PlayerController.Instance.InputBlocked)
         {
             on = !on;
             ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.6f);

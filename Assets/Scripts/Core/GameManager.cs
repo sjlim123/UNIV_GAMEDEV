@@ -33,6 +33,11 @@ public class GameManager : MonoBehaviour
     public bool IsTransitioning { get; private set; }
 
     Dictionary<string, int> expeditionStartItems;
+    // 탐험 일지에 적을 기록
+    float expeditionStartHealth, expeditionTimeLeft, expeditionRedNightSeconds;
+    int expeditionZombieKills, expeditionDogKills;
+    bool expeditionRedNight;
+    AudioSource sfx; // 씬이 바뀌어도 끊기지 않는 소리 (문 덜컥, 잠자는 숨)
     int expeditionStartTurn;
     float starveTimer;
     // 죽거나 엔딩을 본 뒤 메인 메뉴로 돌아가기까지(초). 그 전에 버튼을 눌러도 된다
@@ -54,6 +59,10 @@ public class GameManager : MonoBehaviour
         GameSettings.ApplyGlobal();
         State = new GameState();
         UI = gameObject.AddComponent<UIManager>();
+        sfx = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(sfx, SoundCategory.Effects);
+        sfx.spatialBlend = 0;
+        sfx.playOnAwake = false;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -244,18 +253,31 @@ public class GameManager : MonoBehaviour
         if (IsTransitioning || IsGameOver) return;
         expeditionStartItems = State.Carried.Snapshot();
         expeditionStartTurn = State.Turn;
+        expeditionStartHealth = State.Health;
+        expeditionZombieKills = expeditionDogKills = 0;
         if (!AdvanceTurn()) return;
         // 출발 직후 상태를 저장한다. 탐험 도중 게임을 끄면 이어하기 때 가져간 물건을 잃고 방공호에서 다시 시작한다
         State.InExpedition = true;
         SaveGame();
-        StartCoroutine(LoadRoutine(CityScene, false));
+        StartCoroutine(LoadRoutine(CityScene, false, true));
+    }
+
+    // 탐험 중 쓰러뜨린 적 (탐험 일지에 적는다)
+    public void NoteKill(bool dog)
+    {
+        if (dog) expeditionDogKills++;
+        else expeditionZombieKills++;
     }
 
     public void ReturnToShelter()
     {
         if (IsTransitioning || IsGameOver) return;
+        var city = CityDirector.Instance;
+        expeditionRedNight = city != null && city.IsRedNight;
+        expeditionTimeLeft = city != null ? Mathf.Max(0, city.TimeLeft) : 0;
+        expeditionRedNightSeconds = city != null ? city.RedNightElapsed : 0;
         if (!AdvanceTurn()) return;
-        StartCoroutine(LoadRoutine(ShelterScene, true));
+        StartCoroutine(LoadRoutine(ShelterScene, true, true));
     }
 
     public void ExpeditionTimeUp()
@@ -263,27 +285,59 @@ public class GameManager : MonoBehaviour
         GameOver("탐험 실패", "제한시간 안에 방공호로 돌아오지 못했다.\n도시의 어둠이 당신을 삼켰다.");
     }
 
-    public void Rest()
+    // 침대에서 잔다: 누워서(eye = 베개 위 눈 위치) 천장을 보며 화면이 천천히 어두워지고, 1턴이 지난 뒤 깨어 일어난다
+    public void Rest(Transform eye = null)
     {
         if (IsTransitioning || IsGameOver) return;
-        StartCoroutine(RestRoutine());
+        StartCoroutine(RestRoutine(eye));
     }
 
-    IEnumerator RestRoutine()
+    IEnumerator RestRoutine(Transform eye)
     {
         IsTransitioning = true;
         UI.ClosePanel();
-        yield return UI.Fade(1, 0.8f);
+        var pc = PlayerController.Instance;
+        // 1) 눕는다
+        if (pc != null && eye != null)
+            for (float t = 0; t < 1f; t += Time.unscaledDeltaTime / 1.1f)
+            {
+                pc.SetSleep(eye, t);
+                yield return null;
+            }
+        if (pc != null && eye != null) pc.SetSleep(eye, 1);
+        // 2) 숨이 느려지며 눈이 감긴다 (마인크래프트처럼 천천히 어두워진다)
+        sfx.pitch = 1f;
+        sfx.PlayOneShot(ProceduralAudio.SleepBreath(), 0.55f);
+        UI.ShowSleepText("Z z z . . .");
+        yield return UI.Fade(1, 2.6f);
         bool alive = AdvanceTurn();
         if (alive)
         {
             State.Health = Mathf.Min(State.MaxHealth, State.Health + RestHeal);
-            UI.ShowMessage($"잠시 눈을 붙였다. 체력 +{RestHeal:0}  (턴 {State.Turn}/{GameState.MaxTurns})", 3f);
             SaveGame();
+            UI.ShowSleepText($"턴 {State.Turn} / {GameState.MaxTurns}");
         }
-        yield return new WaitForSecondsRealtime(0.6f);
+        yield return new WaitForSecondsRealtime(1.1f);
+        UI.ShowSleepText(null);
+        if (!alive) { IsTransitioning = false; yield break; }
+        // 3) 눈을 뜨고 일어난다
+        yield return UI.Fade(0, 1.2f);
+        if (pc != null && eye != null)
+            for (float t = 0; t < 1f; t += Time.unscaledDeltaTime / 0.9f)
+            {
+                pc.SetSleep(eye, 1 - t);
+                yield return null;
+            }
+        if (pc != null) pc.SetSleep(null, 0);
+        UI.ShowMessage($"잘 잤다. 체력 +{RestHeal:0}  (턴 {State.Turn}/{GameState.MaxTurns})", 3f);
         IsTransitioning = false;
-        yield return UI.Fade(0, 0.8f);
+    }
+
+    // 방공호 철문·해치가 덜컥 걸리는 소리
+    void DoorClunk(float pitch)
+    {
+        sfx.pitch = pitch;
+        sfx.PlayOneShot(ProceduralAudio.Latch(), 0.9f);
     }
 
     public void Restart() => NewGame(SaveSystem.CurrentSlot, false);
@@ -332,36 +386,50 @@ public class GameManager : MonoBehaviour
         StartCoroutine(ReturnToMenuAfter(EndScreenSeconds));
     }
 
-    IEnumerator LoadRoutine(string scene, bool showResult)
+    // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때)
+    IEnumerator LoadRoutine(string scene, bool showResult, bool door = false)
     {
         IsTransitioning = true;
         UI.ClosePanel();
         UI.SetPaused(false);
+        if (door) DoorClunk(1f);
         yield return UI.Fade(1, 0.7f);
         var op = SceneManager.LoadSceneAsync(scene);
         while (!op.isDone) yield return null;
         yield return null;
         IsTransitioning = false;
+        if (door) DoorClunk(0.82f);
         if (showResult) ShowExpeditionResult();
         yield return UI.Fade(0, 1.0f);
     }
 
+    // 방공호에 돌아오면 양피지 수첩에 그날의 탐험을 적는다 (UIManager.Journal)
     void ShowExpeditionResult()
     {
-        var gained = new List<string>();
+        var r = new UIManager.ExpeditionReport
+        {
+            Turn = State.Turn,
+            TurnsSpent = State.Turn - expeditionStartTurn,
+            HealthBefore = expeditionStartHealth,
+            HealthAfter = State.Health,
+            ZombiesKilled = expeditionZombieKills,
+            DogsKilled = expeditionDogKills,
+            RedNight = expeditionRedNight,
+            TimeLeft = expeditionTimeLeft,
+            RedNightSeconds = expeditionRedNightSeconds,
+        };
+        var now = State.Carried.Snapshot();
         foreach (var kv in State.Carried.Sorted())
         {
             int before = expeditionStartItems != null && expeditionStartItems.TryGetValue(kv.Key, out var b) ? b : 0;
-            if (kv.Value > before) gained.Add($"{ItemDatabase.Name(kv.Key)} x{kv.Value - before}");
+            if (kv.Value > before) r.Gained.Add(new KeyValuePair<string, int>(kv.Key, kv.Value - before));
         }
-        int turns = State.Turn - expeditionStartTurn;
-        UI.OpenPanel("탐험 결과", c =>
-        {
-            UI.Line(c, gained.Count > 0 ? "획득한 아이템" : "아무것도 챙기지 못했다.", 26, UIManager.Accent);
-            foreach (var g in gained) UI.Line(c, "  · " + g);
-            UI.Line(c, "");
-            UI.Line(c, $"소모된 턴: {turns}   (현재 {State.Turn} / {GameState.MaxTurns})");
-            UI.Line(c, "창고(사물함)에서 물건을 정리하세요.", 20, UIManager.Dim);
-        });
+        if (expeditionStartItems != null)
+            foreach (var kv in expeditionStartItems)
+            {
+                int left = now.TryGetValue(kv.Key, out var n) ? n : 0;
+                if (left < kv.Value) r.Spent.Add(new KeyValuePair<string, int>(kv.Key, kv.Value - left));
+            }
+        UI.ShowExpeditionJournal(r);
     }
 }

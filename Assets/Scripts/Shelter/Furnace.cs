@@ -96,6 +96,7 @@ public class Furnace : Interactable
     AudioSource MakeSource(float volume, float maxDistance)
     {
         var src = gameObject.AddComponent<AudioSource>();
+        AudioCategory.Tag(src, SoundCategory.Ambient);
         src.playOnAwake = false;
         src.spatialBlend = 1;
         src.minDistance = 1f;

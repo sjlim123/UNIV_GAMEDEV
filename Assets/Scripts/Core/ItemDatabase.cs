@@ -138,9 +138,9 @@ public static class ItemDatabase
     static ItemDatabase()
     {
         // 일반 (회색): 필드 드랍
-        Add("metal", "고철", ItemCategory.Material, ItemRarity.Common, 0.5f, "녹슨 금속 조각. 조합 재료", icon: "metal");
+        Add("metal", "고철", ItemCategory.Material, ItemRarity.Common, 0.3f, "녹슨 금속 조각. 조합 재료", icon: "metal");
         Add("cloth", "천", ItemCategory.Material, ItemRarity.Common, 0.1f, "낡은 천 조각. 가방·주머니 재료", icon: "cloth");
-        Add("stick", "막대기", ItemCategory.Material, ItemRarity.Common, 0.4f, "단단한 나무 막대. 조합 재료");
+        Add("stick", "막대기", ItemCategory.Material, ItemRarity.Common, 0.2f, "단단한 나무 막대. 조합 재료");
         Add("rope", "밧줄", ItemCategory.Material, ItemRarity.Common, 0.3f, "질긴 밧줄. 조합 재료");
         Add("copper_wire", "구리선", ItemCategory.Material, ItemRarity.Common, 0.2f, "벗겨낸 구리선. 전기 부품 재료");
         Add("rubber", "고무", ItemCategory.Material, ItemRarity.Common, 0.2f, "타이어에서 잘라낸 고무. 조합 재료");
@@ -148,15 +148,15 @@ public static class ItemDatabase
         Add("stone", "돌", ItemCategory.Material, ItemRarity.Common, 0.3f, "주먹만 한 돌. 새총 총알(1개 = 5발) · 화로 재료");
         Add("fuel", "연료통", ItemCategory.Material, ItemRarity.Common, 1.5f, "발전기에 넣으면 전력 +35%", icon: "fuel");
         Add("flashlight", "손전등", ItemCategory.Equipment, ItemRarity.Common, 0.3f, "Q로 켜고 끈다. 배터리를 쓴다", icon: "flashlight");
-        Add("bandage", "붕대", ItemCategory.Health, ItemRarity.Common, 0.1f, "체력 +5", heal: 5, icon: "bandage");
-        Add("canned_food", "통조림", ItemCategory.Food, ItemRarity.Common, 0.4f, "배고픔 +30", hunger: 30);
+        Add("bandage", "붕대", ItemCategory.Health, ItemRarity.Common, 0.1f, "체력 +10", heal: 10, icon: "bandage");
+        Add("canned_food", "통조림", ItemCategory.Food, ItemRarity.Common, 0.2f, "배고픔 +20 · 체력 +5", heal: 5, hunger: 20);
         Add("raw_meat", "고기", ItemCategory.Food, ItemRarity.Common, 0.4f, "배고픔 +10. 화로에서 구우면 +40", hunger: 10);
         Add("water", "물", ItemCategory.Food, ItemRarity.Common, 0.5f, "갈증 +30", thirst: 30);
 
         // 희귀 (파랑)
         Add("battery", "배터리", ItemCategory.Material, ItemRarity.Rare, 0.1f, "손전등 배터리 · 전자 부품 재료", icon: "battery");
         AddBackpack("old_backpack", "낡은 가방", ItemRarity.Rare, 2);
-        Add(LighterId, "부싯돌과 라이터", ItemCategory.Equipment, ItemRarity.Rare, 0.2f, "창고나 소지품에 있으면 화로에 불을 붙일 수 있다 (닳지 않는다)");
+        Add(LighterId, "부싯돌과 라이터", ItemCategory.Equipment, ItemRarity.Rare, 0.2f, "들고 공격하면 적에게 불을 붙인다 (5초 화상). 창고나 소지품에 있으면 화로에 불을 붙일 수 있다 (닳지 않는다)");
         Add("iron_ingot", "철주괴", ItemCategory.Material, ItemRarity.Rare, 0.6f, "화로에서 고철을 녹여 만든 쇳덩이. 여러 조합 재료");
         AddWeapon("baseball_bat", "야구 배트", ItemRarity.Rare, 1.0f, WeaponKind.Swing, 12, 1f, "공격력 12. 핫바에서 고르고 좌클릭으로 휘두른다");
         Add(FurnaceId, "화로", ItemCategory.Equipment, ItemRarity.Rare, 0f, "방공호 거실에 설치한다. 고철을 녹이고 고기를 굽는다");
@@ -164,7 +164,7 @@ public static class ItemDatabase
         AddWeapon("slingshot", "새총", ItemRarity.Rare, 0.3f, WeaponKind.Sling, 10, 1f, "공격력 10. 좌클릭으로 돌을 쏜다 (돌 1개 = 5발)");
         AddArmor("leather_armor", "가죽 방어구", ItemRarity.Rare, 20);
         Add("circuit_board", "전자기판", ItemCategory.Material, ItemRarity.Rare, 0.2f, "전자기판. 반도체·모터·엔진 재료");
-        Add("cooked_meat", "구운 고기", ItemCategory.Food, ItemRarity.Rare, 0.4f, "배고픔 +40", hunger: 40);
+        Add("cooked_meat", "구운 고기", ItemCategory.Food, ItemRarity.Rare, 0.2f, "배고픔 +40", hunger: 40);
         Add("medkit", "구급상자", ItemCategory.Health, ItemRarity.Rare, 0.1f, "체력 +20", heal: 20);
         Add(StonePouchId, "돌주머니", ItemCategory.Equipment, ItemRarity.Rare, 0.3f, "가지고 있으면 돌을 얼마든지 담고, 돌 무게가 0이 된다");
 
@@ -192,14 +192,14 @@ public static class ItemDatabase
 
         // 제작대 조합법 (등급 순)
         AddRecipe("battery", 1, ("copper_wire", 2));
-        AddRecipe("old_backpack", 1, ("cloth", 5), ("rope", 2), ("leather", 4));
+        AddRecipe("old_backpack", 1, ("cloth", 5), ("rope", 2), ("leather", 2));
         AddRecipe("flashlight", 1, ("battery", 1), ("metal", 4));
         AddRecipe(LighterId, 1, ("stone", 3), ("metal", 2), ("cloth", 2));
         AddRecipe("baseball_bat", 1, ("stick", 8));
         AddRecipe(FurnaceId, 1, ("stone", 8));
         AddRecipe("screw", 5, ("metal", 2));
         AddRecipe("slingshot", 1, ("stick", 2), ("rubber", 2), ("rope", 1));
-        AddRecipe("leather_armor", 1, ("leather", 20));
+        AddRecipe("leather_armor", 1, ("leather", 15));
         AddRecipe("circuit_board", 1, ("iron_ingot", 5), ("copper_wire", 10), ("battery", 2));
         AddRecipe("medkit", 1, ("bandage", 3));
         AddRecipe(StonePouchId, 1, ("rope", 3), ("cloth", 2));
@@ -282,13 +282,16 @@ public static class ItemDatabase
         TradeOffers.Add(t);
     }
 
-    public static string RollLoot(System.Random rng = null)
+    // 필드 아이템 하나를 뽑는다. 돌은 건물 밖 바닥(outdoor) 자리에서만 나온다
+    public static string RollLoot(bool outdoor)
     {
         int total = 0;
-        foreach (var w in LootWeights.Values) total += w;
-        int roll = rng != null ? rng.Next(total) : Random.Range(0, total);
+        foreach (var kv in LootWeights)
+            if (outdoor || kv.Key != SlingAmmoId) total += kv.Value;
+        int roll = Random.Range(0, total);
         foreach (var kv in LootWeights)
         {
+            if (!outdoor && kv.Key == SlingAmmoId) continue;
             if (roll < kv.Value) return kv.Key;
             roll -= kv.Value;
         }
