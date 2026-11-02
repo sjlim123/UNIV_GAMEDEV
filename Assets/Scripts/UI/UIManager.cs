@@ -24,8 +24,8 @@ public partial class UIManager : MonoBehaviour
 
     RectTransform root;
     GameObject hud;
-    RectTransform healthFill, hungerFill, thirstFill;
-    UnityEngine.UI.Text healthValue, hungerValue, thirstValue;
+    RectTransform healthFill, hungerFill, thirstFill, staminaFill;
+    UnityEngine.UI.Text healthValue, hungerValue, thirstValue, staminaValue;
     UnityEngine.UI.Text infoText, promptText, toastText, flashlightText, itemNameText, fpsText;
     RectTransform promptBox;
     CanvasGroup toastGroup;
@@ -33,8 +33,9 @@ public partial class UIManager : MonoBehaviour
     Image damageOverlay, fadeOverlay;
 
     const int SlotCount = 8;
-    readonly List<Image> slotFills = new List<Image>(), slotFrames = new List<Image>(), slotIcons = new List<Image>();
-    readonly List<UnityEngine.UI.Text> slotCounts = new List<UnityEngine.UI.Text>();
+    readonly List<ItemSlotView> hotbarSlots = new List<ItemSlotView>();
+    readonly List<Image> slotGlows = new List<Image>(), slotSelects = new List<Image>();
+    readonly List<UnityEngine.UI.Text> slotCounts = new List<UnityEngine.UI.Text>(), slotKeys = new List<UnityEngine.UI.Text>();
     string hotbarSignature;
 
     GameObject panel;
@@ -50,7 +51,7 @@ public partial class UIManager : MonoBehaviour
 
     public bool IsPanelOpen => panel != null && panel.activeSelf;
     // 창이나 일시정지 메뉴가 열려 있으면 플레이어 조작을 막는다
-    public bool IsBlocking => IsPanelOpen || IsPaused || IsPatchNotesOpen;
+    public bool IsBlocking => IsPanelOpen || IsPaused || IsPatchNotesOpen || IsCutscenePlaying || IsWorkbenchOpen;
 
     void Awake()
     {
@@ -99,6 +100,8 @@ public partial class UIManager : MonoBehaviour
     {
         SetPaused(false);
         ClosePatchNotes();
+        CloseWorkbench();
+        HideCutscene();
         if (sceneName == GameManager.MenuScene) ShowMainMenu();
         else HideMainMenu();
         hotbarSignature = null;
@@ -114,10 +117,11 @@ public partial class UIManager : MonoBehaviour
 
         // 왼쪽 위: 상태
         var status = Box(h, "Status", PanelFill, FrameColor);
-        Place(status, new Vector2(0, 1), new Vector2(24, -24), new Vector2(340, 118));
+        Place(status, new Vector2(0, 1), new Vector2(24, -24), new Vector2(340, 152));
         healthFill = MakeBar(status, "체력", 0, new Color(0.78f, 0.2f, 0.16f), out healthValue);
         hungerFill = MakeBar(status, "배고픔", 1, new Color(0.85f, 0.58f, 0.2f), out hungerValue);
         thirstFill = MakeBar(status, "갈증", 2, new Color(0.28f, 0.55f, 0.85f), out thirstValue);
+        staminaFill = MakeBar(status, "스테미너", 3, new Color(0.56f, 0.78f, 0.32f), out staminaValue);
 
         // 오른쪽 위: 턴·시간·전력
         var info = Box(h, "Info", PanelFill, FrameColor);
@@ -143,19 +147,36 @@ public partial class UIManager : MonoBehaviour
         Place(bar, new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(SlotCount * slot + (SlotCount - 1) * gap, slot));
         for (int i = 0; i < SlotCount; i++)
         {
-            var s = Box(bar, "Slot" + i, new Color(0.03f, 0.03f, 0.03f, 0.6f), FrameColor);
-            s.anchorMin = s.anchorMax = s.pivot = new Vector2(0, 0.5f);
-            s.anchoredPosition = new Vector2(i * (slot + gap), 0);
+            var v = NewItemSlot(bar, "Slot" + i, 7);
+            var s = v.Rect;
+            s.anchorMin = s.anchorMax = new Vector2(0, 0.5f);
+            s.pivot = new Vector2(0.5f, 0.5f); // 고른 칸이 가운데를 기준으로 커지게
+            s.anchoredPosition = new Vector2(i * (slot + gap) + slot / 2, 0);
             s.sizeDelta = new Vector2(slot, slot);
-            slotFills.Add(s.GetComponent<Image>());
-            slotFrames.Add(s.GetChild(0).GetComponent<Image>());
-            var icon = NewRect("Icon", s).gameObject.AddComponent<Image>();
-            Stretch(icon.rectTransform, 7, 7);
-            icon.preserveAspect = true;
-            icon.raycastTarget = false;
-            slotIcons.Add(icon);
+            hotbarSlots.Add(v);
+
+            // 고른 칸: 바깥 금색 테두리 + 은은한 빛 (등급 테두리와 겹치지 않게 칸 밖에 그린다)
+            var glow = NewRect("Glow", s).gameObject.AddComponent<Image>();
+            glow.transform.SetAsFirstSibling();
+            Stretch(glow.rectTransform, -5, -5);
+            glow.sprite = UIStyle.Fill;
+            glow.type = Image.Type.Sliced;
+            glow.color = new Color(Accent.r, Accent.g, Accent.b, 0.22f);
+            glow.raycastTarget = false;
+            slotGlows.Add(glow);
+            var sel = NewRect("Select", s).gameObject.AddComponent<Image>();
+            Stretch(sel.rectTransform, -3, -3);
+            sel.sprite = UIStyle.Frame;
+            sel.type = Image.Type.Sliced;
+            sel.pixelsPerUnitMultiplier = 0.7f; // 테두리를 조금 굵게
+            sel.color = Accent;
+            sel.raycastTarget = false;
+            slotSelects.Add(sel);
+
             var key = NewText(s, (i + 1).ToString(), 13, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.45f));
             Stretch(key.rectTransform, 6, 3);
+            key.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.6f);
+            slotKeys.Add(key);
             var count = NewText(s, "", 17, TextAnchor.LowerRight, Text, FontSemiBold);
             Stretch(count.rectTransform, 6, 3);
             count.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
@@ -244,6 +265,8 @@ public partial class UIManager : MonoBehaviour
         }
 
         if (IsPatchNotesOpen) UpdatePatchBlur();
+        if (IsWorkbenchOpen) UpdateWorkbench();
+        if (IsCutscenePlaying) UpdateCutscene();
         HandleKeys(gm);
 
         bool needCursor = IsBlocking || gm.IsGameOver || PlayerController.Instance == null;
@@ -253,9 +276,11 @@ public partial class UIManager : MonoBehaviour
 
     void UpdateHud(GameManager gm, GameState s)
     {
-        SetBar(healthFill, healthValue, s.Health);
+        SetBar(healthFill, healthValue, s.Health, GameBalance.Data.playerMaxHealth);
         SetBar(hungerFill, hungerValue, s.Hunger);
         SetBar(thirstFill, thirstValue, s.Thirst);
+        var pc = PlayerController.Instance;
+        SetBar(staminaFill, staminaValue, pc != null ? 100f * pc.Stamina / GameBalance.Data.staminaMax : 100f);
 
         var city = CityDirector.Instance;
         if (city != null)
@@ -292,19 +317,18 @@ public partial class UIManager : MonoBehaviour
         {
             bool has = i < items.Count;
             bool isSel = i == selected;
-            slotIcons[i].enabled = has;
-            if (has) slotIcons[i].sprite = ItemIcons.Get(items[i].Key);
+            SetItemSlot(hotbarSlots[i], has ? items[i].Key : null);
             slotCounts[i].text = has && items[i].Value > 1 ? items[i].Value.ToString() : "";
-            slotFrames[i].color = isSel ? Accent : FrameColor;
-            slotFills[i].color = isSel ? new Color(0.22f, 0.17f, 0.08f, 0.75f) : new Color(0.03f, 0.03f, 0.03f, 0.6f);
-            slotFills[i].rectTransform.localScale = Vector3.one * (isSel ? 1.08f : 1f);
+            slotGlows[i].enabled = slotSelects[i].enabled = isSel;
+            slotKeys[i].color = isSel ? Accent : new Color(1, 1, 1, 0.45f);
+            hotbarSlots[i].Rect.localScale = Vector3.one * (isSel ? 1.08f : 1f);
         }
 
         if (selected >= 0 && selected < items.Count)
         {
             var def = ItemDatabase.Get(items[selected].Key);
             string action = def.IsConsumable ? "우클릭: 사용" : def.Id == "club" ? "좌클릭: 휘두르기" : def.Id == "flashlight" ? "Q: 켜기/끄기" : def.Id == "fuel" ? "방공호 발전기 연료" : "방공호 제작대 재료";
-            itemNameText.text = $"{def.Name} x{items[selected].Value}   <size=17><color=#a8a294>{action}</color></size>";
+            itemNameText.text = $"{ColoredName(def.Id)} x{items[selected].Value}   <size=17>{RarityTag(def.Rarity)}   <color=#a8a294>{action}</color></size>";
         }
         else itemNameText.text = items.Count > SlotCount ? $"<size=17><color=#a8a294>+{items.Count - SlotCount}개 더 (Tab)</color></size>" : "";
     }
@@ -318,19 +342,20 @@ public partial class UIManager : MonoBehaviour
         if (kb.escapeKey.wasPressedThisFrame)
         {
             if (IsPatchNotesOpen) ClosePatchNotes();
+            else if (IsWorkbenchOpen && !IsPaused) CloseWorkbench();
             else if (IsPanelOpen) { if (panelCloseButton.activeSelf) ClosePanel(); }
             else if (inGame) SetPaused(!IsPaused);
         }
         else if (kb.tabKey.wasPressedThisFrame && inGame && !IsPaused)
         {
             if (IsPanelOpen && panelId == "inventory") ClosePanel();
-            else if (!IsPanelOpen) OpenInventory();
+            else if (!IsPanelOpen && !IsWorkbenchOpen) OpenInventory();
         }
     }
 
-    static void SetBar(RectTransform fill, UnityEngine.UI.Text value, float v)
+    static void SetBar(RectTransform fill, UnityEngine.UI.Text value, float v, float max = 100f)
     {
-        fill.anchorMax = new Vector2(Mathf.Clamp01(v / 100f), 1);
+        fill.anchorMax = new Vector2(Mathf.Clamp01(v / max), 1);
         value.text = Mathf.CeilToInt(v).ToString();
         value.color = v < 25 ? Danger : Text;
     }
@@ -430,6 +455,7 @@ public partial class UIManager : MonoBehaviour
 
     public void OpenPanel(string title, Action<RectTransform> build, string id = null, bool closable = true, Action afterClose = null)
     {
+        CloseWorkbench();
         panelId = id;
         panelBuilder = build;
         afterPanelClosed = afterClose;
@@ -453,8 +479,10 @@ public partial class UIManager : MonoBehaviour
         panelBuilder(panelContent);
     }
 
+    // 제작대 창도 함께 닫는다 (씬 이동·휴식 등에서 열린 창을 모두 닫을 때 쓴다)
     public void ClosePanel()
     {
+        CloseWorkbench();
         bool wasOpen = IsPanelOpen;
         if (panel != null) panel.SetActive(false);
         panelBuilder = null;
@@ -489,7 +517,8 @@ public partial class UIManager : MonoBehaviour
                 var def = ItemDatabase.Get(kv.Key);
                 var row = Row(c);
                 RowIcon(row, def.Id);
-                RowLabel(row, $"{def.Name} x{kv.Value}   <size=18><color=#a8a294>{def.Description}</color></size>");
+                RowLabel(row, $"{ColoredName(def.Id)} x{kv.Value}   <size=18>{RarityTag(def.Rarity)}  <color=#a8a294>{def.Description}</color></size>");
+                RowWeight(row, def.Weight * kv.Value);
                 if (def.IsConsumable)
                     RowButton(row, "사용", () => { GameManager.Instance.UseItem(def.Id, s.Carried); RefreshPanel(); });
                 RowButton(row, "버리기", () =>
@@ -540,14 +569,114 @@ public partial class UIManager : MonoBehaviour
         return t;
     }
 
+    // 줄 맨 앞의 아이템 칸 (등급 배경·테두리 포함)
     public void RowIcon(RectTransform row, string itemId)
     {
-        var img = NewRect("Icon", row).gameObject.AddComponent<Image>();
-        img.sprite = ItemIcons.Get(itemId);
-        img.preserveAspect = true;
-        img.raycastTarget = false;
-        var le = img.gameObject.AddComponent<LayoutElement>();
-        le.preferredWidth = le.minWidth = 40;
+        var v = NewItemSlot(row, "Icon", 4);
+        SetItemSlot(v, itemId);
+        var le = v.Rect.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = le.minWidth = 42;
+    }
+
+    // 줄 오른쪽의 무게 표시 (예: 1.5 kg)
+    public UnityEngine.UI.Text RowWeight(RectTransform row, float kg)
+    {
+        var t = NewText(row, $"{kg:0.0} kg", 18, TextAnchor.MiddleRight, Dim);
+        var le = t.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = le.minWidth = 70;
+        return t;
+    }
+
+    // ---------- 아이템 칸 (등급 배경 + 테두리 + 아이콘) ----------
+    // 핫바·가방·창고·거래·제작대가 함께 쓴다. 등급 색과 배경 그림은 ItemRarityInfo에서 가져오므로
+    // 등급 디자인을 바꿀 때는 ItemRarityInfo(색)와 Resources/SurvivalInventory/Rarity(그림)만 바꾸면 된다
+
+    static readonly Color SlotEmptyFill = new Color(0.03f, 0.03f, 0.03f, 0.6f);
+    static readonly Color SlotItemFill = new Color(0.04f, 0.04f, 0.04f, 0.88f);
+
+    class ItemSlotView
+    {
+        public RectTransform Rect;
+        public Image Fill, Strip, Frame, Icon;
+        public RawImage Background;
+    }
+
+    // 그리는 순서: 바탕 → 등급 배경 그림 → 아래 띠 → 테두리 → 아이콘
+    static ItemSlotView NewItemSlot(Transform parent, string name, float iconPad)
+    {
+        var v = new ItemSlotView { Rect = NewRect(name, parent) };
+        v.Fill = v.Rect.gameObject.AddComponent<Image>();
+        v.Fill.sprite = UIStyle.Fill;
+        v.Fill.type = Image.Type.Sliced;
+        v.Fill.color = SlotEmptyFill;
+        v.Fill.raycastTarget = false;
+
+        v.Background = NewRect("Rarity", v.Rect).gameObject.AddComponent<RawImage>();
+        Stretch(v.Background.rectTransform);
+        v.Background.raycastTarget = false;
+
+        v.Strip = NewRect("Strip", v.Rect).gameObject.AddComponent<Image>();
+        var srt = v.Strip.rectTransform;
+        srt.anchorMin = new Vector2(0, 0);
+        srt.anchorMax = new Vector2(1, 0);
+        srt.pivot = new Vector2(0.5f, 0);
+        srt.anchoredPosition = new Vector2(0, 3);
+        srt.sizeDelta = new Vector2(-14, 3);
+        v.Strip.raycastTarget = false;
+
+        v.Frame = NewRect("Frame", v.Rect).gameObject.AddComponent<Image>();
+        Stretch(v.Frame.rectTransform);
+        v.Frame.sprite = UIStyle.Frame;
+        v.Frame.type = Image.Type.Sliced;
+        v.Frame.raycastTarget = false;
+
+        v.Icon = NewRect("Icon", v.Rect).gameObject.AddComponent<Image>();
+        Stretch(v.Icon.rectTransform, iconPad, iconPad);
+        v.Icon.preserveAspect = true;
+        v.Icon.raycastTarget = false;
+
+        SetItemSlot(v, null);
+        return v;
+    }
+
+    // 칸에 아이템을 넣는다 (null이면 빈 칸). 등급 배경 그림이 있으면 깔고, 없으면 어두운 바탕 + 등급 색 테두리·아래 띠
+    static void SetItemSlot(ItemSlotView v, string itemId)
+    {
+        bool has = !string.IsNullOrEmpty(itemId);
+        var rarity = has ? ItemDatabase.Get(itemId).Rarity : ItemRarity.Common;
+        var c = ItemRarityInfo.Color(rarity);
+        var bg = has ? ItemRarityInfo.Background(rarity) : null;
+        bool hasBg = bg != null;
+
+        v.Fill.color = has ? SlotItemFill : SlotEmptyFill;
+        v.Background.texture = bg;
+        v.Background.enabled = hasBg;
+        v.Strip.enabled = has && !hasBg;
+        v.Strip.color = c;
+        v.Frame.color = has ? new Color(c.r, c.g, c.b, hasBg ? 0.5f : 0.8f) : FrameColor;
+        v.Icon.enabled = has;
+        v.Icon.sprite = has ? ItemIcons.Get(itemId) : null;
+    }
+
+    // 등급 색으로 칠한 아이템 이름 (리치 텍스트)
+    public static string ColoredName(string itemId)
+    {
+        var def = ItemDatabase.Get(itemId);
+        return $"<color={ItemRarityInfo.Hex(def.Rarity)}>{def.Name}</color>";
+    }
+
+    // 등급 이름 (예: <color=#4A8FE6>희귀</color>)
+    public static string RarityTag(ItemRarity r) => $"<color={ItemRarityInfo.Hex(r)}>{ItemRarityInfo.Name(r)}</color>";
+
+    public static string CategoryName(ItemCategory c)
+    {
+        switch (c)
+        {
+            case ItemCategory.Health: return "의료";
+            case ItemCategory.Food: return "식량";
+            case ItemCategory.Equipment: return "장비";
+            default: return "재료";
+        }
     }
 
     public Button RowButton(RectTransform row, string label, Action onClick, bool interactable = true, float width = 110)

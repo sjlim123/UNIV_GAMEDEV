@@ -224,6 +224,160 @@ public static class ProceduralAudio
         return Make("bark", 0.35f, MakeVoice(380, 0.35f, -0.35f, new[] { 800f, 1600f, 3000f }, 7f));
     }
 
+    // ---------- 적 소리 ----------
+    // 낮은 웅웅거림만 있으면 방향을 알 수 없어서 300~3000Hz(쉰 소리·긁는 소리)를 일부러 두껍게 넣는다
+
+    public static AudioClip ZombieGroan()
+    {
+        int v = rng.Next(4);
+        return Make("zgroan" + v, 1.7f, MakeRasp(105 + v * 18, 1.7f, 0.2f - v * 0.08f, new[] { 520f + v * 60, 1150f + v * 90, 2500f }, 0.9f, 5f), 0.95f);
+    }
+
+    public static AudioClip ZombieScream()
+    {
+        int v = rng.Next(2);
+        return Make("zscream" + v, 1.2f, MakeRasp(330 + v * 45, 1.2f, 0.45f, new[] { 950f, 1700f + v * 150, 3100f }, 1.2f, 6f), 0.95f);
+    }
+
+    // 원거리 좀비가 독액을 끌어올리는 꾸르륵 소리
+    public static AudioClip Retch()
+    {
+        return Make("retch", 0.75f, MakeRasp(170, 0.75f, 0.5f, new[] { 700f, 1400f, 2800f }, 1.6f, 5f), 0.95f);
+    }
+
+    // 들개 으르렁 (공격 전 경고)
+    public static AudioClip Growl()
+    {
+        return Make("growl", 1.2f, MakeRasp(88, 1.2f, 0.06f, new[] { 520f, 1250f, 2700f }, 1.0f, 6f), 0.95f);
+    }
+
+    // 약탈자 고함 ("야!")
+    public static AudioClip RaiderShout()
+    {
+        int v = rng.Next(2);
+        return Make("rshout" + v, 0.7f, MakeVoice(150 + v * 25, 0.7f, 0.25f, new[] { 730f, 1150f + v * 100, 2500f }, 3.5f), 0.95f);
+    }
+
+    // 약탈자 기합·신음 (짧은 사람 목소리)
+    public static AudioClip Grunt()
+    {
+        return Make("grunt", 0.3f, MakeVoice(125, 0.3f, -0.2f, new[] { 600f, 1050f, 2500f }, 4f), 0.9f);
+    }
+
+    // 좀비 발소리: 발을 질질 끄는 소리
+    public static AudioClip Shuffle()
+    {
+        int v = rng.Next(3);
+        float dur = 0.42f + v * 0.06f;
+        var scrape = Biquad.BandPass(1300 + v * 300, 1.4f);
+        var grit = Biquad.BandPass(3200, 2f);
+        var lp = Biquad.LowPass(900);
+        return Make("shuffle" + v, dur, t =>
+        {
+            float u = t / dur;
+            float thump = lp.Process(Noise()) * Mathf.Exp(-t * 40) * 1.4f + Mathf.Sin(2 * Mathf.PI * 75 * t) * Mathf.Exp(-t * 35) * 0.5f;
+            float drag = scrape.Process(Noise()) * Mathf.Sin(Mathf.PI * u) * (0.7f + 0.3f * Mathf.Sin(t * 90));
+            float crackle = rng.NextDouble() < 0.004 ? 4f : 0f;
+            return thump + drag * 1.2f + grit.Process(crackle + Noise() * 0.1f) * Mathf.Sin(Mathf.PI * u);
+        }, 0.85f);
+    }
+
+    // 거대 좀비 발소리: 쿵 + 부서지는 소리
+    public static AudioClip Stomp()
+    {
+        var lp = Biquad.LowPass(700);
+        var bp = Biquad.BandPass(900, 1.2f);
+        return Make("stomp", 0.4f, t =>
+            Mathf.Sin(2 * Mathf.PI * 52 * t) * Mathf.Exp(-t * 16) + lp.Process(Noise()) * 1.5f * Mathf.Exp(-t * 22) + bp.Process(Noise()) * Mathf.Exp(-t * 30));
+    }
+
+    // 독액을 뱉는 소리
+    public static AudioClip Spit()
+    {
+        var bp = Biquad.BandPass(1500, 1.5f);
+        return Make("spit", 0.25f, t => bp.Process(Noise()) * Mathf.Exp(-t * 24) + Mathf.Sin(2 * Mathf.PI * 140 * t) * Mathf.Exp(-t * 40) * 0.4f, 0.85f);
+    }
+
+    // 독액이 터지는 질척한 소리
+    public static AudioClip Splat()
+    {
+        var lp = Biquad.LowPass(2000);
+        var bubble = Biquad.BandPass(1800, 3f);
+        return Make("splat", 0.4f, t =>
+        {
+            float pop = rng.NextDouble() < 0.006 ? 3f : 0f;
+            return lp.Process(Noise()) * Mathf.Exp(-t * 18) + bubble.Process(pop + Noise() * 0.2f) * Mathf.Exp(-t * 6);
+        }, 0.85f);
+    }
+
+    // 개가 무는 소리 (이빨 딱)
+    public static AudioClip Snap()
+    {
+        var bp = Biquad.BandPass(2200, 2f);
+        return Make("snap", 0.15f, t => bp.Process(Noise()) * Mathf.Exp(-t * 60) + (t < 0.004f ? 1f : 0f), 0.8f);
+    }
+
+    // 거친 목소리: 톱니파 + 숨소리를 포먼트로 거르고, 고음 쉰 소리와 그르렁거리는 떨림을 더한다
+    static System.Func<float, float> MakeRasp(float f0, float dur, float bend, float[] formants, float breath, float drive)
+    {
+        var f1 = Biquad.BandPass(formants[0], 3);
+        var f2 = Biquad.BandPass(formants[1], 4);
+        var f3 = Biquad.BandPass(formants[2], 5);
+        var hiss = Biquad.BandPass(formants[2] * 0.8f, 1.2f);
+        float phase = 0, gurglePhase = 0, jitter = 0;
+        float gurgleRate = Rand(14, 26);
+        return t =>
+        {
+            float u = t / dur;
+            if (rng.NextDouble() < 0.0005) jitter = Rand(-0.1f, 0.1f);
+            float f = f0 * (1 + bend * Mathf.Sin(Mathf.PI * u) + jitter) * (1 + 0.06f * Mathf.Sin(2 * Mathf.PI * 5.5f * t));
+            phase += f / SR;
+            float saw = 2 * (phase - Mathf.Floor(phase + 0.5f));
+            gurglePhase += gurgleRate / SR;
+            float gurgle = 0.6f + 0.4f * Mathf.Sin(2 * Mathf.PI * gurglePhase);
+            float src = saw + Noise() * breath;
+            float y = f1.Process(src) + f2.Process(src) * 0.9f + f3.Process(src) * 0.6f;
+            float rasp = hiss.Process(Noise()) * (0.5f + 0.5f * Mathf.Abs(saw)) * breath;
+            float env = Mathf.Clamp01(u * 6) * Mathf.Clamp01((1 - u) * 2.5f);
+            return (float)System.Math.Tanh((y + rasp * 0.8f) * drive) * env * gurgle;
+        };
+    }
+
+    // 적 소리용 감쇠 곡선 (가로축 = 거리 / maxDistance). 15~20m에서도 또렷하고 maxDistance에서 사라진다
+    static AnimationCurve enemyRolloff;
+
+    static AnimationCurve EnemyRolloff()
+    {
+        if (enemyRolloff != null) return enemyRolloff;
+        enemyRolloff = new AnimationCurve(
+            new Keyframe(0f, 1f), new Keyframe(0.08f, 1f), new Keyframe(0.3f, 0.72f),
+            new Keyframe(0.5f, 0.45f), new Keyframe(0.75f, 0.16f), new Keyframe(1f, 0f));
+        for (int i = 1; i < enemyRolloff.length - 1; i++) enemyRolloff.SmoothTangents(i, 0);
+        return enemyRolloff;
+    }
+
+    // 좀비·들개 같은 적 소리용 AudioSource 설정: 완전 3D, 방향이 또렷하게(spread 0), 도플러 없음
+    public static void Setup3D(AudioSource src, float maxDistance = 36f, int priority = 64)
+    {
+        src.playOnAwake = false;
+        src.spatialBlend = 1;
+        src.spread = 0;
+        src.dopplerLevel = 0;
+        src.priority = priority;
+        src.minDistance = 1f;
+        src.maxDistance = maxDistance;
+        src.rolloffMode = AudioRolloffMode.Custom;
+        src.SetCustomCurve(AudioSourceCurveType.CustomRolloff, EnemyRolloff());
+    }
+
+    // PlayAt과 같지만 적 소리용 3D 설정을 쓴다
+    public static AudioSource PlayAt3D(AudioClip clip, Vector3 pos, float volume = 1f, float pitch = 1f, float maxDistance = 36f)
+    {
+        var src = PlayAt(clip, pos, volume, pitch, 1f, maxDistance);
+        Setup3D(src, maxDistance);
+        return src;
+    }
+
     public static void Play2D(AudioClip clip, float volume = 1f, float pitch = 1f)
     {
         PlayAt(clip, Vector3.zero, volume, pitch, 0f);

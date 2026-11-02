@@ -77,14 +77,9 @@ public partial class UIManager
         Stretch(r);
         patchRoot = r.gameObject;
 
-        patchBlur = NewRect("Blur", r).gameObject.AddComponent<RawImage>();
-        Stretch(patchBlur.rectTransform);
-        patchBlur.raycastTarget = false;
-        var tint = NewRect("Tint", r).gameObject.AddComponent<Image>();
-        Stretch(tint.rectTransform);
-        tint.color = new Color(0.02f, 0.025f, 0.03f, 0.28f); // 뒤 메뉴를 누르지 못하게 막는 역할도 한다
+        patchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.28f));
 
-        var glass = Box(r, "Glass", new Color(0.09f, 0.095f, 0.09f, 0.62f), new Color(1, 1, 1, 0.14f));
+        var glass = Box(r, "Glass", GlassFill, GlassFrame);
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1480, 840));
 
         var title = NewText(glass, "패치노트", 38, TextAnchor.MiddleLeft, Text, FontBold);
@@ -283,17 +278,37 @@ public partial class UIManager
         }
     }
 
+    // ---------- 유리판 블러 (패치노트·제작대 창이 함께 쓴다) ----------
+
+    static readonly Color GlassFill = new Color(0.09f, 0.095f, 0.09f, 0.62f);
+    static readonly Color GlassFrame = new Color(1, 1, 1, 0.14f);
+
+    // 화면 전체에 흐린 배경(RawImage)과 어두운 막을 깐다. 막은 뒤 화면을 누르지 못하게 막는 역할도 한다
+    RawImage BlurBackdrop(RectTransform parent, Color tint)
+    {
+        var blur = NewRect("Blur", parent).gameObject.AddComponent<RawImage>();
+        Stretch(blur.rectTransform);
+        blur.raycastTarget = false;
+        var t = NewRect("Tint", parent).gameObject.AddComponent<Image>();
+        Stretch(t.rectTransform);
+        t.color = tint;
+        return blur;
+    }
+
+    void UpdatePatchBlur() => UpdateBlur(patchBlur);
+
     // 뒤 배경 블러: 카메라 화면을 작게 그린 뒤 여러 번 줄였다가 다시 키워 부드럽게 번지게 한다 (가벼운 방식)
-    void UpdatePatchBlur()
+    // 블러 텍스처는 하나를 같이 쓴다 (블러 창은 한 번에 하나만 열린다)
+    void UpdateBlur(RawImage target)
     {
         var cam = Camera.main;
-        if (cam == null || patchBlur == null) return;
+        if (cam == null || target == null) return;
         int w = Mathf.Max(160, Screen.width / 3), h = Mathf.Max(90, Screen.height / 3);
         if (blurCapture == null || blurCapture.width != w || blurCapture.height != h)
         {
             ReleaseBlur();
-            blurCapture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, name = "PatchBlurCapture" };
-            blurResult = new RenderTexture(w / 2, h / 2, 0, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, name = "PatchBlur" };
+            blurCapture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, name = "UIBlurCapture" };
+            blurResult = new RenderTexture(w / 2, h / 2, 0, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, name = "UIBlur" };
         }
 
         var prev = cam.targetTexture;
@@ -314,7 +329,7 @@ public partial class UIManager
         RenderTexture.ReleaseTemporary(a);
         RenderTexture.ReleaseTemporary(b);
         RenderTexture.ReleaseTemporary(c);
-        patchBlur.texture = blurResult;
+        target.texture = blurResult;
     }
 
     void ReleaseBlur()

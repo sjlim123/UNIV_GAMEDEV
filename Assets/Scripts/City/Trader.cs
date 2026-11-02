@@ -15,14 +15,21 @@ public class Trader : Interactable
         ui.OpenPanel("잡상인", c =>
         {
             ui.Line(c, "\"돈은 이제 휴지 조각이지. 물건 대 물건으로만 거래하네.\"", 22, UIManager.Dim);
+            ui.Line(c, $"소지품 무게 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg", 18, UIManager.Dim);
             foreach (var offer in ItemDatabase.TradeOffers)
             {
+                // 내는 물건: 이름(등급 색) 개수 (가진 개수, 모자라면 빨강)
                 var parts = new System.Collections.Generic.List<string>();
                 foreach (var kv in offer.Give)
-                    parts.Add($"{ItemDatabase.Name(kv.Key)} {kv.Value} <color=#8a8270>({s.Carried.Count(kv.Key)})</color>");
-                bool can = s.Carried.Has(offer.Give);
+                {
+                    int have = s.Carried.Count(kv.Key);
+                    parts.Add($"{UIManager.ColoredName(kv.Key)} {kv.Value} <color={(have < kv.Value ? "#f05a48" : "#8a8270")}>({have})</color>");
+                }
+                bool can = s.Carried.Has(offer.Give) && FitsAfterTrade(s, offer);
+                var get = ItemDatabase.Get(offer.GetId);
                 var row = ui.Row(c);
-                ui.RowLabel(row, $"{ItemDatabase.Name(offer.GetId)} x{offer.GetCount}   <size=18>←  {string.Join(", ", parts)}</size>");
+                ui.RowIcon(row, offer.GetId);
+                ui.RowLabel(row, $"{UIManager.ColoredName(offer.GetId)} x{offer.GetCount}  <size=16>{UIManager.RarityTag(get.Rarity)}</size>   <size=18>←  {string.Join(", ", parts)}</size>");
                 ui.RowButton(row, "거래", () => Trade(offer), can);
             }
             ui.Line(c, "거래는 몸에 지닌 물건으로만 할 수 있다. 시간은 계속 흐른다.", 18, UIManager.Dim);
@@ -34,11 +41,27 @@ public class Trader : Interactable
         var gm = GameManager.Instance;
         var s = gm.State;
         if (!s.Carried.Has(offer.Give)) return;
+        if (!FitsAfterTrade(s, offer))
+        {
+            gm.UI.ShowMessage("너무 무겁다. 더는 들 수 없다.");
+            return;
+        }
         foreach (var kv in offer.Give) s.Carried.Remove(kv.Key, kv.Value);
         s.Carried.Add(offer.GetId, offer.GetCount);
-        gm.UI.ShowMessage($"{ItemDatabase.Name(offer.GetId)} x{offer.GetCount} 받았다.");
+        gm.UI.ShowMessage($"{UIManager.ColoredName(offer.GetId)} x{offer.GetCount} 받았다.");
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.6f);
         gm.UI.RefreshPanel();
+    }
+
+    // 거래한 뒤에도 들 수 있는 무게 안인가 (내는 물건만큼 가벼워지고 받는 물건만큼 무거워진다)
+    static bool FitsAfterTrade(GameState s, TradeOffer offer)
+    {
+        float after = s.Carried.Weight;
+        foreach (var kv in offer.Give) after -= ItemDatabase.Get(kv.Key).Weight * kv.Value;
+        after += ItemDatabase.Get(offer.GetId).Weight * offer.GetCount;
+        float cap = s.CarryCapacity;
+        if (offer.GetId == "backpack" && s.Carried.Count("backpack") == 0) cap += GameBalance.Data.backpackBonus;
+        return after <= cap + 0.001f;
     }
 
     void Update()

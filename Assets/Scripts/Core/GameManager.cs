@@ -67,6 +67,28 @@ public class GameManager : MonoBehaviour
         UI.OnSceneLoaded(scene.name);
         GameSettings.CaptureScene();
         GameSettings.ApplyScene();
+        // 방공호에 도착할 때마다 자동 저장
+        if (scene.name == ShelterScene)
+        {
+            State.InExpedition = false;
+            SaveGame();
+        }
+    }
+
+    public bool InShelter => SceneManager.GetActiveScene().name == ShelterScene;
+
+    // 방공호에 있을 때만 저장한다 (도시 탐험 도중 상태는 저장하지 않음)
+    public void SaveGame()
+    {
+        if (IsGameOver || State == null) return;
+        // 정전으로 들어온 좀비도 함께 저장한다 (나갔다 들어와서 피할 수 없게)
+        if (InShelter) State.ShelterInvaders = ShelterInvasion.Instance != null ? ShelterInvasion.Instance.InvaderCount : 0;
+        SaveSystem.Save(State);
+    }
+
+    void OnApplicationQuit()
+    {
+        if (InShelter && !IsTransitioning) SaveGame();
     }
 
     // 1턴 진행. 죽거나 마지막 턴이 끝나면 false
@@ -93,6 +115,7 @@ public class GameManager : MonoBehaviour
         if (s.Turn >= GameState.MaxTurns)
         {
             IsGameOver = true;
+            SaveSystem.Delete();
             UI.ShowEndScreen($"{GameState.MaxTurns}턴 생존", $"방공호에서 {GameState.MaxTurns}턴을 버텨냈다.\n(엔딩은 스토리와 함께 정해질 예정)");
             return false;
         }
@@ -117,7 +140,7 @@ public class GameManager : MonoBehaviour
         var def = ItemDatabase.Get(id);
         if (!def.IsConsumable || !from.Remove(id)) return false;
         var s = State;
-        s.Health = Mathf.Clamp(s.Health + def.Heal, 1, 100);
+        s.Health = Mathf.Clamp(s.Health + def.Heal, 1, GameBalance.Data.playerMaxHealth);
         s.Hunger = Mathf.Min(100, s.Hunger + def.Hunger);
         s.Thirst = Mathf.Min(100, s.Thirst + def.Thirst);
         UI.ShowMessage($"{def.Name} 사용 ({def.Description})");
@@ -126,15 +149,64 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    public void NewGame()
+    // 새 게임: 저장을 지우고 도입 컷씬(사진 3장)을 보여 준 뒤 방공호로.
+    // 죽고 나서 '처음부터 다시'는 컷씬 없이 바로 시작한다
+    public void NewGame(bool playIntro = true)
     {
+        if (IsTransitioning) return;
         IsGameOver = false;
         State = new GameState();
-        StartCoroutine(LoadRoutine(ShelterScene, false));
+        if (!playIntro) SaveSystem.Delete();
+        StartCoroutine(playIntro ? NewGameRoutine() : LoadRoutine(ShelterScene, false));
+    }
+
+    IEnumerator NewGameRoutine()
+    {
+        IsTransitioning = true;
+        UI.ClosePanel();
+        UI.SetPaused(false);
+        yield return UI.Fade(1, 0.6f);
+        bool done = false;
+        UI.PlayCutscene(() => done = true);
+        yield return UI.Fade(0, 0.6f);
+        while (!done) yield return null;
+        // 컷씬 도중 게임을 꺼도 예전 저장이 남도록, 저장은 컷씬이 끝난 뒤에 지운다
+        SaveSystem.Delete();
+        yield return LoadRoutine(ShelterScene, false);
+    }
+
+    // 이어하기: 저장된 상태로 바로 방공호에서 시작 (컷씬 없음)
+    public void ContinueGame()
+    {
+        if (IsTransitioning) return;
+        var loaded = SaveSystem.Load();
+        if (loaded == null)
+        {
+            UI.OpenPanel("이어하기", c => UI.Line(c, "저장된 게임을 불러오지 못했다. 저장 파일이 손상되었을 수 있다."));
+            return;
+        }
+        string notice = null;
+        if (loaded.InExpedition)
+        {
+            // 탐험 도중 메뉴로 나가거나 게임을 껐다: 가져간 물건을 모두 잃고 방공호에서 다시 시작한다
+            loaded.InExpedition = false;
+            foreach (var kv in loaded.Carried.Sorted()) loaded.Carried.Remove(kv.Key, kv.Value);
+            notice = "탐험 도중 정신을 잃었다가 간신히 방공호로 돌아왔다. 가져간 물건을 모두 잃었다.";
+        }
+        IsGameOver = false;
+        State = loaded;
+        StartCoroutine(ContinueRoutine(notice));
+    }
+
+    IEnumerator ContinueRoutine(string notice)
+    {
+        yield return LoadRoutine(ShelterScene, false);
+        if (notice != null) UI.ShowMessage(notice, 6f);
     }
 
     public void GoToMainMenu()
     {
+        if (InShelter) SaveGame();
         IsGameOver = false;
         StartCoroutine(LoadRoutine(MenuScene, false));
     }
@@ -145,6 +217,9 @@ public class GameManager : MonoBehaviour
         expeditionStartItems = State.Carried.Snapshot();
         expeditionStartTurn = State.Turn;
         if (!AdvanceTurn()) return;
+        // 출발 직후 상태를 저장한다. 탐험 도중 게임을 끄면 이어하기 때 가져간 물건을 잃고 방공호에서 다시 시작한다
+        State.InExpedition = true;
+        SaveGame();
         StartCoroutine(LoadRoutine(CityScene, false));
     }
 
@@ -174,15 +249,16 @@ public class GameManager : MonoBehaviour
         bool alive = AdvanceTurn();
         if (alive)
         {
-            State.Health = Mathf.Min(100, State.Health + RestHeal);
+            State.Health = Mathf.Min(GameBalance.Data.playerMaxHealth, State.Health + RestHeal);
             UI.ShowMessage($"잠시 눈을 붙였다. 체력 +{RestHeal:0}  (턴 {State.Turn}/{GameState.MaxTurns})", 3f);
+            SaveGame();
         }
         yield return new WaitForSecondsRealtime(0.6f);
         IsTransitioning = false;
         yield return UI.Fade(0, 0.8f);
     }
 
-    public void Restart() => NewGame();
+    public void Restart() => NewGame(false);
 
     public void QuitGame()
     {
@@ -197,6 +273,7 @@ public class GameManager : MonoBehaviour
     {
         if (IsGameOver) return;
         IsGameOver = true;
+        SaveSystem.Delete(); // 죽으면 저장도 사라진다
         UI.ShowEndScreen(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}");
     }
 
