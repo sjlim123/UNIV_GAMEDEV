@@ -1470,11 +1470,70 @@ public static partial class GameSceneBuilder
         {
             float yaw = side * 90;
             var rot = Quaternion.Euler(0, yaw, 0);
-            Box("WallOfRubble", g, rot * new Vector3(0, 5, 80), new Vector3(170, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
+            if (side == 0)
+            {
+                // 북쪽 벽은 가운데(x 16~24)를 비우고 그 자리에 터널을 뚫어 둔다 (보기만 — 보이지 않는 벽이 앞을 막는다)
+                Box("WallOfRubble", g, new Vector3(-34.5f, 5, 80), new Vector3(101, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
+                Box("WallOfRubble", g, new Vector3(54.5f, 5, 80), new Vector3(61, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
+                BuildTunnel(g, new Vector3(20, 0, 78.5f));
+            }
+            else Box("WallOfRubble", g, rot * new Vector3(0, 5, 80), new Vector3(170, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
             Box("Invisible", g, rot * new Vector3(0, 15, 78.2f), new Vector3(170, 30, 0.5f), M["cracked"], 4f, true, new Vector3(0, yaw, 0)).GetComponent<MeshRenderer>().enabled = false;
             for (int i = 0; i < 10; i++)
-                RubblePile(g, rot * new Vector3(R(-75, 75), 0, 77.5f), 6, 2f);
+            {
+                var at = rot * new Vector3(R(-75, 75), 0, 77.5f);
+                if (side == 0 && Mathf.Abs(at.x - 20f) < 9f) continue; // 터널 입구 앞은 비운다
+                RubblePile(g, at, 6, 2f);
+            }
         }
+    }
+
+    // 둘레 벽을 뚫고 들어가는 터널: 메인 화면의 방공호 입구 터널과 같은 모양 (반지름·벽 높이·젖은 바닥·갈비뼈·파이프·전구)
+    // mouth = 입구 바닥 가운데. 그룹을 180도 돌려 로컬 -z가 벽 안쪽(세계 +z)을 향하게 하고, 안쪽 끝은 어둠. 나중에 엔딩에 쓸 자리
+    static void BuildTunnel(Transform parent, Vector3 mouth)
+    {
+        var t = Group("Tunnel", parent, mouth, 180f);
+        const float L = 16f, rad = TunnelRadius, H = TunnelWallH, W = 0.5f;
+        float zc = -L / 2;
+        Box("Floor", t, new Vector3(0, 0f, zc), new Vector3(rad * 2 + 1f, 0.08f, L), M["wetConcrete"], 2f);
+        foreach (var side in new[] { -1f, 1f })
+            Box("Wall", t, new Vector3(side * (rad + W / 2), H / 2, zc), new Vector3(W, H, L), M["dirty"], 2f);
+        Arch(t, "Vault", rad, W, new Vector3(0, H, zc), L, M["dirty"], 16, 2.5f);
+        // 일정 간격의 쇠 갈비뼈
+        for (float z = -0.8f; z > -L + 0.5f; z -= 1.6f)
+        {
+            Arch(t, "Rib", rad - 0.06f, 0.12f, new Vector3(0, H, z), 0.22f, M["metal"], 16, 1f);
+            foreach (var side in new[] { -1f, 1f })
+                Box("RibWall", t, new Vector3(side * (rad - 0.06f), H / 2, z), new Vector3(0.12f, H, 0.22f), M["metal"], 1f, false);
+        }
+        // 입구: 두꺼운 콘크리트 머리벽(아치)과 양옆 기둥·위 블록이 둘레 벽의 틈(8m)을 메운다. 아치 안쪽 테두리에 경고 줄무늬
+        Arch(t, "Headwall", rad, 1.8f, new Vector3(0, H, 0.3f), 1.4f, M["cracked"], 16, 2f);
+        foreach (var side in new[] { -1f, 1f })
+        {
+            Box("HeadwallSide", t, new Vector3(side * (rad + 0.5f + 0.65f), 5f, 0.3f), new Vector3(1.3f, 10f, 1.4f), M["cracked"], 4f, true);
+            Box("CollarWall", t, new Vector3(side * (rad + 0.35f), H / 2, 0.3f), new Vector3(0.7f, H, 1.4f), M["dirty"], 2f);
+        }
+        Box("HeadwallTop", t, new Vector3(0, 7f, 0.3f), new Vector3(8f, 6f, 1.4f), M["cracked"], 4f, true);
+        Arch(t, "Hazard", rad - 0.02f, 0.06f, new Vector3(0, H, 0.03f), 0.06f, M["blastStripe"], 24, 1f);
+        // 안쪽 끝은 어둠 (검은 벽과 천장)
+        Box("BackWall", t, new Vector3(0, 1.7f, -L - 0.15f), new Vector3(rad * 2 + 0.6f, 3.4f, 0.3f), M["tire"], 1f, false);
+        Box("DarkCap", t, new Vector3(0, H + rad * 0.5f, -L + 0.2f), new Vector3(rad * 2, rad + H, 0.3f), M["tire"], 1f, false);
+        // 벽을 따라 지나는 파이프 두 줄과 브래킷
+        Prim(PrimitiveType.Cylinder, "Pipe", t, new Vector3(rad - 0.14f, 0.95f, zc), new Vector3(0.1f, L / 2, 0.1f), M["metal"], new Vector3(90, 0, 0));
+        Prim(PrimitiveType.Cylinder, "Pipe", t, new Vector3(rad - 0.14f, 1.05f, zc), new Vector3(0.06f, L / 2, 0.06f), M["metal"], new Vector3(90, 0, 0));
+        for (float z = -1.2f; z > -L; z -= 2.4f)
+            Box("PipeBracket", t, new Vector3(rad - 0.1f, 0.82f, z), new Vector3(0.2f, 0.36f, 0.05f), M["metal"], 1f, false);
+        // 천장의 꺼진 전구들
+        for (float z = -2.6f; z > -L + 1f; z -= 4f)
+        {
+            var lampPos = new Vector3(0.5f, H + rad - 0.45f, z);
+            Prim(PrimitiveType.Cylinder, "LampCord", t, lampPos + Vector3.up * 0.22f, new Vector3(0.01f, 0.2f, 0.01f), M["tire"]);
+            Prim(PrimitiveType.Sphere, "LampBulb", t, lampPos, new Vector3(0.1f, 0.13f, 0.1f), M["metal"]);
+        }
+        // 입구 앞 잔해와 쓰러진 차단봉
+        RubblePile(t, new Vector3(-2.4f, 0, 1.3f), 4, 1.1f);
+        RubblePile(t, new Vector3(3.0f, 0, 2.2f), 3, 0.9f);
+        Box("Barrier", t, new Vector3(0.3f, 0.12f, 0.9f), new Vector3(4.4f, 0.14f, 0.14f), M["crossPaint"], 1f, false, new Vector3(0, R(-8, 8), 0));
     }
 
     static void AddAshFall(Transform player)

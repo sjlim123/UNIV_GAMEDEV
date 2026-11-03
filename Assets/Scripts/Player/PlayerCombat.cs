@@ -46,7 +46,8 @@ public class PlayerCombat : MonoBehaviour
         PlayerController.Instance.MakeNoise(1.2f);
         GameManager.Instance.UI.KickCrosshair();
 
-        float range = weapon == null ? 1.6f : weapon.Weapon == WeaponKind.Stab ? 1.9f : 2.3f;
+        // 맨손 사거리는 보통 좀비의 공격 사거리(1.6m)보다 2% 길다 (먼저 닿을 수 있게)
+        float range = weapon == null ? 1.6f * 1.02f : weapon.Weapon == WeaponKind.Stab ? 1.9f : 2.3f;
         if (PlayerRaycast.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var hit))
         {
             var target = hit.collider.GetComponentInParent<IDamageable>();
@@ -55,7 +56,7 @@ public class PlayerCombat : MonoBehaviour
                 target.TakeDamage(weapon != null ? weapon.Damage : b.playerDamage, cam.transform.forward);
                 bool killed = IsDead(target);
                 source.PlayOneShot(killed ? ProceduralAudio.KillHit() : ProceduralAudio.FleshHit(), 1f);
-                PlayerController.Instance.Shake(killed ? 0.3f : 0.18f);
+                PlayerController.Instance.Shake(killed ? 0.55f : 0.18f); // 처치 때는 크게 흔들린다
                 HitEffects.PlayerHit((Component)target, hit.point, cam.transform.forward, killed);
                 if (lighter && !killed)
                 {

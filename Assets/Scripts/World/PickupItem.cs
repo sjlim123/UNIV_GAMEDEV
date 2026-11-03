@@ -14,6 +14,7 @@ public class PickupItem : Interactable
         var s = gm.State;
         int take = amount;
         while (take > 0 && !s.CanCarry(itemId, take)) take--;
+        if (take > 0) Tutorial.Notify("pickup");
         if (take == 0)
         {
             gm.UI.ShowMessage("너무 무겁다. 더는 들 수 없다.");

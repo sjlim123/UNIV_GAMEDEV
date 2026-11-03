@@ -51,7 +51,7 @@ public partial class UIManager
         menuBlur.raycastTarget = false;
         menuBlur.enabled = false;
 
-        var title = NewText(m, GameTitle, 88, TextAnchor.LowerLeft, Text, FontBold);
+        var title = NewText(m, GameTitle, 92, TextAnchor.LowerLeft, Text, FontTitle);
         title.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -96), new Vector2(520, 120));
         var sub = NewText(m, GameSubtitle, 22, TextAnchor.UpperLeft, Accent, FontSemiBold);
@@ -87,7 +87,7 @@ public partial class UIManager
         pauseBlur.enabled = false;
         MenuColumn(p);
 
-        var title = NewText(p, "일시정지", 64, TextAnchor.LowerLeft, Text, FontBold);
+        var title = NewText(p, "일시정지", 64, TextAnchor.LowerLeft, Text, FontTitle);
         title.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -120), new Vector2(500, 90));
         pauseInfo = NewText(p, "", 19, TextAnchor.UpperLeft, Dim);
@@ -103,9 +103,88 @@ public partial class UIManager
         MenuButton(p, "메인 메뉴로", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("메인 메뉴로", () => GameManager.Instance.GoToMainMenu()));
         MenuButton(p, "게임 종료", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("게임 종료", () => GameManager.Instance.QuitGame()));
 
+        // Tip 스위치: 할 일 명판·나침반·대상 불빛·힌트·조작키 안내를 한꺼번에 켜고 끈다 (Esc 안내 바로 위)
+        BuildTipSwitch(p, new Vector2(110, 66));
+
         var hint = NewText(p, "Esc   계속하기", 17, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.4f));
         Place(hint.rectTransform, new Vector2(0, 0), new Vector2(110, 24), new Vector2(460, 26));
         return p.gameObject;
+    }
+
+    // ---------- Tip 스위치 (일시정지 메뉴): 'Tip' 글자 옆의 좌우 알약 스위치 ----------
+
+    RectTransform tipKnob;
+    Image tipTrack, tipKnobImg;
+    UnityEngine.UI.Text tipState;
+    const float TipSwitchW = 58, TipSwitchH = 28, TipKnob = 22;
+
+    void BuildTipSwitch(Transform parent, Vector2 pos)
+    {
+        var row = NewRect("TipRow", parent);
+        Place(row, new Vector2(0, 0), pos, new Vector2(460, 34));
+
+        var label = NewText(row, "Tip", 24, TextAnchor.MiddleLeft, Text, FontTitle);
+        Place(label.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(56, 34));
+        label.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+
+        // 알약 모양 홈 + 테두리 + 둥근 손잡이. 켜지면 홈이 호박색이 되고 손잡이가 오른쪽으로 간다
+        var sw = NewRect("Switch", row);
+        Place(sw, new Vector2(0, 0.5f), new Vector2(56, 0), new Vector2(TipSwitchW, TipSwitchH));
+        tipTrack = sw.gameObject.AddComponent<Image>();
+        tipTrack.sprite = UIStyle.Fill;
+        tipTrack.type = Image.Type.Sliced;
+        tipTrack.pixelsPerUnitMultiplier = 0.3f;
+        var frame = NewRect("Frame", sw).gameObject.AddComponent<Image>();
+        Stretch(frame.rectTransform);
+        frame.sprite = UIStyle.Frame;
+        frame.type = Image.Type.Sliced;
+        frame.pixelsPerUnitMultiplier = 0.3f;
+        frame.color = new Color(1, 1, 1, 0.16f);
+        frame.raycastTarget = false;
+        tipKnob = NewRect("Knob", sw);
+        tipKnob.anchorMin = tipKnob.anchorMax = new Vector2(0, 0.5f);
+        tipKnob.pivot = new Vector2(0.5f, 0.5f);
+        tipKnob.sizeDelta = new Vector2(TipKnob, TipKnob);
+        tipKnobImg = tipKnob.gameObject.AddComponent<Image>();
+        tipKnobImg.sprite = UIStyle.Dot;
+        tipKnobImg.raycastTarget = false;
+        tipKnob.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.5f);
+
+        var b = sw.gameObject.AddComponent<Button>();
+        b.targetGraphic = tipTrack;
+        b.transition = Selectable.Transition.None;
+        b.navigation = new Navigation { mode = Navigation.Mode.None };
+        b.onClick.AddListener(() =>
+        {
+            GameSettings.Tips = !GameSettings.Tips;
+            GameSettings.Save();
+            ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.45f, GameSettings.Tips ? 1.15f : 0.85f, SoundCategory.UI);
+            UpdateTipSwitch(false);
+        });
+        UIPress.Attach(b, 1.04f);
+
+        tipState = NewText(row, "", 15, TextAnchor.MiddleLeft, Dim);
+        Place(tipState.rectTransform, new Vector2(0, 0.5f), new Vector2(56 + TipSwitchW + 12, 0), new Vector2(336, 34));
+        UpdateTipSwitch(true);
+    }
+
+    // 스위치 색·글을 설정값에 맞춘다. 손잡이는 UpdateTipKnob에서 미끄러져 간다
+    void UpdateTipSwitch(bool instant)
+    {
+        if (tipKnob == null) return;
+        bool on = GameSettings.Tips;
+        tipTrack.color = on ? new Color(Accent.r, Accent.g, Accent.b, 0.95f) : new Color(0.16f, 0.17f, 0.18f, 0.95f);
+        tipKnobImg.color = on ? new Color(0.98f, 0.96f, 0.9f) : new Color(0.55f, 0.55f, 0.55f);
+        tipState.text = on ? "켜짐  ·  할 일 · 나침반 · 대상 불빛 · 힌트 · 조작키" : "꺼짐  ·  안내 없이 플레이";
+        if (instant) tipKnob.anchoredPosition = new Vector2(TipKnobX(on), 0);
+    }
+
+    static float TipKnobX(bool on) => on ? TipSwitchW - TipKnob / 2f - 3f : TipKnob / 2f + 3f;
+
+    void UpdateTipKnob()
+    {
+        if (tipKnob == null || pauseRoot == null || !pauseRoot.activeSelf) return;
+        tipKnob.anchoredPosition = new Vector2(Mathf.Lerp(tipKnob.anchoredPosition.x, TipKnobX(GameSettings.Tips), Time.unscaledDeltaTime * 18f), 0);
     }
 
     // 왼쪽 세로 유리 기둥 (메인·일시정지 메뉴): 어두운 유리 + 오른쪽 가는 금색 선 + 바깥으로 옅어지는 그림자
@@ -120,8 +199,9 @@ public partial class UIManager
 
         var fill = NewRect("Glass", col).gameObject.AddComponent<Image>();
         Stretch(fill.rectTransform);
-        fill.color = new Color(0.035f, 0.04f, 0.045f, 0.52f);
+        fill.color = new Color(0.015f, 0.017f, 0.02f, 0.74f);
         fill.raycastTarget = false;
+        Grime(col, 0.7f, 1);
 
         var shadow = NewRect("Shadow", col).gameObject.AddComponent<Image>();
         var srt = shadow.rectTransform;
@@ -141,7 +221,7 @@ public partial class UIManager
         ert.pivot = new Vector2(1, 0.5f);
         ert.offsetMin = new Vector2(-1, 0);
         ert.offsetMax = Vector2.zero;
-        edge.color = new Color(0.9f, 0.8f, 0.55f, 0.26f);
+        edge.color = new Color(0.72f, 0.48f, 0.2f, 0.3f);
         edge.raycastTarget = false;
         return col;
     }
@@ -380,6 +460,7 @@ public partial class UIManager
         var gm = GameManager.Instance;
         var s = gm.State;
         pauseInfo.text = s == null ? "" : $"턴 {s.Turn} / {GameState.MaxTurns}   ·   {(gm.InShelter ? "방공호" : "도시 탐험 중")}";
+        UpdateTipSwitch(true);
         RefreshGlass();
     }
 

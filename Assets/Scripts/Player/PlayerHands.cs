@@ -179,8 +179,46 @@ public class PlayerHands : MonoBehaviour
         }
 
         PoseRight(dt);
-        PoseLeft(dt, hasLight, lightOn);
+        UpdateTrail();
+        // 붕대를 감는 동안은 왼팔을 화면 가운데로 들어 올린다 (오른손이 그 둘레를 둘둘 감는다)
+        bool wrapping = move == Move.Use && useKind == UseGesture.Bandage && moveT > 0.08f && moveT < 0.9f;
+        bandage = Mathf.MoveTowards(bandage, wrapping ? 1f : 0f, dt * 5f);
+        PoseLeft(dt, hasLight, lightOn, bandage);
     }
+
+    // ---------- 스윙 궤적: 무기 끝에 달린 짧은 빛 꼬리, 휘두르거나 찌르는 동안만 남는다 ----------
+    TrailRenderer trail;
+
+    void AttachTrail(Transform model, HeldSpec spec)
+    {
+        var tip = new GameObject("SwingTrail").transform;
+        tip.SetParent(model, false);
+        tip.localPosition = spec.Point + spec.Axis.normalized * (0.32f / Mathf.Max(0.3f, spec.Scale));
+        trail = tip.gameObject.AddComponent<TrailRenderer>();
+        trail.time = 0.14f;
+        trail.startWidth = 0.035f;
+        trail.endWidth = 0f;
+        trail.minVertexDistance = 0.005f;
+        trail.sharedMaterial = Resources.Load<Material>("Effects/M_WeatherRain");
+        trail.startColor = new Color(1f, 0.92f, 0.75f, 0.7f);
+        trail.endColor = new Color(1f, 0.6f, 0.3f, 0f);
+        trail.emitting = false;
+        trail.shadowCastingMode = ShadowCastingMode.Off;
+        trail.generateLightingData = false;
+    }
+
+    void UpdateTrail()
+    {
+        if (trail == null) return;
+        bool swinging = (move == Move.Swing || move == Move.Stab) && moveT > 0.1f && moveT < 0.65f;
+        if (trail.emitting == swinging) return;
+        if (swinging) trail.Clear();
+        trail.emitting = swinging;
+    }
+
+    float bandage; // 왼팔을 붕대 감는 자세로 올린 정도 (0~1)
+    static readonly Vector3 BandageWrist = new Vector3(0.0f, -0.15f, 0.36f);
+    static readonly Quaternion BandageHand = HandRig.Look(new Vector3(1f, 0.12f, 0.25f), new Vector3(0.1f, 1f, -0.2f));
 
     // 손에 든 것이 바뀌면 손을 화면 아래로 내렸다가 새 물건을 들고 올라온다
     void UpdateSwap(float dt, string want)
@@ -210,6 +248,7 @@ public class PlayerHands : MonoBehaviour
     {
         if (heldModel != null) Kill(heldModel);
         heldModel = null;
+        trail = null;
         lighterFlame = null;
         flickPending = false;
         heldId = id;
@@ -222,6 +261,8 @@ public class PlayerHands : MonoBehaviour
             Attach(right, model, heldSpec);
             ComputeGrip(right, model, heldSpec, gripPose);
             heldModel = model.gameObject;
+            // 휘두르는 무기(세워 들거나 앞으로 겨누는 것)에는 끝에 궤적을 단다
+            if (heldSpec.Grip == GripKind.Power && (heldSpec.Pose == HoldPose.Upright || heldSpec.Pose == HoldPose.Forward)) AttachTrail(model, heldSpec);
             // 라이터는 들고 나서 엄지로 켠다
             if (id == ItemDatabase.LighterId)
             {
@@ -480,10 +521,10 @@ public class PlayerHands : MonoBehaviour
             }
             case UseGesture.Bandage:
             {
-                // 왼팔에 붕대를 두 번 돌려 감는다
-                float a = hold * Mathf.PI * 4;
-                d = new Vector3(-0.18f, 0.07f, -0.06f) * r + new Vector3(Mathf.Cos(a) * 0.035f, Mathf.Sin(a) * 0.03f, 0) * during;
-                e = new Vector3(-15 * r, 0, 50 * r + Mathf.Sin(a) * 25 * during);
+                // 들어 올린 왼쪽 팔뚝 둘레를 오른손이 세 바퀴 둘둘 감는다 (팔뚝을 가로지르는 원 궤도)
+                float a = hold * Mathf.PI * 6;
+                d = new Vector3(-0.3f, 0.07f, -0.03f) * r + new Vector3(0, Mathf.Cos(a) * 0.05f, Mathf.Sin(a) * 0.045f) * during;
+                e = new Vector3(-12 * r + Mathf.Cos(a) * 15 * during, 0, 28 * r + Mathf.Sin(a) * 22 * during);
                 break;
             }
             case UseGesture.Medkit:
@@ -520,10 +561,11 @@ public class PlayerHands : MonoBehaviour
     const float LeftDeviation = -22f;
 
     // 왼손: 손전등을 켜면 들어 올리고, 끄면 내린다. 켜고 끌 때 엄지로 버튼을 딸깍 누른다
-    void PoseLeft(float dt, bool hasLight, bool on)
+    void PoseLeft(float dt, bool hasLight, bool on, float wrap)
     {
-        if (left.Elbow.gameObject.activeSelf != hasLight) left.Elbow.gameObject.SetActive(hasLight);
-        if (!hasLight) return;
+        bool show = hasLight || wrap > 0.001f;
+        if (left.Elbow.gameObject.activeSelf != show) left.Elbow.gameObject.SetActive(show);
+        if (!show) return;
         if (on != wasOn)
         {
             wasOn = on;
@@ -537,11 +579,20 @@ public class PlayerHands : MonoBehaviour
         var wrist = Vector3.Lerp(LeftOnWrist, LeftOffWrist, l) + new Vector3(0, -0.006f, 0) * c;
         // 손잡이 축(엄지 쪽)은 렌즈 반대쪽을 향한다
         GripAlong(-Vector3.Slerp(LeftOnAim.normalized, LeftOffAim.normalized, l), Vector3.Slerp(LeftOnElbow.normalized, LeftOffElbow.normalized, l), LeftDeviation, out var forearm, out var bend);
+        // 붕대를 감을 때: 왼팔을 화면 가운데 아래에 가로로 들고 손을 편다 (팔꿈치는 왼쪽 아래)
+        float k = Ease(wrap);
+        if (k > 0)
+        {
+            wrist = Vector3.Lerp(wrist, BandageWrist, k);
+            forearm = Quaternion.Slerp(forearm, BandageHand, k);
+            bend = Quaternion.Slerp(bend, Quaternion.identity, k);
+        }
         left.Place(wrist, forearm, bend);
 
         System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
         leftFingers[2] += 25 * c;
         leftFingers[3] += 30 * c;
+        if (k > 0) HandRig.Blend(leftFingers, HandRig.Open, k, leftFingers);
         left.Apply(leftFingers);
     }
 
@@ -589,8 +640,8 @@ public class PlayerHands : MonoBehaviour
         clickT = 1;
         handsRoot.localPosition = Vector3.zero;
         PoseRight(10f);
-        PoseLeft(10f, true, lightOn);
+        PoseLeft(10f, true, lightOn, 0f);
         lowerLeft = lightOn ? 0 : 1;
-        PoseLeft(0.0001f, true, lightOn);
+        PoseLeft(0.0001f, true, lightOn, 0f);
     }
 }

@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     public const string MenuScene = "MainMenu";
     public const string ShelterScene = "Shelter";
     public const string CityScene = "City";
+    public const string CutsceneScene = "Cutscene"; // 새 게임 도입 컷씬 (실시간 3D)
 
     // 턴마다 줄어드는 양은 GameBalance 에셋에서 조정한다
     public static float HungerPerTurn => GameBalance.Data.hungerPerTurn;
@@ -174,7 +175,7 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    // 새 게임: 저장을 지우고 도입 컷씬(사진 3장)을 보여 준 뒤 방공호로.
+    // 새 게임: 도입 컷씬(Cutscene 씬에서 실시간으로 재생)을 보여 준 뒤 저장을 지우고 방공호로.
     // 죽고 나서 '처음부터 다시'는 컷씬 없이 바로 시작한다
     public void NewGame(int slot, bool playIntro = true)
     {
@@ -194,12 +195,24 @@ public class GameManager : MonoBehaviour
         yield return UI.Fade(1, 0.6f);
         SilenceScene(); // 메인 메뉴 배경의 바람·좀비 소리를 끈다
         bool done = false;
-        UI.PlayCutscene(() => done = true);
-        yield return UI.Fade(0, 0.6f);
+        if (Application.CanStreamedLevelBeLoaded(CutsceneScene))
+        {
+            // 로딩 화면 없이 검은 화면 뒤에서 컷씬 씬을 열고, 연출이 시작되면 화면을 밝힌다
+            var op = SceneManager.LoadSceneAsync(CutsceneScene);
+            while (!op.isDone) yield return null;
+            yield return null;
+            UI.PlayCutscene(() => done = true);
+            yield return UI.Fade(0, 1.2f);
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] Cutscene 씬이 빌드 목록에 없어 컷씬을 건너뜁니다 (Tools > 핵폭발 생존 > 컷씬 씬 생성).");
+            done = true;
+        }
         while (!done) yield return null;
         // 컷씬 도중 게임을 꺼도 예전 저장이 남도록, 저장은 컷씬이 끝난 뒤에 지운다
         SaveSystem.Delete(SaveSystem.CurrentSlot);
-        yield return LoadRoutine(ShelterScene, false);
+        yield return LoadRoutine(ShelterScene, false, false, "방공호로 들어가는 중");
     }
 
     // 이어하기: 저장된 상태로 바로 방공호에서 시작 (컷씬 없음)
@@ -256,6 +269,7 @@ public class GameManager : MonoBehaviour
         expeditionStartHealth = State.Health;
         expeditionZombieKills = expeditionDogKills = 0;
         if (!AdvanceTurn()) return;
+        Tutorial.Notify("expedition");
         // 출발 직후 상태를 저장한다. 탐험 도중 게임을 끄면 이어하기 때 가져간 물건을 잃고 방공호에서 다시 시작한다
         State.InExpedition = true;
         SaveGame();
@@ -277,6 +291,7 @@ public class GameManager : MonoBehaviour
         expeditionTimeLeft = city != null ? Mathf.Max(0, city.TimeLeft) : 0;
         expeditionRedNightSeconds = city != null ? city.RedNightElapsed : 0;
         if (!AdvanceTurn()) return;
+        Tutorial.Notify("return");
         StartCoroutine(LoadRoutine(ShelterScene, true, true));
     }
 
@@ -289,6 +304,7 @@ public class GameManager : MonoBehaviour
     public void Rest(Transform eye = null)
     {
         if (IsTransitioning || IsGameOver) return;
+        Tutorial.Notify("rest");
         StartCoroutine(RestRoutine(eye));
     }
 
@@ -308,7 +324,7 @@ public class GameManager : MonoBehaviour
         // 2) 숨이 느려지며 눈이 감긴다 (마인크래프트처럼 천천히 어두워진다)
         sfx.pitch = 1f;
         sfx.PlayOneShot(ProceduralAudio.SleepBreath(), 0.55f);
-        UI.ShowSleepText("Z z z . . .");
+        // 잠드는 동안은 글자 없이 조용히 어두워진다 ('Z z z' 같은 만화풍 표시는 분위기에 맞지 않는다)
         yield return UI.Fade(1, 2.6f);
         bool alive = AdvanceTurn();
         if (alive)
@@ -386,17 +402,22 @@ public class GameManager : MonoBehaviour
         StartCoroutine(ReturnToMenuAfter(EndScreenSeconds));
     }
 
-    // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때)
-    IEnumerator LoadRoutine(string scene, bool showResult, bool door = false)
+    // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때). loadingTitle: 로딩 화면 제목 (없으면 씬에 맞게)
+    IEnumerator LoadRoutine(string scene, bool showResult, bool door = false, string loadingTitle = null)
     {
         IsTransitioning = true;
         UI.ClosePanel();
         UI.SetPaused(false);
         if (door) DoorClunk(1f);
         yield return UI.Fade(1, 0.7f);
+        // 검은 화면 대신 로딩 화면 (적어도 1.2초는 보여 준다)
+        UI.ShowLoading(loadingTitle ?? (scene == ShelterScene ? "방공호로 돌아가는 중" : "도시로 나가는 중"));
+        float shownAt = Time.unscaledTime;
         var op = SceneManager.LoadSceneAsync(scene);
         while (!op.isDone) yield return null;
         yield return null;
+        while (Time.unscaledTime - shownAt < 1.2f) yield return null;
+        UI.HideLoading();
         IsTransitioning = false;
         if (door) DoorClunk(0.82f);
         if (showResult) ShowExpeditionResult();

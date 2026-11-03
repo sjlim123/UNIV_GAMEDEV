@@ -23,7 +23,7 @@ public static partial class GameSceneBuilder
 
     // TV·표지판에 그리는 글자
     const string CutTxtBreaking = "속보";
-    const string CutTxtHeadline = "서울 상공 핵폭발 발생";
+    const string CutTxtHeadline = "수도권 핵 공격 경보";
     const string CutTxtTicker = "정부, 전 국민 대피령 발령  ·  즉시 가까운 대피소로 대피하십시오  ·  창문에서 멀리 떨어지십시오";
     const string CutTxtNewsTag = "뉴스 특보";
     const string CutTxtLive = "LIVE";
@@ -48,6 +48,7 @@ public static partial class GameSceneBuilder
     static CutRig cutSitting, cutStanding, cutRunner;
     static GameObject cutDroppedRemote;
     static Light cutSun, cutTvLight, cutWindowLight, cutBackLight;
+    static float cutStandYaw; // 2번(속보)에서 서 있는 사람의 원래 방향 (3번 폭발에서는 창을 보게 돌린다)
     static Material cutSkyMat, cutTvMat, cutCityNear, cutCityMid, cutCityFar;
     static Texture2D cutSkyClear, cutSkyFlash, cutTvShow, cutTvNews;
     static VolumeProfile cutProfile;
@@ -78,9 +79,9 @@ public static partial class GameSceneBuilder
             EditorUtility.DisplayProgressBar("컷씬 이미지 생성", "그림과 모형 만드는 중...", 0.1f);
             CutPrepareFont();
             var cam = CutBuildWorld();
-            for (int shot = 0; shot < 3; shot++)
+            for (int shot = 0; shot < 4; shot++)
             {
-                EditorUtility.DisplayProgressBar("컷씬 이미지 생성", $"{shot + 1}번 사진 찍는 중...", 0.3f + shot * 0.22f);
+                EditorUtility.DisplayProgressBar("컷씬 이미지 생성", $"{shot + 1}번 사진 찍는 중...", 0.3f + shot * 0.17f);
                 CutSetupShot(shot, cam);
                 // 에디터의 첫 렌더에는 방금 만든 메시가 빠질 수 있어 한 번 미리 찍어 둔다
                 if (shot == 0) CutRender(cam, $"{CutDir}/cut{shot + 1}.png");
@@ -110,14 +111,14 @@ public static partial class GameSceneBuilder
         }
         if (!ok) return;
         CutImportImages();
-        Debug.Log("[GameSceneBuilder] 컷씬 이미지 3장 생성 완료: " + CutDir);
+        Debug.Log("[GameSceneBuilder] 컷씬 이미지 4장 생성 완료: " + CutDir);
     }
 
     // 게임에서 Resources.Load로 쓰기 좋게: 밉맵 없음, Clamp, 고품질 압축, 크기 그대로(NPOT)
     static void CutImportImages()
     {
         AssetDatabase.Refresh();
-        for (int i = 1; i <= 3; i++)
+        for (int i = 1; i <= 4; i++)
         {
             string path = $"{CutDir}/cut{i}.png";
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
@@ -179,6 +180,7 @@ public static partial class GameSceneBuilder
         var standPos = new Vector3(0.75f, 0, 1.25f);
         float standYaw = Mathf.Atan2(-1.6f - standPos.x, 3.1f - standPos.z) * Mathf.Rad2Deg;
         cutStanding = CutPerson(cutHome, "Standing", standPos, standYaw, shirt, jeans, skin, hair, shoes);
+        cutStandYaw = standYaw;
         CutPose(cutStanding, 0.92f, new Vector3(-8, 0, 0), new Vector3(14, 0, 0),
             new Vector3(-0.13f, 0.04f, 0.06f), new Vector3(-0.13f, 0.5f, 1f),
             new Vector3(0.15f, 0.04f, -0.2f), new Vector3(0.15f, 0.5f, 1f),
@@ -247,14 +249,19 @@ public static partial class GameSceneBuilder
         return cam;
     }
 
+    // 1 평범한 오후(소파) → 2 긴급 속보(TV 앞에 굳어 선 사람) → 3 핵폭발(창밖이 하얗게 타오른다) → 4 방공호 입구로 달린다
     static void CutSetupShot(int shot, Camera cam)
     {
-        bool home = shot < 2;
+        bool home = shot < 3;
         cutHome.gameObject.SetActive(home);
         cutShelter.gameObject.SetActive(!home);
         cutSitting.Root.gameObject.SetActive(shot == 0);
-        cutStanding.Root.gameObject.SetActive(shot == 1);
-        cutDroppedRemote.SetActive(shot == 1);
+        cutStanding.Root.gameObject.SetActive(shot == 1 || shot == 2);
+        cutDroppedRemote.SetActive(shot == 1 || shot == 2);
+        // 폭발 장면에서는 서 있던 사람이 창 쪽으로 몸을 돌린다 (카메라에는 등을 보이는 그림자)
+        var standPos = cutStanding.Root.localPosition;
+        float toWindow = Mathf.Atan2(1.7f - standPos.x, 3.2f - standPos.z) * Mathf.Rad2Deg;
+        cutStanding.Root.localRotation = Quaternion.Euler(0, shot == 2 ? toWindow : cutStandYaw, 0);
 
         if (shot == 0)
         {
@@ -275,20 +282,39 @@ public static partial class GameSceneBuilder
         }
         else if (shot == 1)
         {
-            // 속보: 창밖 지평선에서 섬광과 버섯구름, 방 안은 TV의 차가운 빛과 창으로 들어오는 주황빛
-            cutSkyMat.SetTexture("_BaseMap", cutSkyFlash);
-            cutSkyMat.SetColor("_BaseColor", new Color(1.3f, 1.3f, 1.3f));
+            // 긴급 속보 (폭발 직전): 창밖은 아직 맑은 오후, 방 안은 TV의 차가운 빛이 굳어 선 사람을 비춘다
+            cutSkyMat.SetTexture("_BaseMap", cutSkyClear);
+            cutSkyMat.SetColor("_BaseColor", new Color(1.0f, 1.0f, 1.0f));
             cutTvMat.SetTexture("_BaseMap", cutTvNews);
-            cutTvMat.SetColor("_BaseColor", new Color(1.35f, 1.35f, 1.35f));
-            CutCityTint(new Color(0.16f, 0.11f, 0.12f), new Color(0.3f, 0.19f, 0.17f), new Color(0.52f, 0.32f, 0.24f));
-            CutSunLight(new Vector3(9, 209, 0), new Color(1f, 0.6f, 0.3f), 3.2f);
+            cutTvMat.SetColor("_BaseColor", new Color(1.4f, 1.4f, 1.4f));
+            CutCityTint(new Color(0.7f, 0.72f, 0.78f), new Color(0.8f, 0.83f, 0.88f), new Color(0.9f, 0.92f, 0.96f));
+            CutSunLight(new Vector3(16, 205, 0), new Color(1f, 0.88f, 0.72f), 1.6f);
             CutSetLight(cutTvLight, new Color(0.72f, 0.84f, 1f), 6f);
-            CutSetLight(cutWindowLight, new Color(1f, 0.55f, 0.25f), 3f);
-            CutSetLight(cutBackLight, new Color(0.5f, 0.6f, 0.9f), 0.3f);
-            CutAmbient(new Color(0.1f, 0.11f, 0.15f));
-            CutGrade(0.1f, 16f, -6f, new Color(1f, 0.96f, 0.96f), 1.3f, 0.42f, 0.28f, 7.5f);
-            cam.backgroundColor = new Color(0.6f, 0.35f, 0.25f);
+            CutSetLight(cutWindowLight, new Color(1f, 0.9f, 0.76f), 1.6f);
+            CutSetLight(cutBackLight, new Color(0.5f, 0.6f, 0.9f), 0.4f);
+            CutAmbient(new Color(0.22f, 0.24f, 0.3f));
+            CutGrade(0.05f, 18f, -12f, new Color(0.96f, 0.98f, 1f), 0.9f, 0.45f, 0.28f, 7.5f);
+            cam.backgroundColor = new Color(0.6f, 0.68f, 0.8f);
             CutCamera(cam, new Vector3(0.35f, 1.2f, -1.6f), new Vector3(0.7f, 1.4f, 3.0f), 48f, 0f);
+        }
+        else if (shot == 2)
+        {
+            // 핵폭발: 창밖 지평선이 하얗게 타오르고 버섯구름이 솟는다. 창을 향해 선 사람은 역광의 그림자,
+            // 방 안은 창으로 쏟아지는 흰빛과 주황빛뿐 (TV 빛은 묻힌다)
+            cutSkyMat.SetTexture("_BaseMap", cutSkyFlash);
+            cutSkyMat.SetColor("_BaseColor", new Color(2.4f, 2.3f, 2.1f));
+            cutTvMat.SetTexture("_BaseMap", cutTvNews);
+            cutTvMat.SetColor("_BaseColor", new Color(0.9f, 0.9f, 0.9f));
+            CutCityTint(new Color(0.12f, 0.08f, 0.09f), new Color(0.26f, 0.16f, 0.14f), new Color(0.55f, 0.36f, 0.26f));
+            CutSunLight(new Vector3(7, 206, 0), new Color(1f, 0.82f, 0.6f), 6.5f);
+            CutSetLight(cutTvLight, new Color(0.72f, 0.84f, 1f), 1.2f);
+            CutSetLight(cutWindowLight, new Color(1f, 0.72f, 0.42f), 14f);
+            CutSetLight(cutBackLight, new Color(1f, 0.6f, 0.4f), 0.2f);
+            CutAmbient(new Color(0.12f, 0.08f, 0.09f));
+            CutGrade(0.45f, 24f, -8f, new Color(1f, 0.95f, 0.86f), 2.4f, 0.5f, 0.32f, 10f);
+            cam.backgroundColor = new Color(0.95f, 0.8f, 0.6f);
+            // 버섯구름이 사람 왼쪽에 보이고 사람은 화면 오른쪽에 서게 비스듬히 잡는다
+            CutCamera(cam, new Vector3(-0.6f, 1.1f, -0.4f), new Vector3(1.49f, 1.6f, 3.2f), 50f, 0f);
         }
         else
         {

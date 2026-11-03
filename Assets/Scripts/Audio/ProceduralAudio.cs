@@ -566,21 +566,176 @@ public static class ProceduralAudio
         }, 0.5f);
     }
 
-    // 적 소리용 감쇠 곡선 (가로축 = 거리 / maxDistance). 15~20m에서도 또렷하고 maxDistance에서 사라진다
-    static AnimationCurve enemyRolloff;
+    // ---------- 컷씬 소리 ----------
+
+    // 거실 TV의 예능 소리 (반복): 웅얼거리는 말소리(음절처럼 끊기는 잡음) 위에 가벼운 배경 음악과 가끔 터지는 웃음
+    public static AudioClip TvMurmur()
+    {
+        var voice = Biquad.BandPass(900, 1.2f);
+        var voice2 = Biquad.BandPass(2200, 2f);
+        var laugh = Biquad.BandPass(1400, 0.8f);
+        float syl = 0, sylEnv = 0, laughEnv = 0, phase = 0;
+        return Make("tvmurmur", 8f, t =>
+        {
+            syl += 1f / SR;
+            if (syl > 0.08f + Rand(0f, 0.12f)) { syl = 0; sylEnv = rng.NextDouble() < 0.2 ? 0 : Rand(0.4f, 1f); }
+            if (rng.NextDouble() < 0.00004) laughEnv = 1f;
+            laughEnv *= 0.99985f;
+            phase += (150f + 40f * Mathf.Sin(2 * Mathf.PI * 0.6f * t)) / SR;
+            float buzz = 2 * (phase - Mathf.Floor(phase + 0.5f));
+            float talk = (voice.Process(buzz * 0.3f + Noise()) + voice2.Process(Noise()) * 0.5f) * sylEnv;
+            float music = (Mathf.Sin(2 * Mathf.PI * 220 * t) + 0.5f * Mathf.Sin(2 * Mathf.PI * 330 * t) + 0.35f * Mathf.Sin(2 * Mathf.PI * 277 * t)) * (0.5f + 0.5f * Mathf.Sin(2 * Mathf.PI * t / 4f));
+            return talk * 0.8f + music * 0.06f + laugh.Process(Noise()) * laughEnv * (0.6f + 0.4f * Mathf.Sin(2 * Mathf.PI * 9 * t));
+        }, 0.6f, 0.8f);
+    }
+
+    // 긴급 속보 앵커의 다급한 말소리 (반복): 낮고 빠른 음절, 음악 없음
+    public static AudioClip NewsMurmur()
+    {
+        var voice = Biquad.BandPass(700, 1.4f);
+        var voice2 = Biquad.BandPass(1900, 2.2f);
+        float syl = 0, sylEnv = 0, phase = 0;
+        return Make("newsmurmur", 6f, t =>
+        {
+            syl += 1f / SR;
+            if (syl > 0.06f + Rand(0f, 0.08f)) { syl = 0; sylEnv = rng.NextDouble() < 0.15 ? 0 : Rand(0.5f, 1f); }
+            phase += (120f + 25f * Mathf.Sin(2 * Mathf.PI * 1.1f * t)) / SR;
+            float buzz = 2 * (phase - Mathf.Floor(phase + 0.5f));
+            return (voice.Process(buzz * 0.4f + Noise()) + voice2.Process(Noise()) * 0.45f) * sylEnv;
+        }, 0.65f, 0.6f);
+    }
+
+    // 재난 경보음: 두 음(853·960Hz)이 섞인 길고 거친 삐— 소리 세 번
+    public static AudioClip AlertTone()
+    {
+        return Make("alerttone", 3.3f, t =>
+        {
+            float u = t % 1.1f;
+            float env = u < 0.85f ? Mathf.Clamp01(u * 60) * Mathf.Clamp01((0.85f - u) * 60) : 0;
+            float s = Mathf.Sin(2 * Mathf.PI * 853 * t) + Mathf.Sin(2 * Mathf.PI * 960 * t);
+            return (float)System.Math.Tanh(s * 1.6f) * env;
+        }, 0.5f);
+    }
+
+    // TV 채널이 끊길 때의 지지직 소리
+    public static AudioClip Static()
+    {
+        var hp = Biquad.BandPass(3500, 0.4f);
+        var lp = Biquad.LowPass(1200);
+        return Make("tvstatic", 0.7f, t =>
+        {
+            float gate = Mathf.PerlinNoise(t * 40f, 0.3f) > 0.45f ? 1f : 0.25f;
+            return (hp.Process(Noise()) * 0.8f + lp.Process(Noise()) * 0.5f) * gate * Mathf.Clamp01((0.7f - t) * 6);
+        }, 0.7f);
+    }
+
+    // 핵폭발의 낮은 땅울림 (8초): 아주 낮은 굉음이 천천히 커졌다가 길게 사라진다
+    public static AudioClip Rumble()
+    {
+        float brown = 0;
+        var lp = Biquad.LowPass(70, 0.9f);
+        return Make("rumble", 8f, t =>
+        {
+            brown = (brown + 0.03f * Noise()) / 1.03f;
+            float env = Mathf.Clamp01(t * 2.5f) * Mathf.Exp(-t * 0.42f);
+            float sub = Mathf.Sin(2 * Mathf.PI * 28 * t + 2f * Mathf.Sin(2 * Mathf.PI * 0.7f * t)) * 0.6f;
+            return (lp.Process(brown * 12) + sub) * env;
+        }, 0.95f);
+    }
+
+    // 충격파가 닿는 소리 (3초): 날카로운 파열음 → 넓은 굉음 → 낮은 쿵
+    public static AudioClip Blast()
+    {
+        var crack = Biquad.BandPass(2400, 0.7f);
+        var roar = Biquad.LowPass(900);
+        var body = Biquad.LowPass(160);
+        return Make("blast", 3f, t =>
+        {
+            float c = crack.Process(Noise()) * Mathf.Exp(-t * 30) * 2.5f;
+            float r = roar.Process(Noise()) * Mathf.Exp(-t * 2.2f) * 1.6f;
+            float b = (body.Process(Noise()) * 3f + Mathf.Sin(2 * Mathf.PI * 42 * t)) * Mathf.Exp(-t * 3f);
+            return c + r + b;
+        }, 0.98f);
+    }
+
+    // 창유리가 깨져 흩어지는 소리 (1.4초): 와장창 하는 첫 파열 + 여기저기 떨어지며 쨍그랑거리는 조각들
+    public static AudioClip GlassBreak()
+    {
+        var crash = Biquad.BandPass(3200, 0.6f);
+        var rings = new Biquad[6];
+        var freqs = new float[6];
+        var env = new float[6];
+        for (int i = 0; i < 6; i++)
+        {
+            freqs[i] = 2600 + i * 820 + Rand(-150f, 150f);
+            rings[i] = Biquad.BandPass(freqs[i], 28f);
+        }
+        return Make("glassbreak", 1.4f, t =>
+        {
+            float y = crash.Process(Noise()) * Mathf.Exp(-t * 18) * 2f;
+            for (int i = 0; i < 6; i++)
+            {
+                if (rng.NextDouble() < (t < 0.5f ? 0.0012 : 0.0003) * Mathf.Clamp01((1.4f - t) * 2)) env[i] = Rand(0.5f, 1f);
+                env[i] *= 0.9992f;
+                y += rings[i].Process(Noise() * env[i]) * 12f;
+            }
+            return y;
+        }, 0.85f);
+    }
+
+    // 달리며 헐떡이는 숨 (반복 2초): 빠른 들숨·날숨에 목소리가 조금 섞인다
+    public static AudioClip RunBreath()
+    {
+        var bp = Biquad.BandPass(800, 0.8f);
+        var voice = Biquad.BandPass(380, 3f);
+        return Make("runbreath", 2f, t =>
+        {
+            float u = (t * 1.4f) % 1f;
+            float inhale = u < 0.4f ? Mathf.Sin(Mathf.PI * u / 0.4f) : 0;
+            float exhale = u > 0.45f && u < 0.95f ? Mathf.Sin(Mathf.PI * (u - 0.45f) / 0.5f) : 0;
+            float n = Noise();
+            return bp.Process(n) * (inhale * 0.6f + exhale) + voice.Process(n) * exhale * 0.8f;
+        }, 0.55f, 0.3f);
+    }
+
+    // 천장에서 먼지·회반죽이 떨어지는 소리 (2초): 자잘한 톡톡 소리와 쏟아지는 모래 소리
+    public static AudioClip DebrisFall()
+    {
+        var sand = Biquad.BandPass(2600, 1f);
+        var tap = Biquad.BandPass(1200, 6f);
+        float tapEnv = 0;
+        return Make("debrisfall", 2f, t =>
+        {
+            if (rng.NextDouble() < 0.0025 * Mathf.Clamp01((2f - t))) tapEnv = Rand(0.3f, 1f);
+            tapEnv *= 0.996f;
+            return sand.Process(Noise()) * Mathf.Exp(-t * 1.6f) * 0.8f + tap.Process(Noise()) * tapEnv * 6f;
+        }, 0.6f);
+    }
+
+    // 적 소리용 감쇠 곡선 (가로축 = 거리 / maxDistance). 가까우면 크고 멀어질수록 빠르게 작아져 거리감이 분명하다
+    static AnimationCurve enemyRolloff, enemyLowPass;
 
     static AnimationCurve EnemyRolloff()
     {
         if (enemyRolloff != null) return enemyRolloff;
         enemyRolloff = new AnimationCurve(
-            new Keyframe(0f, 1f), new Keyframe(0.08f, 1f), new Keyframe(0.3f, 0.72f),
-            new Keyframe(0.5f, 0.45f), new Keyframe(0.75f, 0.16f), new Keyframe(1f, 0f));
+            new Keyframe(0f, 1f), new Keyframe(0.06f, 1f), new Keyframe(0.2f, 0.66f),
+            new Keyframe(0.4f, 0.36f), new Keyframe(0.6f, 0.18f), new Keyframe(0.8f, 0.07f), new Keyframe(1f, 0f));
         for (int i = 1; i < enemyRolloff.length - 1; i++) enemyRolloff.SmoothTangents(i, 0);
         return enemyRolloff;
     }
 
-    // 좀비·들개 같은 적 소리용 AudioSource 설정: 완전 3D, 방향이 또렷하게(spread 0), 도플러 없음.
-    // tag면 계속 켜 두는 소리로 보고 '적 소리' 음량을 따른다
+    // 먼 소리는 고음이 깎여 먹먹하게 (가로축 = 거리 / maxDistance, 세로축 = 저역 통과 차단 주파수 비율)
+    static AnimationCurve EnemyLowPass()
+    {
+        if (enemyLowPass != null) return enemyLowPass;
+        enemyLowPass = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.25f, 0.8f), new Keyframe(0.6f, 0.35f), new Keyframe(1f, 0.12f));
+        for (int i = 1; i < enemyLowPass.length - 1; i++) enemyLowPass.SmoothTangents(i, 0);
+        return enemyLowPass;
+    }
+
+    // 좀비·들개 같은 적 소리용 AudioSource 설정: 완전 3D, 방향이 또렷하게(spread 0), 도플러 없음,
+    // 거리에 따라 빠르게 작아지고 멀수록 먹먹해진다(저역 통과). tag면 계속 켜 두는 소리로 보고 '적 소리' 음량을 따른다
     public static void Setup3D(AudioSource src, float maxDistance = 36f, int priority = 64, bool tag = true)
     {
         if (tag) AudioCategory.Tag(src, SoundCategory.Enemy);
@@ -593,6 +748,9 @@ public static class ProceduralAudio
         src.maxDistance = maxDistance;
         src.rolloffMode = AudioRolloffMode.Custom;
         src.SetCustomCurve(AudioSourceCurveType.CustomRolloff, EnemyRolloff());
+        var lowPass = src.GetComponent<AudioLowPassFilter>();
+        if (lowPass == null) lowPass = src.gameObject.AddComponent<AudioLowPassFilter>();
+        lowPass.customCutoffCurve = EnemyLowPass();
     }
 
     // PlayAt과 같지만 적 소리용 3D 설정을 쓴다

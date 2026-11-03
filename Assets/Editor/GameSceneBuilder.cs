@@ -10,7 +10,7 @@ using UnityEngine.Rendering.Universal;
 // 메뉴 Tools > 핵폭발 생존 > 게임 씬 전체 생성
 // 방공호(Shelter)·폐허 도시(City) 씬, 플레이어/좀비/들개 프리팹, 머티리얼, 포스트 프로세싱을 한 번에 만든다.
 // 다시 실행하면 두 씬을 처음부터 새로 만든다 (씬에서 손으로 고친 내용은 사라짐).
-// 파일 나눔: 이 파일(공통·도우미) / .Prefabs / .Shelter / .Menu / .City
+// 파일 나눔: 이 파일(공통·도우미) / .Prefabs / .Shelter / .Menu / .City / .CutsceneScene(도입 컷씬 씬) / .Cutscene(옛 컷씬 사진 생성기)
 public static partial class GameSceneBuilder
 {
     const string TexDir = "Assets/ThirdParty/PolyHaven";
@@ -45,17 +45,18 @@ public static partial class GameSceneBuilder
         BuildShelterScene(player, zombie);
         BuildCityScene(player, zombie, dog);
         BuildMenuScene(zombie);
+        BuildCutsceneScene();
 
         EditorBuildSettings.scenes = new[]
         {
             new EditorBuildSettingsScene(SceneDir + "/MainMenu.unity", true),
+            new EditorBuildSettingsScene(SceneDir + "/Cutscene.unity", true),
             new EditorBuildSettingsScene(SceneDir + "/Shelter.unity", true),
             new EditorBuildSettingsScene(SceneDir + "/City.unity", true),
-            new EditorBuildSettingsScene(SceneDir + "/SampleScene.unity", false),
         };
         AssetDatabase.SaveAssets();
         EditorSceneManager.OpenScene(SceneDir + "/MainMenu.unity");
-        Debug.Log("[GameSceneBuilder] MainMenu / Shelter / City 씬 생성 완료");
+        Debug.Log("[GameSceneBuilder] MainMenu / Cutscene / Shelter / City 씬 생성 완료");
     }
 
     // 밸런스 에셋은 팀이 고친 값을 지키기 위해 없을 때만 만든다
