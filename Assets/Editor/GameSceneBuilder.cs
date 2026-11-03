@@ -596,7 +596,7 @@ public static partial class GameSceneBuilder
         return go.AddComponent<T>();
     }
 
-    // 건물 밖 바닥의 아이템 자리 (돌도 나올 수 있다)
+    // 건물 밖 바닥의 아이템 자리 (돌만 나온다)
     static void OutdoorItemPoint(Transform parent, Vector3 worldPos) => Spawn<ItemSpawnPoint>(parent, worldPos).outdoor = true;
 
     // ---------- 벽 (문·창문 구멍 포함) ----------

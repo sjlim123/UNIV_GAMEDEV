@@ -101,8 +101,10 @@ public static class ProcTex
             stains[i] = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), 0.05f + 0.1f * (float)rng.NextDouble(), (float)rng.NextDouble());
         var bloodDark = new Color(0.24f, 0.05f, 0.04f);
         var bloodFresh = new Color(0.46f, 0.1f, 0.08f);
-        // 무늬 주기(텍스처 한 장에 몇 번): 천의 결은 촘촘하게
-        int weave = Mathf.Clamp(Mathf.RoundToInt(tile / 0.004f), 4, size / 4);
+        // 무늬 주기(텍스처 한 장에 몇 번): 천의 결은 촘촘하게. 한 주기가 8픽셀보다 좁으면 멀리서 바둑판처럼 자글거린다
+        int weave = Mathf.Clamp(Mathf.RoundToInt(tile / 0.004f), 4, size / 8);
+        // 핏자국 때문에 한 장이 넓은 면(tile)을 덮으면 결이 굵어지므로 결을 거의 지운다
+        float weaveAmt = tile <= 0.25f ? 0.35f : 0.08f;
 
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
@@ -131,14 +133,16 @@ public static class ProcTex
                     case Kind.Cloth:
                     {
                         float wx = Mathf.Sin(u * weave * Mathf.PI * 2), wy = Mathf.Sin(v * weave * Mathf.PI * 2);
-                        h = (wx * 0.5f + 0.5f) * (wy > 0 ? 1 : 0.6f) * 0.5f + (wy * 0.5f + 0.5f) * (wx > 0 ? 0.6f : 1) * 0.5f;
-                        t = 0.55f + (big - 0.5f) * 0.4f + (h - 0.5f) * 0.05f + (fine - 0.5f) * 0.08f;
+                        float cloth = (wx * 0.5f + 0.5f) * (wy > 0 ? 1 : 0.6f) * 0.5f + (wy * 0.5f + 0.5f) * (wx > 0 ? 0.6f : 1) * 0.5f;
+                        // 결은 약하게, 대신 잔잔한 보풀·구김
+                        h = cloth * weaveAmt + fine * 0.35f + mid * (0.65f - weaveAmt);
+                        t = 0.55f + (big - 0.5f) * 0.4f + (fine - 0.5f) * 0.08f;
                         break;
                     }
                     case Kind.Denim:
                     {
                         float d = Mathf.Sin((u + v) * weave * Mathf.PI * 2);
-                        h = d * 0.5f + 0.5f;
+                        h = (d * 0.5f + 0.5f) * weaveAmt + fine * 0.35f + mid * (0.65f - weaveAmt);
                         float fade = Step(0.45f, 0.8f, Fbm(u, v, 3, 3, seed + 21));
                         t = 0.5f + (h - 0.5f) * 0.08f + fade * 0.3f + (fine - 0.5f) * 0.1f;
                         break;
@@ -168,7 +172,8 @@ public static class ProcTex
                         int strands = kind == Kind.Fur ? 64 : 48;
                         float strand = Noise(u * strands, v * 4, strands, seed + 3) * 0.6f + Noise(u * strands * 2, v * 8, strands * 2, seed + 4) * 0.4f;
                         h = strand;
-                        t = 0.45f + (strand - 0.5f) * 0.7f + (big - 0.5f) * 0.4f;
+                        // 털 가닥 색 차이가 크면 멀리서 나뭇결 줄무늬처럼 보인다
+                        t = 0.45f + (strand - 0.5f) * (kind == Kind.Fur ? 0.35f : 0.7f) + (big - 0.5f) * 0.4f;
                         break;
                     }
                     case Kind.Wood:
@@ -222,7 +227,8 @@ public static class ProcTex
 
         // 높이 차이로 노멀맵을 만든다 (선형 색공간, RGB = 법선, A = 1)
         var nrm = new Color[size * size];
-        float strength = size / 64f;
+        // 천·털은 결이 너무 도드라지면 멀리서 줄무늬·바둑판처럼 깨져 보인다
+        float strength = size / 64f * (kind == Kind.Cloth || kind == Kind.Denim ? 0.5f : kind == Kind.Fur ? 0.6f : 1f);
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {

@@ -161,6 +161,8 @@ public static class CharacterModels
 
     static readonly float[] UpperArmRings =
     {
+        0.07f, 0.016f, 0.017f, 0f,
+        0.055f, 0.036f, 0.038f, 0f,
         0.03f, 0.044f, 0.046f, 0f,
         0.00f, 0.056f, 0.054f, 0f,
         -0.05f, 0.054f, 0.052f, 0.003f,
@@ -232,8 +234,9 @@ public static class CharacterModels
         b.Part(hips, pelvis, h.Pants, Vector3.zero);
         if (h.Belt)
         {
-            b.Part(hips, Tube(k + "belt", 0.0f, 0.162f * bulk, 0.108f * bulk, 0.006f, 0.04f, 0.158f * bulk, 0.104f * bulk, 0.006f), ProcTex.Get(ProcTex.Kind.Leather, Hex("2e231b"), 3), Vector3.zero);
-            b.Part(hips, ProcMesh.Box("buckle", 0.05f, 0.04f, 0.012f), ProcTex.Plain(Hex("8c8576"), 0.6f, 0.6f), new Vector3(0, 0.02f, 0.11f * bulk));
+            // 허리띠는 골반보다 6mm 이상 크게 (붙어 있으면 멀리서 두 면이 겹쳐 깜빡인다)
+            b.Part(hips, Tube(k + "belt", 0.0f, 0.168f * bulk, 0.113f * bulk, 0.006f, 0.04f, 0.164f * bulk, 0.11f * bulk, 0.006f), ProcTex.Get(ProcTex.Kind.Leather, Hex("2e231b"), 3), Vector3.zero);
+            b.Part(hips, ProcMesh.Box("buckle", 0.05f, 0.04f, 0.012f), ProcTex.Plain(Hex("8c8576"), 0.6f, 0.6f), new Vector3(0, 0.02f, 0.118f * bulk));
         }
 
         // --- 다리 ---
@@ -278,7 +281,7 @@ public static class CharacterModels
             // 어깨 근육 (소매가 있으면 소매색)
             b.Part(arm, Ell(k + "delt", 0.05f * limb, 0.062f, 0.054f * limb), h.Sleeve ?? h.Skin, new Vector3(-s * 0.004f, -0.018f, 0));
             if (h.Sleeve != null)
-                b.Part(arm, Tube(k + "sleeve", Slice(Grow(UpperArmRings, limb * 1.22f, limb * 1.22f), Mathf.Max(h.SleeveTo, -0.31f), 0.03f)), h.Sleeve, Vector3.zero);
+                b.Part(arm, Tube(k + "sleeve", Slice(Grow(UpperArmRings, limb * 1.22f, limb * 1.22f), Mathf.Max(h.SleeveTo, -0.31f), 0.08f)), h.Sleeve, Vector3.zero);
 
             var fore = b.Joint(s < 0 ? "ForeL" : "ForeR", arm, new Vector3(0, -UpperArm, 0));
             b.Part(fore, Tube(k + "forearm", Grow(ForearmRings, limb, limb)), h.SleeveTo < -0.31f && h.Sleeve != null ? h.Sleeve : h.Skin, Vector3.zero);
@@ -415,13 +418,6 @@ public static class CharacterModels
         }
     }
 
-    // 옷이 찢어져 드러난 상처 (살갗 + 검붉은 테두리)
-    static void Rip(Builder b, Transform parent, Material skin, Vector3 pos, float yaw, float w, float hgt)
-    {
-        b.Part(parent, Ell("riprim", 1, 1, 1), ProcTex.Plain(Hex("3d0f0b"), 0.55f), pos, new Vector3(0, yaw, 0), new Vector3(w * 1.25f, hgt * 1.2f, 0.012f), false);
-        b.Part(parent, Ell("ripskin", 1, 1, 1), skin, pos + Quaternion.Euler(0, yaw, 0) * new Vector3(0, 0, 0.003f), new Vector3(0, yaw, 0), new Vector3(w, hgt, 0.012f), false);
-    }
-
     // ================= 01 일반 좀비 =================
     // 피부 #8E9C7C, 셔츠 #BDB39C(찢김·혈흔), 청바지 #51637C, 눈 #E6E0A3 (발광). 변형: 0 기본 · 1 여성형 · 2 작업복 · 3 비만형
 
@@ -472,10 +468,8 @@ public static class CharacterModels
         var body = b.Rig.Body;
         float bulk = h.Bulk;
 
-        // 찢어진 셔츠 자락·찢긴 틈의 상처
+        // 찢어진 셔츠 자락
         Tatters(b, body, h.Shirt, 0.02f, 0.155f * bulk, 0.104f * bulk, 7, seed);
-        Rip(b, body, h.Skin, new Vector3(-0.07f * bulk, 0.32f, 0.11f * bulk + 0.004f), -18, 0.045f, 0.06f);
-        Rip(b, body, h.Skin, new Vector3(0.1f * bulk, 0.16f, -0.092f * bulk), 160, 0.05f, 0.04f);
         if (variant == 1) // 블라우스 아랫자락이 허벅지까지
             b.Part(b.Rig.Model.Find("Hips"), Tube(b.Key + "skirt", -0.22f, 0.2f, 0.15f, 0.01f, -0.05f, 0.172f, 0.118f, 0.005f, 0.04f, 0.162f, 0.108f, 0.004f), h.Shirt, Vector3.zero);
         if (variant == 2)
@@ -486,9 +480,6 @@ public static class CharacterModels
             b.Part(b.Rig.Head, Tube(b.Key + "cap", capRings), cap, Vector3.zero);
             b.Part(b.Rig.Head, ProcMesh.Tube("brim", 3, 12, 0f, 0.07f, 0.06f, 0f, 0.008f, 0.07f, 0.06f, 0f), cap, new Vector3(0, 0.17f, 0.1f), new Vector3(-8, 0, 0));
         }
-        // 무릎이 해진 청바지
-        if (variant != 2)
-            Rip(b, b.Rig.ShinL, h.Skin, new Vector3(0, -0.02f, 0.06f), 0, 0.03f, 0.035f);
     }
 
     // ================= 02 가죽갑옷 좀비 =================
@@ -522,9 +513,9 @@ public static class CharacterModels
         var chest = b.Armor("ChestArmor", rig.Body, Vector3.zero);
         var shell = Grow(Slice(Grow(TorsoRings, bulk, Mathf.Pow(bulk, 0.7f)), 0.08f, 0.48f), 1.09f, 1.14f, 0.004f);
         b.Part(chest, ProcMesh.Tube(b.Key + "cuirass", 3.2f, 16, shell), leather, Vector3.zero);
-        b.Part(chest, ProcMesh.Box("strapdiag", 0.05f, 0.62f, 0.012f), strap, new Vector3(0, 0.27f, 0.128f * bulk), new Vector3(-6, 0, 38));
-        b.Part(chest, ProcMesh.Box("strapdiag", 0.05f, 0.62f, 0.012f), strap, new Vector3(0, 0.27f, -0.124f * bulk), new Vector3(6, 0, 38));
-        b.Part(chest, ProcMesh.Box("chestband", 0.36f, 0.035f, 0.01f), strap, new Vector3(0, 0.12f, 0.124f * bulk), new Vector3(4, 0, 0));
+        b.Part(chest, ProcMesh.Box("strapdiag", 0.05f, 0.4f, 0.012f), strap, new Vector3(0, 0.27f, 0.128f * bulk), new Vector3(-6, 0, 38));
+        b.Part(chest, ProcMesh.Box("strapdiag", 0.05f, 0.4f, 0.012f), strap, new Vector3(0, 0.27f, -0.124f * bulk), new Vector3(6, 0, 38));
+        b.Part(chest, ProcMesh.Box("chestband", 0.26f, 0.035f, 0.01f), strap, new Vector3(0, 0.12f, 0.124f * bulk), new Vector3(4, 0, 0));
         for (int i = 0; i < 6; i++)
         {
             float x = (i % 2 == 0 ? -1 : 1) * 0.11f * bulk, y = 0.18f + (i / 2) * 0.1f;
@@ -863,7 +854,7 @@ public static class CharacterModels
             for (int i = 0; i < 3; i++)
                 b.Part(rig.Body, ProcMesh.Box("rib", 0.006f, 0.1f, 0.016f), ProcTex.Plain(Hex("5c4b3b"), 0.2f), new Vector3(s * 0.106f, -0.02f, -0.02f + i * 0.055f), new Vector3(-12, 0, s * 6), null, false);
         // 옆구리의 흉터
-        b.Part(rig.Body, Ell("dogscar", 0.004f, 0.03f, 0.05f), ProcTex.Plain(Hex("a8706a"), 0.5f), new Vector3(0.118f, 0.02f, -0.18f), new Vector3(0, 0, 0), null, false);
+        b.Part(rig.Body, Ell("dogscar", 0.004f, 0.03f, 0.05f), ProcTex.Plain(Hex("a8706a"), 0.5f), new Vector3(0.1f, 0.02f, -0.18f), new Vector3(0, 0, 0), null, false);
 
         // 목·머리
         rig.Neck = b.Joint("Neck", rig.Body, new Vector3(0, 0.05f, 0.3f));

@@ -304,8 +304,10 @@ public partial class UIManager
         float w = s.Carried.Weight, cap = s.CarryCapacity;
         float ratio = cap > 0 ? Mathf.Clamp01(w / cap) : 1f;
         bool heavy = ratio >= 0.9f;
-        var wl = NewText(p, "소지 무게", 20, TextAnchor.MiddleLeft, Accent, FontSemiBold);
-        Place(wl.rectTransform, new Vector2(0, 1), new Vector2(0, -392), new Vector2(160, 34));
+        // 80%부터 걸음이 느려진다: 무게 옆에 지금 이동 속도를 적는다
+        float loadSpeed = PlayerController.LoadSpeedFor(w, cap);
+        var wl = NewText(p, loadSpeed < 0.999f ? $"소지 무게  <size=16><color=#{ColorUtility.ToHtmlStringRGB(Danger)}>이동 속도 {loadSpeed * 100:0}%</color></size>" : "소지 무게", 20, TextAnchor.MiddleLeft, Accent, FontSemiBold);
+        Place(wl.rectTransform, new Vector2(0, 1), new Vector2(0, -392), new Vector2(240, 34));
         var wv = NewText(p, $"{w:0.0} / {cap:0.0} kg", 24, TextAnchor.MiddleRight, heavy ? Danger : Text, FontBold);
         Place(wv.rectTransform, new Vector2(1, 1), new Vector2(0, -392), new Vector2(220, 34));
         var bar = NewRect("WeightBar", p);

@@ -102,6 +102,10 @@ public class GameBalance : ScriptableObject
     [Header("짐")]
     [Tooltip("가방 없이 들 수 있는 무게. 가방을 메면 가방마다 더 늘어난다 (ItemDatabase의 CarryBonus)")]
     public float carryCapacity = 5f;
+    [Tooltip("소지 무게가 들 수 있는 무게의 이 비율부터 걸음이 느려지기 시작한다 (0.8 = 80%)")]
+    [Range(0, 1)] public float slowLoadRatio = 0.8f;
+    [Tooltip("짐이 가득 찼을 때(100%) 이동 속도 배율. slowLoadRatio부터 100%까지 서서히 이 값으로 줄어든다 (0.6 = 40% 느리게)")]
+    [Range(0.1f, 1f)] public float fullLoadSpeedMultiplier = 0.6f;
     [Tooltip("배터리 1개로 손전등을 켤 수 있는 시간(초)")]
     public float flashlightSecondsPerBattery = 300f;
     public float fuelPower = 35f;
@@ -112,7 +116,8 @@ public class GameBalance : ScriptableObject
     [Tooltip("붉은 밤: redNightInterval초마다 체력이 이만큼 준다")]
     public float redNightDamage = 3f;
     public float redNightInterval = 3f;
-    [Range(0, 1)] public float itemSpawnChance = 0.55f;
+    [Tooltip("아이템 자리마다 아이템이 놓일 확률 (0.45 = 45%)")]
+    [Range(0, 1)] public float itemSpawnChance = 0.45f;
     public int startZombies = 3;
     public int maxZombies = 10;
     public int dogCount = 2;

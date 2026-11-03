@@ -1,7 +1,8 @@
 using UnityEngine;
 
 // 1인칭 이동: 이동키(기본 WASD), 마우스 시점, 달리기(스테미너 소모), 앉기, 점프. 조작키는 설정 → 컨트롤에서 바꾼다 (KeyBindings).
-// 소지 무게가 들 수 있는 무게의 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio).
+// 소지 무게가 들 수 있는 무게의 80%를 넘으면 100%까지 걸음이 서서히 느려지고 (GameBalance.slowLoadRatio·fullLoadSpeedMultiplier),
+// 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio).
 // 발소리와 소음 수치, 카메라 움직임(걸음 흔들림·옆걸음 기울기·달릴 때 시야 넓어짐·점프 착지 출렁임·지친 숨)도 여기서 만든다.
 // 침대에서 잘 때는 SetSleep으로 카메라를 침대에 눕힌다
 [RequireComponent(typeof(CharacterController))]
@@ -50,6 +51,38 @@ public class PlayerController : MonoBehaviour
     }
 
     float StaminaCostMultiplier => IsHeavy ? GameBalance.Data.heavyStaminaMultiplier : 1f;
+
+    // 짐 무게에 따른 이동 속도 배율: slowLoadRatio(80%)까지는 1, 거기서 100%까지 fullLoadSpeedMultiplier로 서서히 줄어든다
+    public static float LoadSpeedFor(float weight, float capacity)
+    {
+        var b = GameBalance.Data;
+        if (capacity <= 0) return b.fullLoadSpeedMultiplier;
+        float t = Mathf.InverseLerp(b.slowLoadRatio, 1f, weight / capacity);
+        return Mathf.Lerp(1f, b.fullLoadSpeedMultiplier, t);
+    }
+
+    // 지금 걸음에 쓰는 배율 (짐을 줍거나 버리면 1초쯤에 걸쳐 바뀐다)
+    public float LoadSpeed { get; private set; } = 1f;
+    bool slowedNotice, loadChecked;
+
+    void UpdateLoadSpeed(float dt)
+    {
+        var s = GameManager.Instance.State;
+        float target = LoadSpeedFor(s.Carried.Weight, s.CarryCapacity);
+        bool slowed = target < 0.999f;
+        if (!loadChecked)
+        {
+            // 장면을 막 열었을 때는 알림 없이 바로 맞춘다
+            loadChecked = true;
+            LoadSpeed = target;
+            slowedNotice = slowed;
+            return;
+        }
+        LoadSpeed = Mathf.MoveTowards(LoadSpeed, target, dt * 0.5f);
+        // 짐 때문에 느려지기 시작하면 한 번 알려 준다
+        if (slowed && !slowedNotice) GameManager.Instance.UI.ShowMessage("짐이 무거워 걸음이 느려진다.", 2f);
+        slowedNotice = slowed;
+    }
 
     public bool InputBlocked
     {
@@ -148,7 +181,8 @@ public class PlayerController : MonoBehaviour
         bool runHeld = !blocked && KeyBindings.Held(GameAction.Run);
         IsRunning = runHeld && !IsCrouching && move.y > 0 && !exhausted && Stamina > 0;
         UpdateStamina(runHeld, dt, balance);
-        float speed = IsCrouching ? balance.CrouchSpeed : IsRunning ? balance.RunSpeed : balance.WalkSpeed;
+        UpdateLoadSpeed(dt);
+        float speed = (IsCrouching ? balance.CrouchSpeed : IsRunning ? balance.RunSpeed : balance.WalkSpeed) * LoadSpeed;
 
         Vector3 dir = transform.right * move.x + transform.forward * move.y;
         if (dir.sqrMagnitude > 1) dir.Normalize();

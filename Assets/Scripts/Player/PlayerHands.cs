@@ -5,13 +5,10 @@ using UnityEngine.Rendering;
 // 1인칭 손 (HandRig 두 개): 왼손은 손전등, 오른손은 핫바에서 고른 아이템을 아이템마다 다른 모양(HeldItems)으로 쥔다.
 // 손가락은 쥔 물건 표면에 닿을 때까지 감는다(HandRig.Wrap). 바꿔 들 때는 손을 내렸다 올리며 펴진 손가락을 오므려 쥔다.
 // 주먹·찌르기·휘두르기·새총·먹기·마시기·붕대 감기·구급상자·라이터 켜기·손전등 딸깍 같은 몸짓은 기본 자세 위에 얹는다.
-// 그림자 전용 몸통도 만들어서 조명 아래 플레이어 그림자가 보이게 한다.
+// 조명 아래 플레이어 그림자는 그림자 전용 몸(PlayerShadowBody)이 이 팔들을 따라 움직이며 드리운다.
 public class PlayerHands : MonoBehaviour
 {
     public static PlayerHands Instance { get; private set; }
-
-    static readonly Color Sleeve = new Color(0.24f, 0.26f, 0.21f); // 낡은 야상
-    static readonly Color Cuff = new Color(0.15f, 0.16f, 0.13f);
 
     // 손잡이를 쥔 손 안의 손잡이 축 (손 좌표): 새끼 쪽 손목 가까이에서 검지 뿌리 쪽으로 비스듬히 지난다
     static readonly Vector3 PowerAxis = new Vector3(0, 1f, 0.4f).normalized;
@@ -19,8 +16,7 @@ public class PlayerHands : MonoBehaviour
     PlayerController pc;
     PlayerFlashlight flashlight;
     PlayerHotbar hotbar;
-    CharacterController cc;
-    Transform handsRoot, shadowBody;
+    Transform handsRoot;
     HandRig right, left;
 
     // 오른손
@@ -64,9 +60,8 @@ public class PlayerHands : MonoBehaviour
         pc = GetComponent<PlayerController>();
         flashlight = GetComponent<PlayerFlashlight>();
         hotbar = GetComponent<PlayerHotbar>();
-        cc = GetComponent<CharacterController>();
         Init(pc.cameraRoot);
-        BuildShadowBody();
+        if (GetComponent<PlayerShadowBody>() == null) gameObject.AddComponent<PlayerShadowBody>();
     }
 
     // 손 둘과 손전등을 만든다 (편집기 미리보기에서도 부른다)
@@ -82,7 +77,7 @@ public class PlayerHands : MonoBehaviour
         // 왼손 손전등. 실제 불빛(Spot Light)도 렌즈 앞으로 옮겨 손을 따라 흔들린다
         var model = new GameObject("FlashlightModel").transform;
         ItemVisuals.Build("flashlight", model);
-        var spec = HeldItems.Get("flashlight");
+        var spec = HeldItems.LeftFlashlight;
         Attach(left, model, spec);
         ComputeGrip(left, model, spec, leftGrip);
         System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
@@ -100,18 +95,17 @@ public class PlayerHands : MonoBehaviour
             r.shadowCastingMode = ShadowCastingMode.Off;
     }
 
-    void BuildShadowBody()
+    // 그림자 몸(PlayerShadowBody)이 따라갈 1인칭 팔: 화면에 보이면 true와 함께 팔꿈치·손목 자리와 손 방향 (월드 좌표)
+    public bool ArmPose(bool rightArm, out Vector3 elbow, out Vector3 wrist, out Quaternion hand)
     {
-        shadowBody = new GameObject("ShadowBody").transform;
-        shadowBody.SetParent(transform, false);
-        RuntimeVisuals.Part(PrimitiveType.Capsule, shadowBody, new Vector3(0, 1.15f, 0), new Vector3(0.48f, 0.38f, 0.3f), Sleeve);
-        RuntimeVisuals.Part(PrimitiveType.Sphere, shadowBody, new Vector3(0, 1.68f, 0), new Vector3(0.23f, 0.26f, 0.24f), HandRig.SkinColor);
-        RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(-0.11f, 0.42f, 0), new Vector3(0.17f, 0.84f, 0.2f), Cuff);
-        RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(0.11f, 0.42f, 0), new Vector3(0.17f, 0.84f, 0.2f), Cuff);
-        RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(-0.31f, 1.1f, 0), new Vector3(0.11f, 0.6f, 0.11f), Sleeve);
-        RuntimeVisuals.Part(PrimitiveType.Cube, shadowBody, new Vector3(0.31f, 1.1f, 0), new Vector3(0.11f, 0.6f, 0.11f), Sleeve);
-        foreach (var r in shadowBody.GetComponentsInChildren<Renderer>())
-            r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+        var rig = rightArm ? right : left;
+        elbow = wrist = Vector3.zero;
+        hand = Quaternion.identity;
+        if (rig == null || handsRoot == null || !handsRoot.gameObject.activeInHierarchy || !rig.Elbow.gameObject.activeSelf) return false;
+        elbow = rig.Elbow.position;
+        wrist = rig.Wrist.position;
+        hand = rig.Wrist.rotation;
+        return true;
     }
 
     // ---------- 몸짓 시작 (다른 스크립트가 부른다) ----------
@@ -150,7 +144,6 @@ public class PlayerHands : MonoBehaviour
         // 침대에 누우면 손을 감춘다
         bool asleep = pc.SleepBlend > 0.05f;
         if (handsRoot.gameObject.activeSelf == asleep) handsRoot.gameObject.SetActive(!asleep);
-        if (shadowBody != null) shadowBody.localScale = new Vector3(1, cc.height / 1.8f, 1);
 
         string want = hotbar != null ? hotbar.SelectedId : null;
         if (want == "flashlight") want = null; // 손전등은 왼손 담당
@@ -367,18 +360,19 @@ public class PlayerHands : MonoBehaviour
                 rot = Aim(new Vector3(-1f, 0.05f, 0.25f), new Vector3(-0.25f, 0.4f, 0.88f));
                 break;
             default: // Ready: 힘을 뺀 빈손 (느슨한 주먹, 손등이 바깥)
-                wrist = new Vector3(0.2f, -0.195f, 0.38f);
-                rot = HandRig.Look(new Vector3(-0.25f, 0.5f, 0.83f), new Vector3(0.15f, 0.85f, -0.5f));
+                wrist = ReadyWrist;
+                rot = HandRig.Look(ReadyFingers, ReadyThumb);
                 break;
         }
     }
+
+    // 빈손: 손끝이 화면 가운데 쪽 앞을 보고, 엄지가 위, 손등이 바깥 위로 보인다
+    static readonly Vector3 ReadyWrist = new Vector3(0.21f, -0.21f, 0.36f), ReadyFingers = new Vector3(-0.2f, 0.22f, 0.95f), ReadyThumb = new Vector3(-0.3f, 0.92f, -0.1f);
 
     // 손잡이를 쥔 손을 놓는다: 손 안의 손잡이 축(PowerAxis)이 grip 방향을, 팔뚝이 forearm 방향을 향하게
     static Quaternion Aim(Vector3 grip, Vector3 forearm) =>
         Quaternion.LookRotation(grip, forearm) * Quaternion.Inverse(Quaternion.LookRotation(PowerAxis, Vector3.forward));
 
-    static Vector3 Mirror(Vector3 v) => new Vector3(-v.x, v.y, v.z);
-    static Quaternion Mirror(Quaternion q) => HandRig.Look(Mirror(q * Vector3.forward), Mirror(q * Vector3.up));
     static float Ease(float t) => t * t * (3 - 2 * t);
 
     // 몸짓의 돌림(화면 좌표) 가운데 팔뚝이 맡는 몫. 나머지는 손목이 꺾여 맡는다 (팔뚝이 크게 돌면 소매가 화면을 가로지른다)
@@ -507,6 +501,24 @@ public class PlayerHands : MonoBehaviour
         }
     }
 
+    // 손잡이를 쥔 손을 놓는다: 손잡이(PowerAxis)가 grip 쪽을, 팔꿈치가 elbowSide 쪽을 향하고,
+    // 손목은 새끼손가락 쪽으로 deviation도만큼 꺾인다 (음수면 엄지 쪽으로).
+    // forearm = 팔뚝 방향, bend = 팔뚝에 대한 손 방향 (HandRig.Place에 그대로 넘긴다)
+    static void GripAlong(Vector3 grip, Vector3 elbowSide, float deviation, out Quaternion forearm, out Quaternion bend)
+    {
+        float r = deviation * Mathf.Deg2Rad;
+        var toElbow = new Vector3(0, -Mathf.Sin(r), -Mathf.Cos(r)); // 손 좌표에서 팔꿈치 쪽
+        var hand = Quaternion.LookRotation(grip, elbowSide) * Quaternion.Inverse(Quaternion.LookRotation(PowerAxis, toElbow));
+        bend = Quaternion.AngleAxis(deviation, Vector3.right);
+        forearm = hand * Quaternion.Inverse(bend);
+    }
+
+    // 왼손 손전등 자세 (화면 좌표): 손등이 위로 오게 위에서 감아쥐고(오버핸드), 렌즈는 새끼손가락 쪽으로 나와 앞을 비춘다.
+    // 팔뚝은 화면 왼쪽에서 들어오고 손목은 엄지 쪽으로 조금 꺾는다. 끄면 왼쪽 아래로 내려 바닥 쪽을 향한다
+    static readonly Vector3 LeftOnWrist = new Vector3(-0.18f, -0.17f, 0.4f), LeftOnAim = new Vector3(0.12f, 0.06f, 1f), LeftOnElbow = new Vector3(-0.9f, -0.35f, -0.25f);
+    static readonly Vector3 LeftOffWrist = new Vector3(-0.25f, -0.36f, 0.3f), LeftOffAim = new Vector3(0.05f, -0.75f, 0.65f), LeftOffElbow = new Vector3(-0.8f, -0.2f, -0.5f);
+    const float LeftDeviation = -22f;
+
     // 왼손: 손전등을 켜면 들어 올리고, 끄면 내린다. 켜고 끌 때 엄지로 버튼을 딸깍 누른다
     void PoseLeft(float dt, bool hasLight, bool on)
     {
@@ -520,14 +532,12 @@ public class PlayerHands : MonoBehaviour
         lowerLeft = Mathf.MoveTowards(lowerLeft, on ? run * 0.5f : 1f, dt * 4);
         clickT = Mathf.Min(1f, clickT + dt / 0.22f);
 
-        BasePose(HoldPose.Forward, out var wrist, out var rot, out _);
-        wrist = Mirror(wrist) + new Vector3(-0.01f, 0.02f, 0.02f);
-        rot = Mirror(rot);
         float l = Ease(lowerLeft);
         float c = clickT < 1f ? Mathf.Sin(clickT * Mathf.PI) : 0;
-        wrist += new Vector3(-0.02f, -0.15f, -0.07f) * l + new Vector3(0, -0.006f, 0) * c;
-        rot = Quaternion.Euler(45 * l, 0, 0) * rot;
-        left.Place(wrist, rot, Quaternion.identity);
+        var wrist = Vector3.Lerp(LeftOnWrist, LeftOffWrist, l) + new Vector3(0, -0.006f, 0) * c;
+        // 손잡이 축(엄지 쪽)은 렌즈 반대쪽을 향한다
+        GripAlong(-Vector3.Slerp(LeftOnAim.normalized, LeftOffAim.normalized, l), Vector3.Slerp(LeftOnElbow.normalized, LeftOffElbow.normalized, l), LeftDeviation, out var forearm, out var bend);
+        left.Place(wrist, forearm, bend);
 
         System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
         leftFingers[2] += 25 * c;
