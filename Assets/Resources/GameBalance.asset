@@ -40,7 +40,7 @@ MonoBehaviour:
   flashlightSecondsPerBattery: 300
   fuelPower: 35
   expeditionSeconds: 300
-  itemSpawnChance: 0.55
+  itemSpawnChance: 0.45
   startZombies: 3
   maxZombies: 10
   dogCount: 2

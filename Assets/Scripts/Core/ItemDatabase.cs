@@ -282,16 +282,17 @@ public static class ItemDatabase
         TradeOffers.Add(t);
     }
 
-    // 필드 아이템 하나를 뽑는다. 돌은 건물 밖 바닥(outdoor) 자리에서만 나온다
+    // 필드 아이템 하나를 뽑는다. 건물 밖 길바닥(outdoor) 자리에는 돌만, 건물 안에는 돌을 뺀 나머지가 나온다
     public static string RollLoot(bool outdoor)
     {
+        if (outdoor) return SlingAmmoId;
         int total = 0;
         foreach (var kv in LootWeights)
-            if (outdoor || kv.Key != SlingAmmoId) total += kv.Value;
+            if (kv.Key != SlingAmmoId) total += kv.Value;
         int roll = Random.Range(0, total);
         foreach (var kv in LootWeights)
         {
-            if (!outdoor && kv.Key == SlingAmmoId) continue;
+            if (kv.Key == SlingAmmoId) continue;
             if (roll < kv.Value) return kv.Key;
             roll -= kv.Value;
         }

@@ -72,7 +72,7 @@ public static class HeldItems
         specs["stick"] = Power(HoldPose.Upright, new Vector3(0.02f, 0.025f, 0), Vector3.right, Vector3.up, 0.025f);
 
         // 마시고 먹는 것: 몸통을 감아쥔다
-        specs["water"] = Power(HoldPose.Hold, new Vector3(0, 0.13f, 0), Vector3.up, Vector3.forward, 0.045f);
+        specs["water"] = Power(HoldPose.Hold, new Vector3(0, 0.13f, 0), Vector3.up, Vector3.forward, 0.045f, 0.78f);
         specs["water"].Use = UseGesture.Drink;
         specs["canned_food"] = Power(HoldPose.Hold, new Vector3(0, 0.06f, 0), Vector3.up, Vector3.forward, 0.0465f);
         specs["canned_food"].Use = UseGesture.Eat;
@@ -129,9 +129,12 @@ public static class HeldItems
         // 바퀴: 위쪽 타이어를 손가락으로 걸어 든다
         specs["wheel"] = Hook(new Vector3(0, 0.3625f, 0), Vector3.forward, Vector3.up, 0.043f, 0.72f);
 
-        // 손전등 (왼손): 몸통을 쥐고 빛이 앞으로
+        // 손전등 (오른손으로 들 때): 몸통을 쥐고 빛이 앞으로
         specs["flashlight"] = Power(HoldPose.Forward, new Vector3(0, 0.028f, -0.03f), Vector3.forward, Vector3.up, 0.02f);
     }
+
+    // 왼손 손전등: 손등이 위로 오게 위에서 감아쥔다. 렌즈(+z)가 새끼손가락 쪽으로 나오도록 손잡이 축을 뒤집고, 버튼(+y)은 손가락 쪽
+    public static readonly HeldSpec LeftFlashlight = Power(HoldPose.Forward, new Vector3(0, 0.028f, -0.01f), Vector3.back, Vector3.up, 0.02f);
 
     public static HeldSpec Get(string id)
     {
