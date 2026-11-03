@@ -165,7 +165,11 @@ public class Zombie : MonoBehaviour, IDamageable
 
         if (sees)
         {
-            if (state != State.Chase) Scream();
+            if (state != State.Chase)
+            {
+                Scream();
+                Tutorial.Hint(Tutorial.HintZombie, "놈이 알아챘다. 달리면 소리가 커지고, 앉으면 조용하다. 무기를 들고 벽을 등지자.");
+            }
             state = State.Chase;
             lastKnown = playerPos;
             lostSightTimer = 0;
@@ -216,7 +220,8 @@ public class Zombie : MonoBehaviour, IDamageable
                     if (repathTimer <= 0) { agent.SetDestination(sees ? playerPos : lastKnown); repathTimer = 0.2f; }
                     if (dist < attackRange + 0.6f) FaceTowards(playerPos);
                 }
-                if (dist < attackRange && attackTimer <= 0 && staggerTimer <= 0 && windup <= 0) StartAttack(playerPos, dist, danger);
+                // 벽 너머로는 휘두르지 않는다 (문을 두드리는 쪽으로 간다)
+                if (dist < attackRange && attackTimer <= 0 && staggerTimer <= 0 && windup <= 0 && ReachesPlayer(PlayerController.Instance)) StartAttack(playerPos, dist, danger);
                 TryBreakDoor(dt);
                 break;
 
@@ -344,6 +349,7 @@ public class Zombie : MonoBehaviour, IDamageable
                     voice.PlayOneShot(attackCry, 0.9f);
                 }
                 ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.8f, 0.8f);
+                UIManager.LastHitFrom = transform.position;
                 GameManager.Instance.Damage(stats.damage * (1 + 0.3f * danger), DeathReason());
                 break;
         }
@@ -369,7 +375,8 @@ public class Zombie : MonoBehaviour, IDamageable
         var to = playerPos - transform.position;
         float height = Mathf.Abs(to.y);
         to.y = 0;
-        bool hit = dist < attackRange + 0.5f && height < 1.6f && Vector3.Angle(transform.forward, to) < 75f;
+        // 벽·문이 사이에 있으면 닿지 않는다
+        bool hit = dist < attackRange + 0.5f && height < 1.6f && Vector3.Angle(transform.forward, to) < 75f && ReachesPlayer(player);
         if (Kind == ZombieKind.Heavy)
         {
             // 내려찍기: 빗나가도 땅이 울린다
@@ -379,6 +386,7 @@ public class Zombie : MonoBehaviour, IDamageable
         else ProceduralAudio.PlayAt3D(ProceduralAudio.Swoosh(), transform.position + Vector3.up * 1.3f * size, 0.9f, 0.8f);
         if (!hit) return;
         ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.9f, Kind == ZombieKind.Heavy ? 0.6f : 0.9f);
+        UIManager.LastHitFrom = transform.position;
         GameManager.Instance.Damage(damage, DeathReason());
     }
 
@@ -438,6 +446,17 @@ public class Zombie : MonoBehaviour, IDamageable
         float fov = state == State.Chase ? 100f : IsRaider ? 80f : 65f;
         if (dist > 2.5f && Vector3.Angle(transform.forward, target - eye) > fov) return false;
         if (Physics.Linecast(eye, target, out var hit, ~0, QueryTriggerInteraction.Ignore))
+            return hit.transform == p.transform || hit.transform.IsChildOf(p.transform);
+        return true;
+    }
+
+    // 가슴 높이에서 플레이어까지 곧게 뻗었을 때 벽·문이 가로막지 않는가 (공격이 벽을 뚫지 않게)
+    bool ReachesPlayer(PlayerController p)
+    {
+        if (p == null) return false;
+        Vector3 from = transform.position + Vector3.up * 1.2f * size;
+        Vector3 to = p.cameraRoot.position;
+        if (Physics.Linecast(from, to, out var hit, ~0, QueryTriggerInteraction.Ignore))
             return hit.transform == p.transform || hit.transform.IsChildOf(p.transform);
         return true;
     }

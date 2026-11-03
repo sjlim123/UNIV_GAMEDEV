@@ -26,6 +26,7 @@ public partial class UIManager
 
     public void OpenTruck(TruckSite site)
     {
+        Tutorial.Notify("truck");
         if (truckRoot == null) BuildTruck();
         ClosePanel();
         truckSite = site;
@@ -83,6 +84,7 @@ public partial class UIManager
         truckBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        Grime(glass);
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 

@@ -15,7 +15,12 @@ public class Trader : Interactable
         ui.OpenPanel("잡상인", c =>
         {
             ui.Line(c, "\"돈은 이제 휴지 조각이지. 물건 대 물건으로만 거래하네.\"", 22, UIManager.Dim);
-            ui.Line(c, $"소지품 무게 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg", 18, UIManager.Dim);
+            // 거래 가능한 것만 보기 (켜면 노란 버튼)
+            var filterRow = ui.Row(c, false);
+            ui.RowLabel(filterRow, $"소지품 무게 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg", UIManager.Dim);
+            var filter = ui.RowButton(filterRow, "거래 가능만 보기", () => { tradableOnly = !tradableOnly; Interact(player); }, true, 200);
+            if (tradableOnly) UIManager.MarkOn(filter);
+            int shown = 0;
             foreach (var offer in ItemDatabase.TradeOffers)
             {
                 // 내는 물건: 이름(등급 색) 개수 (가진 개수, 모자라면 빨강)
@@ -26,15 +31,21 @@ public class Trader : Interactable
                     parts.Add($"{UIManager.ColoredName(kv.Key)} {kv.Value} <color={(have < kv.Value ? "#f05a48" : "#8a8270")}>({have})</color>");
                 }
                 bool can = s.Carried.Has(offer.Give) && FitsAfterTrade(s, offer);
+                if (tradableOnly && !can) continue;
+                shown++;
                 var get = ItemDatabase.Get(offer.GetId);
                 var row = ui.Row(c);
                 ui.RowIcon(row, offer.GetId);
                 ui.RowLabel(row, $"{UIManager.ColoredName(offer.GetId)} x{offer.GetCount}  <size=16>{UIManager.RarityTag(get.Rarity)}</size>   <size=18>←  {string.Join(", ", parts)}</size>");
                 ui.RowButton(row, "거래", () => Trade(offer), can);
             }
+            if (shown == 0) ui.Line(c, "지금 가진 물건으로 할 수 있는 거래가 없다.", 20, UIManager.Dim);
             ui.Line(c, "거래는 몸에 지닌 물건으로만 할 수 있다. 시간은 계속 흐른다.", 18, UIManager.Dim);
         }, "trade");
     }
+
+    // '거래 가능만 보기' 상태 (창을 닫아도 기억한다)
+    static bool tradableOnly;
 
     void Trade(TradeOffer offer)
     {

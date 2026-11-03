@@ -28,6 +28,8 @@ public class GameState
 
     // 방공호에 화로를 설치했는가 (제작대에서 화로를 만들면 true)
     public bool FurnaceBuilt;
+    // 처음 안내(Tutorial): 몇 번째 할 일인지, 줍기 단계에서 주운 개수, 한 번만 보여 준 힌트 비트
+    public int TutorialStep, TutorialCount, HintsSeen;
     // 새총에 메겨 둔 돌로 더 쏠 수 있는 발 수 (0이면 다음에 쏠 때 돌 1개를 메긴다)
     public int SlingShots;
 
@@ -214,6 +216,9 @@ public class GameState
             equippedBackpack = EquippedBackpack ?? "",
             equippedArmor = EquippedArmor ?? "",
             furnaceBuilt = FurnaceBuilt,
+            tutorialStep = TutorialStep,
+            tutorialCount = TutorialCount,
+            hintsSeen = HintsSeen,
             slingShots = SlingShots,
             savedAt = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
             gameVersion = UnityEngine.Application.version,
@@ -238,6 +243,10 @@ public class GameState
             InExpedition = d.inExpedition,
             ShelterInvaders = d.shelterInvaders,
             FurnaceBuilt = d.furnaceBuilt,
+            // 안내가 없던 옛 저장(턴 2 이상)은 안내를 건너뛴다
+            TutorialStep = d.tutorialStep == 0 && d.turn >= 2 ? Tutorial.Steps.Length : d.tutorialStep,
+            TutorialCount = d.tutorialCount,
+            HintsSeen = d.hintsSeen,
             SlingShots = d.slingShots,
         };
         // 이름이 바뀐 예전 아이템은 지금 아이템으로 바꾸고, 없어진 아이템은 건너뛴다
@@ -300,6 +309,7 @@ public class SaveData
     public int shelterInvaders;
     public string equippedBackpack, equippedArmor;
     public bool furnaceBuilt;
+    public int tutorialStep, tutorialCount, hintsSeen;
     public int slingShots;
     public List<ItemCount> truck = new List<ItemCount>();
     public List<ItemCount> carried = new List<ItemCount>();

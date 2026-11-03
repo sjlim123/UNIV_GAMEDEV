@@ -50,6 +50,7 @@ public partial class UIManager
 
     public void OpenInventory()
     {
+        Tutorial.Hint(Tutorial.HintInventory, "아이템을 끌어 아래 핫바 칸에 놓으면 숫자 키로 바로 꺼낸다. 가방·방어구는 장비 칸을 두 번 눌러 입는다.");
         if (invRoot == null) BuildInventory();
         ClosePanel();
         // 열 때는 손에 든 아이템을 고른다 (없으면 첫 아이템)
@@ -120,6 +121,7 @@ public partial class UIManager
         invBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        Grime(glass);
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 
@@ -494,7 +496,10 @@ public partial class UIManager
         DetailRow(ref y, "보유", $"{count}개   ·   {GameManager.Instance.State.Carried.UnitWeight(def.Id) * count:0.0} kg");
         DetailRow(ref y, "쓰는 법", PlayerHotbar.ActionHint(id));
         int bar = s.HotbarIndex(id);
-        DetailRow(ref y, "핫바", bar >= 0 ? $"{bar + 1}번 칸" + (held ? "   ·   손에 들고 있다" : "") : "없음 (아래 핫바 칸으로 끌어다 놓기)", bar >= 0 ? Text : Dim);
+        // 넣고 빼는 법은 Tip 스위치가 켜져 있을 때만 덧붙인다
+        DetailRow(ref y, "핫바", bar >= 0
+            ? $"{bar + 1}번 칸" + (held ? "   ·   손에 들고 있다" : "") + (GameSettings.Tips ? "   ·   칸 Shift+클릭 = 빼기" : "")
+            : GameSettings.Tips ? "없음 · 끌어다 놓기 / Shift+클릭" : "없음", bar >= 0 ? Text : Dim);
 
         // 위: 사용 / 장착 (장비 칸에 다른 것이 있으면 바꿔 낀다)
         if (def.IsConsumable)
@@ -634,6 +639,8 @@ public partial class UIManager
     // 첫 누름도 늘 기록한다 (고르지 않은 아이템을 두 번 눌러도 바로 사용·장착되게)
     void ClickInventoryItem(string id, int index)
     {
+        // Shift+클릭: 핫바의 비어 있는 가장 앞 칸에 바로 넣는다
+        if (ShiftHeld) { invSlot = EquipSlot.None; invItem = id; invIndex = index; QuickEquip(id); return; }
         bool twice = IsDoubleClick("item:" + id);
         invSlot = EquipSlot.None;
         invItem = id;

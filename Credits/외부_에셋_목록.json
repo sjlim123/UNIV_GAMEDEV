@@ -1,0 +1,141 @@
+{
+  "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
+  "updated": "2026-11-03",
+  "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
+  "licenses": {
+    "CC0": { "name": "Creative Commons CC0 1.0 (퍼블릭 도메인 기증)", "url": "https://creativecommons.org/publicdomain/zero/1.0/", "summary": "표기 없이 상업용 포함 자유롭게 사용·수정 가능" },
+    "OFL": { "name": "SIL Open Font License 1.1", "url": "https://openfontlicense.org/", "summary": "게임에 내장·배포 가능, 글꼴 자체를 단독 판매만 금지, 라이선스 문서 동봉" }
+  },
+  "assets": [
+    {
+      "id": "polyhaven-textures",
+      "kind": "텍스처",
+      "name": "Poly Haven 텍스처 9종",
+      "items": ["asphalt_02", "brick_wall_10", "concrete_floor_worn_001", "concrete_wall_008", "cracked_concrete_wall", "dirty_concrete", "rusty_metal_02", "wood_planks_dirt"],
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/textures",
+      "license": "CC0",
+      "location": "Assets/ThirdParty/PolyHaven/*.jpg",
+      "used_for": "벽·바닥·금속·나무 재질",
+      "added": "2026-10-28",
+      "status": "사용 중"
+    },
+    {
+      "id": "polyhaven-models",
+      "kind": "3D 모델",
+      "name": "Poly Haven 모델 7종 (1K FBX + 색·노멀 텍스처)",
+      "items": ["metal_tool_chest", "old_military_crate", "metal_jerrycan", "old_gas_mask", "medical_box", "old_tyre", "trashbag"],
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/models",
+      "license": "CC0",
+      "location": "Assets/ThirdParty/PolyHaven/Models/",
+      "used_for": "방공호 소품, 메인 화면 터널",
+      "added": "2026-11-02",
+      "status": "사용 중"
+    },
+    {
+      "id": "oga-ianzazz-zombie",
+      "kind": "효과음",
+      "name": "Zombie noises and moans (zombienoises.zip)",
+      "items": [],
+      "author": "ianzazz (OpenGameArt)",
+      "source": "https://opengameart.org/",
+      "license": "CC0",
+      "location": "Assets/ThirdParty/OpenGameArt/ianzazz_zombie_noises/ → 잘라서 Assets/Resources/Audio/Zombie/",
+      "used_for": "좀비 신음·맞음·공격 소리",
+      "added": "2026-11-02",
+      "status": "사용 중"
+    },
+    {
+      "id": "oga-darsycho-zombie",
+      "kind": "효과음",
+      "name": "Zombie moans (darsycho__zombie-moans.ogg)",
+      "items": [],
+      "author": "Darsycho (OpenGameArt)",
+      "source": "https://opengameart.org/",
+      "license": "CC0",
+      "location": "Assets/ThirdParty/OpenGameArt/darsycho_zombie_moans/ → Assets/Resources/Audio/Zombie/",
+      "used_for": "좀비 신음·공격 소리",
+      "added": "2026-11-02",
+      "status": "사용 중"
+    },
+    {
+      "id": "oga-saturn91-zomby",
+      "kind": "효과음",
+      "name": "Zomby sfx pack (01~07_zombey.mp3)",
+      "items": [],
+      "author": "saturn91 (saturn91.dev, OpenGameArt)",
+      "source": "https://opengameart.org/",
+      "license": "CC0",
+      "location": "Assets/ThirdParty/OpenGameArt/saturn91_zomby_sfx/ → Assets/Resources/Audio/Zombie/",
+      "used_for": "좀비 발견·신음 소리",
+      "added": "2026-11-02",
+      "status": "사용 중"
+    },
+    {
+      "id": "font-pretendard",
+      "kind": "글꼴",
+      "name": "Pretendard (Regular·SemiBold·Bold)",
+      "items": [],
+      "author": "길형진 (orioncactus)",
+      "source": "https://github.com/orioncactus/pretendard",
+      "license": "OFL",
+      "location": "Assets/Resources/Fonts/Pretendard-*.ttf (+ Pretendard-LICENSE.txt)",
+      "used_for": "UI 본문 글꼴",
+      "added": "2026-10-28",
+      "status": "사용 중"
+    },
+    {
+      "id": "font-dohyeon",
+      "kind": "글꼴",
+      "name": "Do Hyeon (도현체)",
+      "items": [],
+      "author": "우아한형제들 (Woowahan Brothers)",
+      "source": "https://fonts.google.com/specimen/Do+Hyeon",
+      "license": "OFL",
+      "location": "Assets/Resources/Fonts/DoHyeon-Regular.ttf (+ DoHyeon-LICENSE.txt)",
+      "used_for": "UI 제목·라벨 (대피소 서류 스타일)",
+      "added": "2026-11-03",
+      "status": "사용 중"
+    },
+    {
+      "id": "font-nanumpenscript",
+      "kind": "글꼴",
+      "name": "Nanum Pen Script (나눔손글씨 펜)",
+      "items": [],
+      "author": "산돌커뮤니케이션 (네이버 나눔글꼴)",
+      "source": "https://fonts.google.com/specimen/Nanum+Pen+Script",
+      "license": "OFL",
+      "location": "Assets/Resources/Fonts/NanumPenScript-Regular.ttf (+ NanumPenScript-LICENSE.txt)",
+      "used_for": "손글씨 메모·일지",
+      "added": "2026-11-03",
+      "status": "사용 중"
+    },
+    {
+      "id": "font-sharetechmono",
+      "kind": "글꼴",
+      "name": "Share Tech Mono",
+      "items": [],
+      "author": "Carrois Apostrophe (Ralph du Carrois)",
+      "source": "https://fonts.google.com/specimen/Share+Tech+Mono",
+      "license": "OFL",
+      "location": "Assets/Resources/Fonts/ShareTechMono-Regular.ttf (+ ShareTechMono-LICENSE.txt)",
+      "used_for": "숫자·시간 표시 (라틴·숫자만)",
+      "added": "2026-11-03",
+      "status": "사용 중"
+    },
+    {
+      "id": "kenney-particle-pack",
+      "kind": "파티클 스프라이트",
+      "name": "Kenney Particle Pack (80장, 512px)",
+      "items": [],
+      "author": "Kenney (kenney.nl)",
+      "source": "https://kenney.nl/assets/particle-pack",
+      "license": "CC0",
+      "location": "(파티클 단계에서 받을 예정) Assets/ThirdParty/Kenney/ParticlePack/",
+      "used_for": "연기·먼지·불티 파티클",
+      "added": "2026-11-03",
+      "status": "예정"
+    }
+  ]
+}

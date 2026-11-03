@@ -21,11 +21,10 @@ public partial class UIManager
 
     void BuildInventoryHotbar(RectTransform glass, float gridX)
     {
-        var head = NewText(glass, "핫바", 20, TextAnchor.MiddleLeft, Accent, FontSemiBold);
-        Place(head.rectTransform, new Vector2(0, 0), new Vector2(gridX, 36 + InvBarSlot + 8), new Vector2(80, 28));
+        // ('핫바'라는 머리글은 두지 않는다 — 칸 번호만으로 충분하다)
         if (!CompactItemCards)
         {
-            var tip = NewText(glass, "아이템을 끌어다 칸에 놓기 · 칸 밖으로 끌면 빠짐", 15, TextAnchor.MiddleRight, Dim);
+            var tip = NewText(glass, "끌어다 칸에 놓기 · 칸 밖으로 끌면 빠짐 · Shift+클릭 = 빠른 장착·해제", 15, TextAnchor.MiddleRight, Dim);
             Place(tip.rectTransform, new Vector2(0, 0), new Vector2(gridX + InvGridWidth - 420, 36 + InvBarSlot + 8), new Vector2(420, 28));
         }
         for (int i = 0; i < GameState.HotbarSlots; i++)
@@ -126,18 +125,25 @@ public partial class UIManager
     public void EndItemDrag(PointerEventData e)
     {
         if (dragId == null) return;
-        var s = GameManager.Instance.State;
-        // 놓은 자리: 핫바 칸이면 그 칸에, 핫바 칸에서 끌어 줄 밖에 놓으면 뺀다
+        // 놓은 자리: 핫바 칸이면 그 칸에, 아니면 줄 밖
         InvDropTarget target = null;
         var over = e.pointerCurrentRaycast.gameObject;
         if (over != null) target = over.GetComponentInParent<InvDropTarget>();
-        if (target != null)
+        FinishItemDrag(target != null ? target.Slot : -1);
+    }
+
+    // 끌기를 끝낸다: slot이 0 이상이면 그 칸에 놓고, 핫바 칸에서 끌던 것을 줄 밖에 놓으면 뺀다. 끌던 그림은 반드시 치운다
+    void FinishItemDrag(int slot)
+    {
+        if (dragId == null) return;
+        var s = GameManager.Instance.State;
+        if (slot >= 0)
         {
-            if (dragFromSlot >= 0) s.SwapHotbar(dragFromSlot, target.Slot);
-            else s.SetHotbar(target.Slot, dragId);
+            if (dragFromSlot >= 0) s.SwapHotbar(dragFromSlot, slot);
+            else s.SetHotbar(slot, dragId);
             ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.45f, 0.9f, SoundCategory.UI);
-            invBarSlots[target.Slot].Rect.localScale = Vector3.one * 1.2f;
-            ShowMessage($"{ColoredName(dragId)}{PlayerHotbar.Eul(ItemDatabase.Name(dragId))} 핫바 {target.Slot + 1}번 칸에 놓았다.", 1.6f);
+            invBarSlots[slot].Rect.localScale = Vector3.one * 1.2f;
+            ShowMessage($"{ColoredName(dragId)}{PlayerHotbar.Eul(ItemDatabase.Name(dragId))} 핫바 {slot + 1}번 칸에 놓았다.", 1.6f);
         }
         else if (dragFromSlot >= 0)
         {
@@ -145,12 +151,20 @@ public partial class UIManager
             ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.35f, 1f, SoundCategory.UI);
             ShowMessage($"{ColoredName(dragId)}{PlayerHotbar.Eul(ItemDatabase.Name(dragId))} 핫바에서 뺐다.", 1.6f);
         }
-        dragId = null;
-        dragFromSlot = -1;
-        dragHover = -1;
-        foreach (var g in invBarGlows) g.enabled = false;
-        if (dragGhost != null) dragGhost.gameObject.SetActive(false);
+        CancelItemDrag();
         RefreshInventory();
+    }
+
+    // 끌던 카드가 목록을 다시 그리는 사이 사라지면 OnEndDrag가 오지 않아 그림이 남는다.
+    // 그래서 매 프레임, 끄는 중인데 왼쪽 버튼이 떼어져 있으면 마지막으로 올라가 있던 칸에 놓은 것으로 끝낸다 (UIManager.Update가 부른다)
+    void WatchItemDrag()
+    {
+        if (dragId != null)
+        {
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse == null || !mouse.leftButton.isPressed) FinishItemDrag(dragHover);
+        }
+        else if (dragGhost != null && dragGhost.gameObject.activeSelf) dragGhost.gameObject.SetActive(false);
     }
 
     // 창이 닫히면 끌던 것을 취소한다
@@ -162,10 +176,51 @@ public partial class UIManager
         foreach (var g in invBarGlows) g.enabled = false;
         if (dragGhost != null) dragGhost.gameObject.SetActive(false);
     }
+
+    // ---------- Shift+클릭 빠른 장착·해제 ----------
+
+    static bool ShiftHeld => UnityEngine.InputSystem.Keyboard.current != null &&
+        (UnityEngine.InputSystem.Keyboard.current.leftShiftKey.isPressed || UnityEngine.InputSystem.Keyboard.current.rightShiftKey.isPressed);
+
+    // 소지품의 아이템을 핫바의 비어 있는 가장 앞 칸(1번부터)에 넣는다
+    public void QuickEquip(string id)
+    {
+        var s = GameManager.Instance.State;
+        if (id == null) return;
+        int already = s.HotbarIndex(id);
+        if (already >= 0)
+        {
+            ShowMessage($"{ColoredName(id)}{PlayerHotbar.Eun(ItemDatabase.Name(id))} 이미 핫바 {already + 1}번 칸에 있다.", 1.6f);
+            return;
+        }
+        int empty = System.Array.IndexOf(s.Hotbar, null);
+        if (empty < 0)
+        {
+            ShowMessage("핫바가 가득 찼다. Shift+클릭으로 칸을 비우자.", 1.8f);
+            return;
+        }
+        s.SetHotbar(empty, id);
+        ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.45f, 0.9f, SoundCategory.UI);
+        if (empty < invBarSlots.Count) invBarSlots[empty].Rect.localScale = Vector3.one * 1.2f;
+        ShowMessage($"{ColoredName(id)}{PlayerHotbar.Eul(ItemDatabase.Name(id))} 핫바 {empty + 1}번 칸에 놓았다.", 1.6f);
+        RefreshInventory();
+    }
+
+    // 핫바 칸을 비운다 (아이템은 소지품에 그대로)
+    public void QuickUnequip(int slot)
+    {
+        var s = GameManager.Instance.State;
+        if (slot < 0 || slot >= s.Hotbar.Length || s.Hotbar[slot] == null) return;
+        string id = s.Hotbar[slot];
+        s.Hotbar[slot] = null;
+        ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.35f, 1f, SoundCategory.UI);
+        ShowMessage($"{ColoredName(id)}{PlayerHotbar.Eul(ItemDatabase.Name(id))} 핫바에서 뺐다.", 1.6f);
+        RefreshInventory();
+    }
 }
 
-// 끌 수 있는 아이템 (소지품 카드 또는 핫바 칸). Slot이 0 이상이면 핫바 칸
-public class InvDragSource : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+// 끌 수 있는 아이템 (소지품 카드 또는 핫바 칸). Slot이 0 이상이면 핫바 칸 — 핫바 칸은 Shift+클릭으로 바로 비운다
+public class InvDragSource : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
     public string Id;
     public int Slot = -1;
@@ -179,6 +234,13 @@ public class InvDragSource : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     public void OnDrag(PointerEventData e) => UI.DragItem(e);
 
     public void OnEndDrag(PointerEventData e) => UI.EndItemDrag(e);
+
+    public void OnPointerClick(PointerEventData e)
+    {
+        if (Slot < 0 || Id == null || e.button != PointerEventData.InputButton.Left || e.dragging) return;
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed)) UI.QuickUnequip(Slot);
+    }
 }
 
 // 아이템을 놓을 수 있는 핫바 칸 (끄는 동안 마우스를 올리면 금색 테두리)

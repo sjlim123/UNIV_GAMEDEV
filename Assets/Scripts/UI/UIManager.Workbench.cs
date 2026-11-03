@@ -37,7 +37,12 @@ public partial class UIManager
     public bool IsFurnaceOpen => IsWorkbenchOpen && furnaceMode;
 
     // source: 제작 소리를 낼 위치 (제작대). 없으면 2D 소리
-    public void OpenWorkbench(Transform source = null) => OpenCrafting(false, source);
+    public void OpenWorkbench(Transform source = null)
+    {
+        Tutorial.Notify("workbench");
+        Tutorial.Hint(Tutorial.HintWorkbench, "재료가 모자란 조합법은 흐리게 보인다. '제작 가능만 보기'를 켜면 지금 만들 수 있는 것만 남는다.");
+        OpenCrafting(false, source);
+    }
 
     // source: 화로. 없으면 방공호의 화로(Furnace.Instance)를 쓴다
     public void OpenFurnace(Transform source = null) => OpenCrafting(true, source);
@@ -103,6 +108,9 @@ public partial class UIManager
     List<Recipe> CraftRecipes => (furnaceMode ? ItemDatabase.SmeltRecipes : ItemDatabase.Recipes)
         .OrderBy(r => (int)ItemDatabase.Get(r.ResultId).Rarity).ToList();
 
+    // '제작 가능만 보기' (재료가 갖춰진 조합법만 목록에 남긴다). 창을 닫아도 기억한다
+    bool craftableOnly;
+
     // 제작대와 화로는 고른 조합법을 따로 기억한다
     Recipe CraftSelection
     {
@@ -144,6 +152,7 @@ public partial class UIManager
         workbenchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        Grime(glass);
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 
@@ -224,6 +233,7 @@ public partial class UIManager
         if (!IsWorkbenchOpen) return;
         var s = GameManager.Instance.State;
         var recipes = CraftRecipes;
+        if (craftableOnly) recipes = recipes.Where(r => Workbench.HasIngredients(s, r) && !Workbench.AlreadyInstalled(s, r)).ToList();
         bool ready = StationReady(s);
         if (furnaceMode)
         {
@@ -243,9 +253,13 @@ public partial class UIManager
         ClearChildren(workbenchList);
         ClearChildren(workbenchDetail);
         smeltFill = null;
+        // 목록 맨 위의 토글: 켜면 노란 버튼
+        var filterRow = Row(workbenchList, false);
+        var filterButton = RowButton(filterRow, "제작 가능만 보기", () => { craftableOnly = !craftableOnly; RefreshWorkbench(); }, true, 190);
+        if (craftableOnly) AccentButton(filterButton);
         if (recipes.Count == 0)
         {
-            Line(workbenchList, "조합법이 없습니다.", 22, Dim);
+            Line(workbenchList, craftableOnly ? "지금 재료로 만들 수 있는 것이 없다." : "조합법이 없습니다.", 22, Dim);
             return;
         }
 
@@ -420,7 +434,7 @@ public partial class UIManager
         else if (busy) { status = "화로에서 다른 재료를 녹이는 중이다"; statusColor = Accent; }
         else if (installed) { status = "이미 방공호에 설치했다"; statusColor = AddedColor; }
         else if (!ready) { status = StationProblem(true); statusColor = Danger; }
-        else if (!enough) { status = "재료가 모자란다"; statusColor = Danger; }
+        else if (!enough) { status = "재료 부족"; statusColor = Danger; }
         else if (install) { status = "만들면 방공호에 바로 설치한다"; statusColor = Text; }
         else if (Workbench.ResultFitsInHand(s, recipe)) { status = "완성품은 소지품에 넣는다"; statusColor = Text; }
         else { status = "무거워서 완성품은 창고에 넣는다"; statusColor = Accent; }

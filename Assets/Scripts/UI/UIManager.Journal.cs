@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 탐험 결과 일지: 방공호로 돌아오면 낡은 양피지 수첩 한 장에 그날의 탐험을 손으로 적어 내려간다.
+// 탐색 결과: 방공호로 돌아오면 낡은 양피지 한 장에 그날의 탐색 결과를 손으로 적어 내려간다 (일기가 아니라 결과 보고서).
 // 종이를 펼치는 소리 → 한 글자씩 적히며 펜이 사각사각 긁히는 소리. 다 적히면 클릭·Esc·스페이스로 덮는다
 // (적는 도중 누르면 남은 글을 한꺼번에 적는다)
 public partial class UIManager
@@ -46,7 +46,7 @@ public partial class UIManager
         journalFull.Clear();
 
         // 제목·날짜
-        AddJournalLine($"탐험 일지  —  {r.Turn}번째 날", 40, Ink, FontBold, 6, -1.2f);
+        AddJournalLine($"탐색 결과  —  {r.Turn}번째 날", 40, Ink, FontBold, 6, -1.2f);
         string back = r.RedNight ? $"붉은 밤 속을 {Mathf.CeilToInt(r.RedNightSeconds)}초나 헤매다 겨우 해치로 돌아왔다."
             : $"붉은 밤까지 {(int)r.TimeLeft / 60}분 {(int)r.TimeLeft % 60}초를 남기고 해치로 돌아왔다.";
         AddJournalLine(back, 23, r.RedNight ? InkRed : InkFaded, Font, 18, 0.6f);
@@ -190,7 +190,7 @@ public partial class UIManager
     void FinishJournal()
     {
         journalDone = true;
-        journalHint.text = "— 일지를 덮으려면 클릭하거나 Esc";
+        journalHint.text = "— 아무 키나 눌러 계속";
     }
 
     public void CloseJournal()
@@ -231,43 +231,84 @@ public partial class UIManager
         if (journalLine >= journalTexts.Count) FinishJournal();
     }
 
-    // 낡은 양피지: 누런 바탕 + 섬유 결 + 얼룩·커피 자국 + 가장자리가 그을려 들쭉날쭉하게 투명해진다
+    // 낡은 두루마리 양피지 (참고 사진처럼): 누런 바탕에 섬유 결과 구김, 번진 갈색 얼룩과 물 자국 고리,
+    // 위·아래는 말린 봉(원통 그늘), 양옆은 그을려 검게 타들어 간 들쭉날쭉한 가장자리와 작은 구멍.
+    // 글이 놓이는 가운데는 밝게 두어 읽기 쉽다
     static Sprite Parchment
     {
         get
         {
             if (parchment != null) return parchment;
-            const int w = 430, h = 500;
+            const int w = 512, h = 600;
+            const float RollH = 34f;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, name = "Parchment" };
             var px = new Color[w * h];
             var rng = new System.Random(77);
-            var stains = new Vector3[5];
-            for (int i = 0; i < stains.Length; i++) stains[i] = new Vector3((float)rng.NextDouble(), (float)rng.NextDouble(), 0.05f + 0.08f * (float)rng.NextDouble());
+            // 번진 얼룩 (x, y, 반지름, 세기)과 물 자국 고리 (x, y, 반지름)
+            var blots = new Vector4[7];
+            for (int i = 0; i < blots.Length; i++)
+                blots[i] = new Vector4(0.08f + 0.84f * (float)rng.NextDouble(), 0.08f + 0.84f * (float)rng.NextDouble(), 0.05f + 0.1f * (float)rng.NextDouble(), 0.18f + 0.22f * (float)rng.NextDouble());
+            var rings = new Vector3[3];
+            for (int i = 0; i < rings.Length; i++) rings[i] = new Vector3((float)rng.NextDouble(), (float)rng.NextDouble(), 0.06f + 0.08f * (float)rng.NextDouble());
+            var ink = new Color(0.1f, 0.06f, 0.03f);
+            var burnt = new Color(0.3f, 0.17f, 0.07f);
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
                     float u = x / (float)w, v = y / (float)h;
-                    float big = Mathf.PerlinNoise(u * 3.1f + 11, v * 3.1f + 7);
-                    float mid = Mathf.PerlinNoise(u * 14f + 3, v * 14f + 9);
-                    float fiber = Mathf.PerlinNoise(u * 180f, v * 9f + 5) * 0.5f + Mathf.PerlinNoise(u * 9f + 2, v * 160f) * 0.5f;
-                    var c = Color.Lerp(new Color(0.72f, 0.6f, 0.4f), new Color(0.9f, 0.82f, 0.64f), big * 0.7f + mid * 0.3f);
-                    c *= 0.94f + fiber * 0.1f;
-                    // 커피·물 얼룩 (고리 모양)
-                    foreach (var st in stains)
+                    float big = Mathf.PerlinNoise(u * 2.6f + 11, v * 2.2f + 7);
+                    float mid = Mathf.PerlinNoise(u * 9f + 3, v * 9f + 9);
+                    float fine = Mathf.PerlinNoise(u * 40f + 1, v * 40f + 2);
+                    float fiber = Mathf.PerlinNoise(u * 190f, v * 7f + 5) * 0.5f + Mathf.PerlinNoise(u * 7f + 2, v * 170f) * 0.5f;
+                    var c = Color.Lerp(new Color(0.74f, 0.62f, 0.42f), new Color(0.91f, 0.84f, 0.67f), big * 0.55f + mid * 0.3f + fine * 0.15f);
+                    c *= 0.93f + fiber * 0.12f;
+                    // 번진 얼룩: 가장자리가 더 진한 갈색, 모양은 노이즈로 일그러뜨린다
+                    foreach (var b in blots)
+                    {
+                        float d = Vector2.Distance(new Vector2(u, v), new Vector2(b.x, b.y)) + (Mathf.PerlinNoise(u * 18f + b.x * 10, v * 18f + b.y * 10) - 0.5f) * 0.05f;
+                        float inside = Mathf.Clamp01((b.z - d) / (b.z * 0.45f));
+                        float rim = Mathf.Exp(-Mathf.Pow((d - b.z) / 0.009f, 2));
+                        c = Color.Lerp(c, new Color(0.5f, 0.36f, 0.19f), inside * b.w);
+                        c = Color.Lerp(c, new Color(0.4f, 0.27f, 0.13f), rim * b.w * 0.8f);
+                    }
+                    foreach (var st in rings)
                     {
                         float d = Mathf.Sqrt((u - st.x) * (u - st.x) + (v - st.y) * (v - st.y) * 0.8f);
-                        float ring = Mathf.Exp(-Mathf.Pow((d - st.z) / 0.006f, 2)) * 0.25f + (d < st.z ? 0.05f : 0);
+                        float ring = Mathf.Exp(-Mathf.Pow((d - st.z) / 0.006f, 2)) * 0.22f + (d < st.z ? 0.04f : 0);
                         c = Color.Lerp(c, new Color(0.55f, 0.4f, 0.22f), ring);
                     }
-                    // 가장자리: 안쪽으로 갈색 그을음, 바깥은 들쭉날쭉하게 찢겨 투명
-                    float edge = Mathf.Min(Mathf.Min(u, 1 - u) * w, Mathf.Min(v, 1 - v) * h) / 34f;
-                    float ragged = edge + (Mathf.PerlinNoise(u * 22f + 4, v * 22f + 1) - 0.5f) * 0.9f;
-                    float burn = Mathf.Clamp01(1 - ragged);
-                    c = Color.Lerp(c, new Color(0.32f, 0.2f, 0.1f), burn * 0.85f);
-                    c.a = Mathf.Clamp01((ragged - 0.12f) * 6f);
-                    // 가운데가 조금 밝게 (빛이 비친 듯)
-                    float vig = 1 - Mathf.Pow(Mathf.Clamp01(Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.55f)) * 1.3f), 2) * 0.22f;
-                    c.r *= vig; c.g *= vig; c.b *= vig;
+                    // 구김: 가는 주름 선 (밝은 선 옆에 어두운 선)
+                    float crease = Mathf.Abs(Mathf.PerlinNoise(u * 6f + 20, v * 6f + 30) - 0.5f);
+                    if (crease < 0.01f) c *= 1.07f; else if (crease < 0.02f) c *= 0.92f;
+                    float crease2 = Mathf.Abs(Mathf.PerlinNoise(u * 12f + 40, v * 4f + 50) - 0.5f);
+                    if (crease2 < 0.007f) c *= 1.05f; else if (crease2 < 0.014f) c *= 0.94f;
+
+                    // 양옆: 들쭉날쭉하게 타들어 간 가장자리 (바깥 20px쯤은 진한 갈색→검정, 끝은 투명)
+                    float edgeLR = Mathf.Min(u, 1 - u) * w;
+                    float rag = (Mathf.PerlinNoise(u * 16f + 4, v * 16f + 1) - 0.5f) * 24f + (Mathf.PerlinNoise(u * 60f + 9, v * 60f + 3) - 0.5f) * 7f;
+                    float e = edgeLR + rag;
+                    float burn = Mathf.Clamp01(1 - e / 26f);
+                    c = Color.Lerp(c, burnt, burn * burn * 0.8f);
+                    c = Color.Lerp(c, ink, Mathf.Clamp01(1 - e / 7f) * 0.9f);
+                    float alpha = Mathf.Clamp01(e / 1.5f);
+                    // 가장자리 근처의 작은 구멍
+                    float hole = Mathf.PerlinNoise(u * 34f + 70, v * 34f + 80);
+                    if (hole > 0.84f && edgeLR < 80f) alpha *= Mathf.Clamp01((0.9f - hole) / 0.06f);
+
+                    // 위·아래: 말린 봉 (원통 그늘, 안쪽 끝에 그림자 선)
+                    float edgeTB = Mathf.Min(v, 1 - v) * h;
+                    if (edgeTB < RollH)
+                    {
+                        float s = edgeTB / RollH;
+                        float shade = 0.5f + 0.62f * Mathf.Pow(Mathf.Sin(s * Mathf.PI), 0.8f);
+                        c = new Color(c.r * shade * 0.92f, c.g * shade * 0.86f, c.b * shade * 0.78f);
+                        c = Color.Lerp(c, ink, Mathf.Clamp01(1 - edgeTB / 2.5f) * 0.8f);
+                    }
+                    else if (edgeTB < RollH + 6f) c *= 0.62f + 0.38f * ((edgeTB - RollH) / 6f);
+
+                    // 가운데가 밝게 (글이 놓이는 자리)
+                    float vig = 1 - Mathf.Pow(Mathf.Clamp01(Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.52f)) * 1.25f), 2) * 0.2f;
+                    c = new Color(Mathf.Clamp01(c.r * vig), Mathf.Clamp01(c.g * vig), Mathf.Clamp01(c.b * vig), alpha);
                     px[y * w + x] = c;
                 }
             tex.SetPixels(px);

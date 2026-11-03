@@ -20,6 +20,49 @@ public static class ItemIcons
         return s;
     }
 
+    static readonly Dictionary<string, Sprite> outlined = new Dictionary<string, Sprite>();
+
+    // 윤곽선을 두른 아이콘: 바탕 없이 화면에 띄워도 눈에 띄게 그림의 투명한 가장자리를 2px 두께의 color로 두른다 (HUD 손전등·배터리)
+    public static Sprite Outlined(string id, Color color)
+    {
+        if (outlined.TryGetValue(id, out var cached) && cached != null) return cached;
+        var src = Get(id).texture;
+        int w = src.width, h = src.height;
+        // 읽기 설정과 상관없이 픽셀을 얻으려고 렌더 텍스처를 거친다
+        var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32);
+        var prev = RenderTexture.active;
+        Graphics.Blit(src, rt);
+        RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = "IconOutline_" + id, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+        var px = tex.GetPixels32();
+        var result = (Color32[])px.Clone();
+        var line = (Color32)color;
+        int radius = Mathf.Max(2, w / 48);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                if (px[y * w + x].a >= 40) continue;
+                bool near = false;
+                for (int dy = -radius; dy <= radius && !near; dy++)
+                    for (int dx = -radius; dx <= radius; dx++)
+                    {
+                        if (dx * dx + dy * dy > radius * radius + 1) continue;
+                        int nx = x + dx, ny = y + dy;
+                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                        if (px[ny * w + nx].a >= 100) { near = true; break; }
+                    }
+                if (near) result[y * w + x] = line;
+            }
+        tex.SetPixels32(result);
+        tex.Apply();
+        var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
+        outlined[id] = sprite;
+        return sprite;
+    }
+
     // 2D 아이콘 그림. 텍스처 가져오기 설정(Sprite 여부)과 상관없이 코드에서 스프라이트를 만든다
     static Sprite Load2D(string id)
     {

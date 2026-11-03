@@ -3,9 +3,298 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// UI용 둥근 사각형(채우기)과 테두리 스프라이트를 코드로 만든다. 9-slice로 늘려 쓴다.
+// UI 그림을 전부 코드로 만든다. 사각형(채우기·테두리)은 9-slice로 늘려 쓰고,
+// 대피소 서류 스타일 그림(종이·뜯긴 종이·테이프·녹슨 명판·나사·전구 빛·연필선)은 타일(Tiled)로 깔거나 그대로 붙인다
 public static class UIStyle
 {
+    // ---------- 대피소 서류 스타일 ----------
+    static Sprite paper, torn, tape, plate, screw, glow, pencil;
+
+    // 바랜 종이 (타일로 깐다. 가장자리 1px는 종이 끝 그늘). 색은 Image.color로 입힌다
+    public static Sprite Paper => paper != null ? paper : paper = MakePaper();
+    // 가장자리를 손으로 뜯은 종이 (쪽지·꼬리표). 테두리 14px가 뜯긴 모양이고 Tiled로 깔면 긴 쪽지도 끊기지 않는다
+    public static Sprite Torn => torn != null ? torn : torn = MakeTorn();
+    // 마스킹 테이프 한 조각 (양 끝이 뜯겨 있다). 색을 입혀 베이지·노란 절연테이프로 쓴다
+    public static Sprite Tape => tape != null ? tape : tape = MakeTape();
+    // 녹슨 강철 명판 (색을 그림에 넣어 두었으니 Image.color는 흰색)
+    public static Sprite Plate => plate != null ? plate : plate = MakePlate();
+    // 명판 귀퉁이 나사
+    public static Sprite Screw => screw != null ? screw : screw = MakeScrew();
+    // 가운데가 밝고 바깥으로 사라지는 빛 (계기 전구)
+    public static Sprite Glow => glow != null ? glow : glow = MakeGlow();
+    // 연필로 그은 밑줄 (가로로 늘려 쓴다)
+    public static Sprite Pencil => pencil != null ? pencil : pencil = MakePencil();
+    // 유리 위의 긁힘·먼지·얼룩 (흰색, 알파만 있다 — 타일로 깔고 낮은 알파로 입힌다)
+    static Sprite grime;
+    public static Sprite Grime => grime != null ? grime : grime = MakeGrime();
+    // 피격 방향 호: 화면 가장자리의 둥근 띠 중 위쪽 ±45도만 보이는 그림 (맞은 방향으로 돌려 쓴다)
+    static Sprite hitArc;
+    public static Sprite HitArc => hitArc != null ? hitArc : hitArc = MakeHitArc();
+
+    static Sprite MakeHitArc()
+    {
+        const int size = 256;
+        var tex = NewTex("UIHitArc", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2 - 1, dy = (y + 0.5f) / size * 2 - 1;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = 0;
+                if (r > 0.68f && r <= 1f)
+                {
+                    float ang = Mathf.Abs(Mathf.Atan2(dx, dy)) * Mathf.Rad2Deg; // 0 = 위
+                    float radial = Mathf.Clamp01((r - 0.68f) / 0.32f);
+                    float angular = Mathf.Clamp01(1 - ang / 48f);
+                    a = radial * radial * angular * angular;
+                }
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    // 격자 점 해시 (0~1)
+    static float Hash(int x, int y, int seed)
+    {
+        unchecked
+        {
+            int h = x * 374761393 + y * 668265263 + seed * 1274126177;
+            h = (h ^ (h >> 13)) * 1274126177;
+            return ((h ^ (h >> 16)) & 0xffff) / 65535f;
+        }
+    }
+
+    // 값 노이즈: 격자 점의 해시를 부드럽게 잇는다. period가 있으면 그 칸 수마다 되풀이돼 타일로 이어 붙여도 끊기지 않는다
+    static float Noise(float x, float y, int seed, int period = 0)
+    {
+        int ix = Mathf.FloorToInt(x), iy = Mathf.FloorToInt(y);
+        float fx = x - ix, fy = y - iy;
+        fx = fx * fx * (3 - 2 * fx);
+        fy = fy * fy * (3 - 2 * fy);
+        int ix1 = ix + 1, iy1 = iy + 1;
+        if (period > 0) { ix = Mod(ix, period); iy = Mod(iy, period); ix1 = Mod(ix1, period); iy1 = Mod(iy1, period); }
+        float a = Hash(ix, iy, seed), b = Hash(ix1, iy, seed), c = Hash(ix, iy1, seed), d = Hash(ix1, iy1, seed);
+        return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, d, fx), fy);
+    }
+
+    static int Mod(int a, int n) => ((a % n) + n) % n;
+
+    // 타일 크기 size 안에서 cells칸마다 되풀이되는 노이즈
+    static float TileNoise(int x, int y, int size, int cells, int seed) => Noise(x * cells / (float)size, y * cells / (float)size, seed, cells);
+
+    // 되풀이되는 1차원 요철 0~1 (뜯긴 가장자리). u가 0→1로 갈 때 한 바퀴
+    static float Wave(float u, int seed)
+    {
+        float t = u * 6.2832f;
+        return 0.5f + 0.25f * Mathf.Sin(t * 3 + seed) + 0.15f * Mathf.Sin(t * 7 + seed * 1.7f) + 0.1f * Mathf.Sin(t * 13 + seed * 2.3f);
+    }
+
+    static Texture2D NewTex(string name, int w, int h, TextureWrapMode wrap = TextureWrapMode.Repeat)
+        => new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = wrap, filterMode = FilterMode.Bilinear, name = name };
+
+    static Sprite Finish(Texture2D tex, Color32[] px, Vector4 border)
+    {
+        tex.SetPixels32(px);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+    }
+
+    // 종이 결: 잔 알갱이 + 넓은 얼룩. 1에 가까운 밝기라 색을 곱하면 그 색의 종이가 된다
+    static float Grain(int x, int y, int size, int seed)
+        => 1f - 0.06f * TileNoise(x, y, size, size / 3, seed) - 0.05f * TileNoise(x, y, size, 4, seed + 1) - 0.025f * Hash(x, y, seed + 2);
+
+    static Sprite MakePaper()
+    {
+        const int size = 128;
+        var tex = NewTex("UIPaper", size, size);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float g = Grain(x, y, size, 101);
+                int edge = Mathf.Min(Mathf.Min(x, y), Mathf.Min(size - 1 - x, size - 1 - y));
+                if (edge == 0) g *= 0.8f; else if (edge == 1) g *= 0.92f;
+                byte v = (byte)(Mathf.Clamp01(g) * 255);
+                px[y * size + x] = new Color32(v, v, v, 255);
+            }
+        return Finish(tex, px, new Vector4(8, 8, 8, 8));
+    }
+
+    static Sprite MakeTorn()
+    {
+        const int size = 96, border = 14;
+        var tex = NewTex("UITorn", size, size);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float g = Grain(x, y, size, 111);
+                // 네 변에서 안쪽으로 뜯긴 깊이 (3~10px). 변을 따라 되풀이되는 요철이라 타일로 이어도 끊기지 않는다
+                float u = x / (float)size, v = y / (float)size;
+                float cutB = 3 + 7 * Wave(u, 1), cutT = 3 + 7 * Wave(u, 2), cutL = 3 + 7 * Wave(v, 3), cutR = 3 + 7 * Wave(v, 4);
+                float d = Mathf.Min(Mathf.Min(y + 0.5f - cutB, size - y - 0.5f - cutT), Mathf.Min(x + 0.5f - cutL, size - x - 0.5f - cutR));
+                float a = Mathf.Clamp01(d + 0.5f);
+                // 뜯긴 자리 바로 안쪽은 종이 속살(조금 밝고 뿌옇게), 그 옆은 그늘
+                if (d < 1.5f) g = Mathf.Min(1f, g + 0.06f);
+                else if (d < 3f) g *= 0.94f;
+                byte val = (byte)(Mathf.Clamp01(g) * 255);
+                px[y * size + x] = new Color32(val, val, val, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeTape()
+    {
+        const int w = 128, h = 32;
+        var tex = NewTex("UITape", w, h, TextureWrapMode.Clamp);
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float v = y / (float)h;
+                float cutL = 2 + 6 * Wave(v, 7), cutR = w - 2 - 6 * Wave(v, 8);
+                float a = Mathf.Clamp01(Mathf.Min(x + 0.5f - cutL, cutR - x - 0.5f) + 0.5f);
+                // 가로 섬유 결 + 넓은 얼룩, 위아래 가장자리는 살짝 어둡게
+                float g = 1f - 0.08f * Noise(x * 0.5f, y * 2.5f, 121) - 0.05f * Noise(x * 0.12f, y * 0.3f, 122) - 0.02f * Hash(x, y, 123);
+                if (y == 0 || y == h - 1) g *= 0.86f;
+                byte val = (byte)(Mathf.Clamp01(g) * 255);
+                // 테이프는 살짝 비친다
+                px[y * w + x] = new Color32(val, val, val, (byte)(a * 0.9f * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    static Sprite MakePlate()
+    {
+        const int size = 96, border = 10;
+        var tex = NewTex("UIPlate", size, size);
+        var px = new Color32[size * size];
+        var steel = new Color(0.30f, 0.315f, 0.33f);
+        var rust = new Color(0.40f, 0.21f, 0.11f);
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // 쇠 결 + 가는 긁힘(비스듬한 줄) + 드문드문 녹 얼룩 (큰 얼룩과 잔 얼룩을 겹쳐 격자처럼 보이지 않게)
+                float shade = 0.86f + 0.12f * TileNoise(x, y, size, 24, 131) + 0.1f * TileNoise(x, y, size, 6, 132);
+                float scratch = Noise(x * 0.9f + y * 0.35f, y * 0.06f, 133);
+                if (scratch > 0.8f) shade += 0.12f;
+                var c = steel * shade;
+                float r = 0.6f * TileNoise(x, y, size, 3, 134) + 0.4f * TileNoise(x, y, size, 11, 135);
+                float rustAmt = Mathf.SmoothStep(0f, 1f, (r - 0.6f) / 0.14f) * 0.8f;
+                c = Color.Lerp(c, rust * (0.8f + 0.4f * Hash(x, y, 136)), rustAmt);
+                // 가장자리 비스듬한 면: 왼쪽·위는 밝고 오른쪽·아래는 어둡다. 안쪽 6px에는 눌린 홈 선
+                int l = x, b = y, rgt = size - 1 - x, t = size - 1 - y;
+                int edge = Mathf.Min(Mathf.Min(l, b), Mathf.Min(rgt, t));
+                if (edge <= 1)
+                {
+                    bool lit = l <= 1 || t <= 1;
+                    c *= lit ? 1.35f : 0.6f;
+                }
+                else if (edge == 6) c *= 0.72f;
+                else if (edge == 7) c *= 1.08f;
+                px[y * size + x] = new Color32((byte)(Mathf.Clamp01(c.r) * 255), (byte)(Mathf.Clamp01(c.g) * 255), (byte)(Mathf.Clamp01(c.b) * 255), 255);
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeScrew()
+    {
+        const int size = 16;
+        var tex = NewTex("UIScrew", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        float half = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x + 0.5f - half, dy = y + 0.5f - half;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(half - 1f - r + 0.5f);
+                // 머리: 가운데 어둡고 테두리는 밝은 쇠. 가운데 일자 홈
+                float g = r > half - 2.6f ? 0.62f : 0.3f + 0.1f * (dy / half);
+                if (Mathf.Abs(dy) < 1.1f && Mathf.Abs(dx) < half - 2.8f) g = 0.1f;
+                byte val = (byte)(g * 255);
+                px[y * size + x] = new Color32(val, val, val, (byte)(a * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    static Sprite MakeGlow()
+    {
+        const int size = 32;
+        var tex = NewTex("UIGlow", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        float half = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x + 0.5f - half, dy = y + 0.5f - half;
+                float r = Mathf.Sqrt(dx * dx + dy * dy) / (half - 1);
+                float a = Mathf.Clamp01(1 - r);
+                a = a * a * (3 - 2 * a);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    static Sprite MakePencil()
+    {
+        const int w = 128, h = 6;
+        var tex = NewTex("UIPencil", w, h, TextureWrapMode.Clamp);
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                // 살짝 구불거리는 선, 흑연이 고르지 않게 묻는다
+                float mid = 3f + 0.8f * Mathf.Sin(x * 0.21f) + 0.4f * Mathf.Sin(x * 0.57f + 1f);
+                float a = Mathf.Clamp01(1.4f - Mathf.Abs(y + 0.5f - mid));
+                a *= 0.55f + 0.45f * Noise(x * 0.5f, 0, 141);
+                px[y * w + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    static Sprite MakeGrime()
+    {
+        // 타일이 눈에 띄게 되풀이되지 않도록 크게(256px) 만들고, 긁힘은 드문드문 길게, 먼지는 옅게
+        const int size = 256;
+        var tex = NewTex("UIGrime", size, size);
+        var px = new Color32[size * size];
+        const int lineCount = 5;
+        var lines = new float[lineCount, 4];
+        for (int k = 0; k < lineCount; k++)
+        {
+            float ang = Hash(k, 0, 151) * 3.1416f;
+            lines[k, 0] = Hash(k, 1, 152) * size; lines[k, 1] = Hash(k, 2, 153) * size;
+            lines[k, 2] = Mathf.Cos(ang); lines[k, 3] = Mathf.Sin(ang);
+        }
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float a = 0f;
+                // 넓은 얼룩 (아주 옅게)
+                a += 0.07f * TileNoise(x, y, size, 3, 154) * TileNoise(x, y, size, 9, 155);
+                // 먼지: 군데군데 모여 있는 점
+                float cluster = TileNoise(x, y, size, 6, 156);
+                float speck = Hash(x, y, 157);
+                if (speck > 0.992f && cluster > 0.55f) a += 0.15f + 0.2f * Hash(x, y, 158);
+                // 긁힘 (끝은 옅어진다)
+                for (int k = 0; k < lineCount; k++)
+                {
+                    float dx = x + 0.5f - lines[k, 0], dy = y + 0.5f - lines[k, 1];
+                    float along = dx * lines[k, 2] + dy * lines[k, 3];
+                    float across = Mathf.Abs(-dx * lines[k, 3] + dy * lines[k, 2]);
+                    float len = 40 + 60 * Hash(k, 3, 159);
+                    if (Mathf.Abs(along) < len && across < 0.8f)
+                        a += 0.2f * (1 - across / 0.8f) * (1 - Mathf.Abs(along) / len) * (0.5f + 0.5f * Noise(along * 0.2f, k, 160));
+                }
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    // ---------- 기본 사각형 ----------
+
     static Sprite fill, frame;
 
     static Sprite fade;
@@ -81,8 +370,9 @@ public static class UIStyle
 
     static Sprite Make(bool outline)
     {
+        // 모서리는 살짝만 둥글게 (어두운 유리판), 테두리는 가는 선
         const int size = 32;
-        const float radius = 7f, width = 1.6f;
+        const float radius = 4f, width = 1.6f;
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
         {
             wrapMode = TextureWrapMode.Clamp,

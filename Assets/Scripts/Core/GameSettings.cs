@@ -23,6 +23,7 @@ public static class GameSettings
     public static float Fov;
     public static int FpsIndex;
     public static bool VSync, ShowFps, Fullscreen, InvertY;
+    public static bool Tips;          // 안내(할 일 명판·나침반·대상 불빛·힌트·조작키) 켜기 — 일시정지 메뉴의 Tip 스위치
     public static float Sensitivity;  // 마우스 감도 배율
     public static float Volume;        // 전체 (AudioListener)
     public static float VolumeAmbient, VolumeEffects, VolumeEnemy, VolumeUI; // 종류별 (AudioCategory)
@@ -46,6 +47,7 @@ public static class GameSettings
         ShowFps = PlayerPrefs.GetInt("set_showFps", 0) == 1;
         Fullscreen = PlayerPrefs.GetInt("set_fullscreen", 1) == 1;
         InvertY = PlayerPrefs.GetInt("set_invertY", 0) == 1;
+        Tips = PlayerPrefs.GetInt("set_tips", 1) == 1;
         Sensitivity = PlayerPrefs.GetFloat("set_sensitivity", 1f);
         Volume = PlayerPrefs.GetFloat("set_volume", 0.8f);
         VolumeAmbient = PlayerPrefs.GetFloat("set_volAmbient", 1f);
@@ -76,6 +78,7 @@ public static class GameSettings
         PlayerPrefs.SetInt("set_showFps", ShowFps ? 1 : 0);
         PlayerPrefs.SetInt("set_fullscreen", Fullscreen ? 1 : 0);
         PlayerPrefs.SetInt("set_invertY", InvertY ? 1 : 0);
+        PlayerPrefs.SetInt("set_tips", Tips ? 1 : 0);
         PlayerPrefs.SetFloat("set_sensitivity", Sensitivity);
         PlayerPrefs.SetFloat("set_volume", Volume);
         PlayerPrefs.SetFloat("set_volAmbient", VolumeAmbient);
@@ -108,7 +111,8 @@ public static class GameSettings
         Application.targetFrameRate = fps == 0 ? -1 : fps;
         if (!Application.isEditor)
             Screen.fullScreenMode = Fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
-        AudioListener.volume = Volume;
+        // 전체 음량을 100%로 둬도 실제 출력은 81% (처음 시작한 사람이 놀라지 않게 10%씩 두 번 낮춤, 사용자 요청)
+        AudioListener.volume = Volume * 0.81f;
 
         if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
         {

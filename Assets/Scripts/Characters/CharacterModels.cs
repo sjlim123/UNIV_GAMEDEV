@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 적·NPC 겉모습 (Character_Design 디자인 시트를 따른다: 일반·가죽갑옷·새총·거대 좀비, 약탈자, 들개, 잡상인)
-public enum FigureKind { Zombie, Leather, Slingshot, Giant, Raider, Dog, Merchant }
+// Civilian: 컷씬의 주인공 (평범한 옷차림의 시민)
+public enum FigureKind { Zombie, Leather, Slingshot, Giant, Raider, Dog, Merchant, Civilian }
 
 // 만든 몸의 관절. 사람은 몸통·머리·턱·어깨·팔꿈치·손목·엉덩이·무릎, 들개는 목·머리·턱·다리 4개(위·아래)·꼬리
 public class CharacterRig
@@ -20,8 +21,8 @@ public class CharacterRig
 // 크기는 Unity 1 = 1m (사람 1.75m, 들개 어깨 0.6m·몸길이 1.1m)
 public static class CharacterModels
 {
-    // 사람 뼈대 길이 (m)
-    const float HipY = 0.92f, Thigh = 0.44f, Shin = 0.40f, UpperArm = 0.30f, Forearm = 0.27f;
+    // 사람 뼈대 길이 (m). 컷씬 배우(CutsceneActor)가 관절을 IK로 굽힐 때도 쓴다
+    public const float HipY = 0.92f, Thigh = 0.44f, Shin = 0.40f, UpperArm = 0.30f, Forearm = 0.27f;
     // 손 가운데 (어깨 기준 아래로). 좀비 코드가 손 위치를 이 값으로 잡는다
     public const float HandReach = 0.66f;
 
@@ -42,6 +43,7 @@ public static class CharacterModels
             case FigureKind.Raider: Raider(b); break;
             case FigureKind.Dog: Dog(b); break;
             case FigureKind.Merchant: Merchant(b); break;
+            case FigureKind.Civilian: Civilian(b, variant); break;
             default: CommonZombie(b, variant); break;
         }
         b.Finish();
@@ -815,6 +817,39 @@ public static class CharacterModels
         b.Part(staff, ProcMesh.Tube("staff", 2, 8, -1.05f, 0.016f, 0.016f, 0f, 0.55f, 0.018f, 0.018f, 0f, 0.6f, 0.022f, 0.022f, 0f), ProcTex.Get(ProcTex.Kind.Wood, Hex("6a4a2e"), 85), Vector3.zero, new Vector3(62, 0, 0));
         rig.ArmL.localRotation = Quaternion.Euler(4, 0, -6);
         rig.ForeL.localRotation = Quaternion.Euler(-20, 0, 0);
+    }
+
+    // ================= 컷씬 주인공 (시민) =================
+    // 피부 #C9A27E, 밝은 회색 반팔 티셔츠, 청바지, 흰 운동화, 짧은 검은 머리. 상처·피 없음
+
+    static void Civilian(Builder b, int variant)
+    {
+        int seed = 90 + variant;
+        var shirt = ProcTex.Get(ProcTex.Kind.Cloth, Hex("d9d4c9"), seed, 0, 0.06f, Hex("aaa497"));
+        var h = new Human
+        {
+            Skin = ProcTex.Get(ProcTex.Kind.Skin, Hex("C9A27E"), seed, 0, 0.04f, Hex("a67e5d")),
+            Shirt = shirt,
+            Sleeve = shirt,
+            SleeveTo = -0.13f,
+            Pants = ProcTex.Get(ProcTex.Kind.Denim, Hex("3f5273"), seed, 0, 0.1f, Hex("2b3950")),
+            Shoes = ProcTex.Get(ProcTex.Kind.Leather, Hex("dcd9d3"), seed, 0, 0.12f, Hex("b8b4ac")),
+            Hair = ProcTex.Get(ProcTex.Kind.Hair, Hex("1e1816"), seed),
+            Zombie = false,
+            PantsBaggy = false,
+            Belt = true,
+        };
+        Humanoid(b, h);
+        var rig = b.Rig;
+        // 티셔츠 아랫단(허리띠 위로 살짝 늘어진다)과 목둘레 띠
+        b.Part(rig.Body, Tube(b.Key + "hem", -0.03f, 0.158f, 0.106f, 0.004f, 0.03f, 0.154f, 0.102f, 0.002f), shirt, Vector3.zero);
+        b.Part(rig.Body, Tube(b.Key + "neckband", 0.515f, 0.072f, 0.068f, 0f, 0.535f, 0.07f, 0.066f, 0.002f), ProcTex.Get(ProcTex.Kind.Cloth, Hex("c4bfb3"), seed + 1, 0, 0.06f), Vector3.zero);
+        // 눈썹과 손목시계
+        var brow = ProcTex.Get(ProcTex.Kind.Hair, Hex("2a2220"), seed);
+        b.Part(rig.Head, ProcMesh.Box("eyebrow", 0.03f, 0.006f, 0.006f), brow, new Vector3(-0.033f, 0.168f, 0.097f), new Vector3(0, 0, 6), null, false);
+        b.Part(rig.Head, ProcMesh.Box("eyebrow", 0.03f, 0.006f, 0.006f), brow, new Vector3(0.033f, 0.168f, 0.097f), new Vector3(0, 0, -6), null, false);
+        b.Part(rig.ForeL, Tube(b.Key + "watchband", -0.255f, 0.028f, 0.023f, 0f, -0.235f, 0.029f, 0.024f, 0f), ProcTex.Plain(Hex("2a2522"), 0.3f), Vector3.zero);
+        b.Part(rig.ForeL, ProcMesh.Box("watchface", 0.024f, 0.02f, 0.006f), ProcTex.Plain(Hex("8c8f93"), 0.8f, 0.7f), new Vector3(-0.028f, -0.245f, 0f), new Vector3(0, 90, 0), null, false);
     }
 
     // ================= 05 들개 =================

@@ -199,6 +199,7 @@ public class Animal : MonoBehaviour, IDamageable
         voice.pitch = Random.Range(0.9f, 1.1f);
         voice.PlayOneShot(ProceduralAudio.Snap(), 1f);
         ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.6f, 1.1f);
+        UIManager.LastHitFrom = transform.position;
         GameManager.Instance.Damage(stats.damage * (1 + 0.2f * danger), "들개에게 물어뜯겼다.");
     }
 

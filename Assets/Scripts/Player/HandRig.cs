@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // 1인칭 팔 하나 (ProcMesh로 짓는다): 팔꿈치(Elbow) → 야상 소매 → 손목(Wrist) → 손바닥과 다섯 손가락 관절.
+// 손에는 낡은 가죽 반장갑을 꼈다: 손목 끈과 버클, 손등 너클 패드, 손가락은 첫 마디까지만 덮고 끝 두 마디는 맨살.
+// 손바닥·손등은 매끈한 한 덩어리(튀어나온 살점 없이)라 로우폴리 손처럼 깔끔하게 읽힌다.
 // 손 좌표(Wrist): +z = 손가락 쪽, +y = 엄지 쪽, 손바닥은 -x*Side 쪽 (Side 1 = 오른손, -1 = 왼손, 왼손은 거울 모양).
 // 팔뚝은 늘 손 -z 쪽으로 뻗는다. 그래서 손을 어느 쪽으로 돌려도 손목이 꺾여 보이지 않는다 (몸짓 때만 Bend로 조금 꺾는다).
 // 손가락은 마디마다 굽힌 각도로 움직이고, Wrap()은 쥔 물건 표면에 닿을 때까지 손가락을 감는다.
@@ -23,7 +25,7 @@ public class HandRig
     readonly float[] radii = new float[5];
 
     // 재질은 ProcTex가 이름으로 한 번만 만들어 함께 쓴다 (장면을 옮기며 지워져도 다시 만든다)
-    readonly Material skin, nail, jacket, cuff;
+    readonly Material skin, nail, jacket, cuff, glove, pad, strap;
 
     // ---------- 손 모양 (자세) ----------
 
@@ -69,6 +71,10 @@ public class HandRig
         // 야상은 따뜻한 불빛 아래서도 맨살로 보이지 않게 어둡고 푸른 국방색
         jacket = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.16f, 0.19f, 0.14f), 402, 0, 0.5f, new Color(0.1f, 0.12f, 0.09f));
         cuff = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.12f, 0.14f, 0.11f), 403, 0, 0.55f);
+        // 반장갑: 닳은 검은 가죽, 너클 패드는 고무, 손목 끈은 검은 띠
+        glove = ProcTex.Get(ProcTex.Kind.Leather, new Color(0.17f, 0.14f, 0.12f), 404, 0, 0.6f, new Color(0.09f, 0.075f, 0.065f));
+        pad = ProcTex.Get(ProcTex.Kind.Rubber, new Color(0.2f, 0.19f, 0.18f), 405, 0, 0.5f);
+        strap = ProcTex.Plain(new Color(0.08f, 0.075f, 0.07f), 0.25f);
         BuildSleeve();
         BuildHand();
         Apply(Relaxed);
@@ -98,23 +104,28 @@ public class HandRig
             L - 0.03f, 0.044f, 0.048f, 0f), cuff, Vector3.zero, Along);
     }
 
-    // 손바닥·손목·손날 + 다섯 손가락
+    // 장갑 낀 손목·손바닥 + 다섯 손가락
     void BuildHand()
     {
-        // 손목 (소매 안에서 손바닥까지)
+        // 손목 (소매 안에서 손바닥까지) — 장갑 가죽
         Part(Wrist, ProcMesh.Tube("fp2_wrist", 2, 16,
             -0.07f, 0.021f, 0.027f, 0f,
             -0.02f, 0.019f, 0.027f, 0f,
-            0.004f, 0.019f, 0.029f, 0f), skin, new Vector3(Side * 0.007f, 0, 0), Along);
-        // 손등·손바닥 (손목 → 손가락 뿌리)
+            0.004f, 0.019f, 0.029f, 0f), glove, new Vector3(Side * 0.007f, 0, 0), Along);
+        // 손목 끈: 손목을 한 바퀴 감은 검은 띠와 손등 쪽 버클
+        Part(Wrist, ProcMesh.Tube("fp2_strap", 2, 16,
+            -0.052f, 0.0235f, 0.0305f, 0f,
+            -0.034f, 0.0235f, 0.0305f, 0f), strap, new Vector3(Side * 0.007f, 0, 0), Along);
+        Part(Wrist, ProcMesh.Box("fp2_buckle", 0.005f, 0.014f, 0.016f), pad, new Vector3(Side * 0.031f, 0.004f, -0.043f), Quaternion.identity);
+        // 손등·손바닥 (손목 → 손가락 뿌리): 살점 없이 매끈한 한 덩어리
         Part(Wrist, ProcMesh.Tube("fp2_palm", 3, 18,
             -0.012f, 0.02f, 0.029f, 0f,
             0.02f, 0.022f, 0.036f, 0f,
             0.05f, 0.02f, 0.04f, 0f,
             0.075f, 0.017f, 0.042f, 0f,
-            0.093f, 0.011f, 0.036f, 0f), skin, new Vector3(Side * 0.012f, 0, 0), Along);
-        // 새끼손가락 쪽 손날의 두툼한 살
-        Part(Wrist, ProcMesh.Ellipsoid("fp2_hypothenar", 0.013f, 0.014f, 0.032f), skin, new Vector3(-Side * 0.001f, -0.027f, 0.035f), Quaternion.identity);
+            0.093f, 0.011f, 0.036f, 0f), glove, new Vector3(Side * 0.012f, 0, 0), Along);
+        // 손등의 너클 패드 (네 손가락 뿌리 위를 가로지르는 고무판)
+        Part(Wrist, ProcMesh.Box("fp2_kpad", 0.011f, 0.058f, 0.02f), pad, new Vector3(Side * 0.021f, 0f, 0.08f), Quaternion.identity);
 
         // 손가락 넷: 검지(위)부터 새끼(아래)로. 뿌리 마디 위치, 마디 길이, 굵기
         float[] ys = { 0.027f, 0.009f, -0.009f, -0.027f };
@@ -126,8 +137,6 @@ public class HandRig
             float k = scale[i];
             radii[f] = 0.0097f * (i == 3 ? 0.87f : i == 1 ? 1.03f : 1f);
             lengths[f] = new[] { 0.041f * k, 0.026f * k, 0.021f * k };
-            // 손등 마디 뼈가 도드라진다
-            Part(Wrist, ProcMesh.Ellipsoid("fp2_knuckle", 0.009f, 0.0095f, 0.011f), skin, new Vector3(Side * 0.02f, ys[i], zs[i] - 0.004f), Quaternion.identity);
             BuildFinger(f, new Vector3(Side * 0.011f, ys[i], zs[i]), Quaternion.identity);
         }
 
@@ -137,8 +146,6 @@ public class HandRig
         var dir = new Vector3(-Side * 0.3f, 0.62f, 0.72f).normalized;
         var flex = new Vector3(-Side * 0.55f, -0.8f, 0.1f);
         BuildFinger(0, new Vector3(-Side * 0.004f, 0.022f, 0.012f), Frame(dir, flex));
-        // 엄지 뿌리 두툼한 살 (엄지 첫 마디에 붙어 함께 움직인다)
-        Part(joints[0][0], ProcMesh.Ellipsoid("fp2_thenar", 0.015f, 0.016f, 0.026f), skin, new Vector3(-Side * 0.004f, -0.004f, 0.012f), Quaternion.identity);
     }
 
     // 굽힐 방향(flex)으로 마디가 굽는 좌표계: +z = 손가락 방향, 로컬 y축으로 돌면 flex 쪽으로 굽는다
@@ -164,7 +171,12 @@ public class HandRig
             joints[f][j] = t;
             float len = lengths[f][j];
             float rr = r * (j == 0 ? 1f : j == 1 ? 0.93f : 0.86f) * (f == 0 && j == 0 ? 1.2f : 1f);
-            Segment(t, len, rr);
+            // 반장갑: 첫 마디는 가죽으로 덮이고 끝에 꿰맨 단이 있다. 나머지 두 마디는 맨살
+            Segment(t, len, rr, j == 0 ? glove : skin);
+            if (j == 0)
+                Part(t, ProcMesh.Tube($"fp2_hem_{rr:0.0000}_{len:0.000}", 2, 12,
+                    len - 0.007f, rr * 1.07f, rr * 1.02f, 0f,
+                    len - 0.001f, rr * 1.07f, rr * 1.02f, 0f), strap, Vector3.zero, Along);
             // 손톱: 끝 마디 등 쪽
             if (j == 2)
                 Part(t, ProcMesh.Ellipsoid($"fp2_nail_{rr:0.0000}_{len:0.000}", 0.0022f, rr * 0.72f, len * 0.42f), nail, new Vector3(Side * rr * 0.82f, 0, len * 0.58f), Quaternion.identity);
@@ -174,7 +186,7 @@ public class HandRig
     }
 
     // 손가락 한 마디 (+z로 길이 len, 끝이 둥글다)
-    void Segment(Transform joint, float len, float r)
+    void Segment(Transform joint, float len, float r, Material mat)
     {
         var mesh = ProcMesh.Tube($"fp2_seg_{len:0.000}_{r:0.0000}", 2, 12,
             -r * 0.55f, r * 0.72f, r * 0.72f, 0f,
@@ -182,7 +194,7 @@ public class HandRig
             len * 0.5f, r * 0.96f, r * 0.9f, 0f,
             len, r * 0.92f, r * 0.88f, 0f,
             len + r * 0.6f, r * 0.55f, r * 0.55f, 0f);
-        Part(joint, mesh, skin, Vector3.zero, Along);
+        Part(joint, mesh, mat, Vector3.zero, Along);
     }
 
     static Transform Part(Transform parent, Mesh mesh, Material mat, Vector3 pos, Quaternion rot)

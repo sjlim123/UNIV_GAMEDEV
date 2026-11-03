@@ -24,8 +24,9 @@ public class MainMenuBackground : MonoBehaviour
         silenced = false;
         startPos = cameraTransform.position;
         startRot = cameraTransform.rotation;
-        wind = Loop(ProceduralAudio.Wind(), 0.22f);
-        if (rain) rainSource = Loop(ProceduralAudio.Rain(), 0.42f);
+        // 메인 화면 소리는 전체보다 10% 더 작게
+        wind = Loop(ProceduralAudio.Wind(), 0.2f);
+        if (rain) rainSource = Loop(ProceduralAudio.Rain(), 0.38f);
     }
 
     AudioSource Loop(AudioClip clip, float volume)
@@ -59,7 +60,7 @@ public class MainMenuBackground : MonoBehaviour
         {
             groanTimer = Random.Range(10f, 22f);
             var pos = cameraTransform.position + Quaternion.Euler(0, Random.Range(-60f, 60f), 0) * cameraTransform.forward * Random.Range(25f, 40f);
-            ProceduralAudio.PlayAt(ProceduralAudio.Groan(), pos, 0.6f, Random.Range(0.8f, 0.95f), 1f, 60f, SoundCategory.Ambient);
+            ProceduralAudio.PlayAt(ProceduralAudio.ZombieGroan(), pos, 0.6f, Random.Range(0.8f, 0.95f), 1f, 60f, SoundCategory.Ambient);
         }
     }
 }

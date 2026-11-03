@@ -62,6 +62,7 @@ public class Radio : Interactable
 
     void TurnOn()
     {
+        Tutorial.Notify("radio");
         BuildTransmission();
         playing = true;
         index = -1;
@@ -87,14 +88,29 @@ public class Radio : Interactable
         if (needle != null) needle.localPosition = needleHome;
     }
 
-    // 끊어진 방송 내용. 남은 턴에 따라 한 줄이 바뀐다 (○○ 지명은 나중에 정한다)
+    // 켤 때마다 두 방송이 번갈아 잡힌다 (○○ 지명은 나중에 정한다):
+    // 1) 긴급 재난 방송 — 핵폭발 뒤 퍼진 바이러스와 감염자(좀비)를 알리고 서울시 ○○으로 대피하라는 안내
+    // 2) 생존자의 호출 — 트럭을 만들어 ○○으로 오라는 끊어진 목소리 (남은 턴에 따라 한 줄이 바뀐다)
+    static int broadcastTurn;
+
     void BuildTransmission()
     {
         lines.Clear();
         durations.Clear();
         var s = GameManager.Instance.State;
         int left = Mathf.Max(0, GameState.MaxTurns - s.Turn);
+        bool emergency = broadcastTurn++ % 2 == 0;
         Add("치지직…", 2f);
+        if (emergency)
+        {
+            Add("…긴급 재난 방송입니다… 치직…", 2.5f);
+            Add("…핵폭발 이후… 정체불명의 바이러스가… 수도권에 퍼지고 있습니다…", 3.5f);
+            Add("…감염자는… 사람을 공격합니다… 절대 접근하지 마십시오…", 3f);
+            Add("…서울 전역이… 위험 지대로… 지정되었습니다…", 3f);
+            Add("…생존자 여러분은… 서울시 ○○으로… 대피하시기 바랍니다…", 3.5f);
+            Add("…이 방송은… 반복됩니다… 치지직…", 2.5f);
+            return;
+        }
         Add("…들리는 사람… 있나…", 2.5f);
         Add($"…{GameState.MaxTurns}턴 안에… 트럭을… 만들어서…", 3f);
         Add("…서울시 ○○으로… 와라… 치직…", 3f);

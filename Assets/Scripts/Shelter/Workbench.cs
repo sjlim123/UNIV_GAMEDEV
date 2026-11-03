@@ -7,6 +7,16 @@ public class Workbench : Interactable
 
     public override void Interact(PlayerInteractor player) => GameManager.Instance.UI.OpenWorkbench(transform);
 
+    // 벽에 붙은 공구판(Pegboard)을 바라봐도 안내와 윤곽선이 나오게 충돌체를 하나 더 둔다 (씬을 다시 만들지 않아도 되게 실행 중에 붙인다)
+    void Start()
+    {
+        var board = transform.Find("Pegboard");
+        if (board == null || GetComponents<BoxCollider>().Length > 1) return;
+        var c = gameObject.AddComponent<BoxCollider>();
+        c.center = board.localPosition;
+        c.size = board.localScale + new Vector3(0, 0, 0.06f);
+    }
+
     // 전력이 없으면 작업등과 공구를 쓸 수 없다
     public static bool IsPowered(GameState s) => s.Power > 0;
 

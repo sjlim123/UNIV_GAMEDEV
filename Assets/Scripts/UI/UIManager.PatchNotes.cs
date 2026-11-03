@@ -80,6 +80,7 @@ public partial class UIManager
         patchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.28f));
 
         var glass = Box(r, "Glass", GlassFill, GlassFrame);
+        Grime(glass);
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1480, 840));
 
@@ -282,8 +283,8 @@ public partial class UIManager
 
     // ---------- 유리판 블러 (패치노트·제작대·트럭·일반 창·메뉴가 함께 쓴다. 패치노트·일반 창·메뉴의 갱신은 UIManager.cs의 UpdateGlass) ----------
 
-    static readonly Color GlassFill = new Color(0.09f, 0.095f, 0.09f, 0.62f);
-    static readonly Color GlassFrame = new Color(1, 1, 1, 0.14f);
+    static readonly Color GlassFill = new Color(0.035f, 0.037f, 0.04f, 0.9f);
+    static readonly Color GlassFrame = new Color(0.72f, 0.48f, 0.2f, 0.22f);
 
     // 화면 전체에 흐린 배경(RawImage)과 어두운 막을 깐다. 막은 뒤 화면을 누르지 못하게 막는 역할도 한다
     RawImage BlurBackdrop(RectTransform parent, Color tint)

@@ -55,6 +55,7 @@ public class CityDirector : MonoBehaviour
     void Start()
     {
         balance = GameBalance.Data;
+        Weather.Begin(); // 이번 탐험의 날씨 (붉은 밤보다 먼저 적용된다)
         timeLimit = balance.expeditionSeconds;
         TimeLeft = timeLimit;
         zombiePoints = FindObjectsByType<ZombieSpawnPoint>(FindObjectsSortMode.None);
@@ -218,7 +219,8 @@ public class CityDirector : MonoBehaviour
             distantSoundTimer = Random.Range(10f, 25f) * Mathf.Lerp(1f, 0.5f, Danger);
             Vector2 r = Random.insideUnitCircle.normalized * Random.Range(25f, 45f);
             var pos = player.transform.position + new Vector3(r.x, 1, r.y);
-            var clip = Random.value < 0.25f ? ProceduralAudio.Scream() : ProceduralAudio.Groan();
+            // 녹음한 좀비 목소리 (예전 합성음 Groan/Scream은 더 쓰지 않는다)
+            var clip = Random.value < 0.25f ? ProceduralAudio.ZombieScream() : ProceduralAudio.ZombieGroan();
             ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f, SoundCategory.Ambient);
         }
     }

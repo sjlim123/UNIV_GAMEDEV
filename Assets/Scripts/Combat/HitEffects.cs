@@ -12,10 +12,23 @@ public static class HitEffects
     // 플레이어가 적을 때렸을 때 한 번에 부른다
     public static void PlayerHit(Component target, Vector3 point, Vector3 direction, bool killed)
     {
-        Blood(point, -direction, killed ? 26 : 14);
+        Blood(point, -direction, killed ? 44 : 14);
         var ui = GameManager.Instance.UI;
         ui.ShowHitMarker(killed);
         HitStop(killed ? 0.09f : 0.05f);
+        if (killed) GameManager.Instance.StartCoroutine(KillSlow());
+    }
+
+    // 처치: 멈칫한 뒤 잠깐 느려졌다가 돌아온다 + 둔탁한 울림 (마지막 타격을 느끼게)
+    const float KillScale = 0.35f;
+
+    static IEnumerator KillSlow()
+    {
+        yield return new WaitForSecondsRealtime(0.1f);
+        if (Time.timeScale > 0.99f || Mathf.Approximately(Time.timeScale, StopScale)) Time.timeScale = KillScale;
+        ProceduralAudio.Play2D(ProceduralAudio.Bang(), 0.35f, 0.45f);
+        yield return new WaitForSecondsRealtime(0.18f);
+        if (Mathf.Approximately(Time.timeScale, KillScale)) Time.timeScale = 1f;
     }
 
     // 맞은 자리에서 핏방울이 튄다 (normal 쪽으로)
