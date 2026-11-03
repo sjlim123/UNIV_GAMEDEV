@@ -256,6 +256,7 @@ public class GameManager : MonoBehaviour
 
     public void GoToMainMenu()
     {
+        if (IsTransitioning) return; // 버튼을 연달아 누르거나 씬을 옮기는 중에 또 부르면 메뉴 씬이 두 번 열린다
         if (InShelter) SaveGame();
         IsGameOver = false;
         StartCoroutine(LoadRoutine(MenuScene, false));
@@ -335,7 +336,13 @@ public class GameManager : MonoBehaviour
         }
         yield return new WaitForSecondsRealtime(1.1f);
         UI.ShowSleepText(null);
-        if (!alive) { IsTransitioning = false; yield break; }
+        if (!alive)
+        {
+            // 자다가 죽거나 마지막 턴이 끝났다: 검은 화면을 걷어야 그 아래 끝 화면이 보인다 (걷지 않으면 8초 동안 까만 화면만 보인다)
+            yield return UI.Fade(0, 1.0f);
+            IsTransitioning = false;
+            yield break;
+        }
         // 3) 눈을 뜨고 일어난다
         yield return UI.Fade(0, 1.2f);
         if (pc != null && eye != null)

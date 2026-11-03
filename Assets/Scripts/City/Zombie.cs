@@ -127,9 +127,11 @@ public class Zombie : MonoBehaviour, IDamageable
         health = stats.health;
         baseAttackRange = attackRange;
         // 목소리·발소리: 완전 3D, 방향이 또렷하고 15~20m에서도 잘 들린다
+        // (두 AudioSource를 먼저 붙이고 나서 Setup3D를 부른다: Setup3D가 붙이는 저음 필터가 있는 오브젝트에
+        //  AudioSource를 더 붙이면 유니티가 빈 소리를 재생하려다 "Only custom filters can be played" 경고를 낸다)
         voice = gameObject.AddComponent<AudioSource>();
-        ProceduralAudio.Setup3D(voice, 36f, 64);
         feet = gameObject.AddComponent<AudioSource>();
+        ProceduralAudio.Setup3D(voice, 36f, 64);
         ProceduralAudio.Setup3D(feet, 26f, 150);
         groanTimer = Random.Range(2f, 8f);
         animPhase = Random.value * 10;
