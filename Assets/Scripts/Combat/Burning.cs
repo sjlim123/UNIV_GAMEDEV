@@ -117,7 +117,12 @@ public class Burning : MonoBehaviour
         glow.intensity = 0;
         glow.shadows = LightShadows.None;
 
-        crackle = gameObject.AddComponent<AudioSource>();
+        // 타닥 소리는 자식 오브젝트에 둔다: 적의 몸에는 목소리용 저음 필터가 이미 붙어 있어서
+        // 거기에 AudioSource를 더 붙이면 유니티가 빈 소리를 재생하려다 경고를 낸다
+        var ag = new GameObject("BurnAudio");
+        ag.transform.SetParent(transform, false);
+        ag.transform.localPosition = new Vector3(0, localHeight * 0.5f, 0);
+        crackle = ag.AddComponent<AudioSource>();
         ProceduralAudio.Setup3D(crackle, 22f, 100);
         crackle.clip = ProceduralAudio.Crackle();
         crackle.loop = true;

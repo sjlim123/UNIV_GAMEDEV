@@ -97,20 +97,24 @@ public static class Tutorial
 
     static GameObject beacon;
     static string beaconFor;
+    static bool beaconMissing; // 이 씬에는 대상이 없다고 확인했다 (매 프레임 씬 전체를 다시 뒤지지 않게)
 
     public static void RefreshBeacon(bool force = false)
     {
         string want = Done || State == null || !GameSettings.Tips ? "" : Current.Target;
         string key = want + "@" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (!force && key == beaconFor && (beacon != null || want == "")) return;
+        // 불빛이 이미 떠 있거나, 이 씬에 대상이 없다고 확인했으면 그대로 둔다.
+        // 씬이 다시 열려 불빛이 사라졌으면(beacon이 파괴됨) 같은 씬 이름이어도 다시 만든다 (이어하기·새 게임)
+        if (!force && key == beaconFor && (beacon != null || want == "" || beaconMissing)) return;
         beaconFor = key;
+        beaconMissing = false;
         if (beacon != null) Object.Destroy(beacon);
         beacon = null;
         if (want == "") return;
         var type = System.Type.GetType(want);
-        if (type == null) return;
+        if (type == null) { beaconMissing = true; return; }
         var target = Object.FindFirstObjectByType(type) as Component;
-        if (target == null) return;
+        if (target == null) { beaconMissing = true; return; }
         var b = new Bounds(target.transform.position, Vector3.one * 0.5f);
         foreach (var r in target.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
         beacon = new GameObject("TutorialBeacon");
