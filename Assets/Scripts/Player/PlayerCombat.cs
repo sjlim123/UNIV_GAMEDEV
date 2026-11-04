@@ -60,12 +60,21 @@ public class PlayerCombat : MonoBehaviour
                 HitEffects.PlayerHit((Component)target, hit.point, cam.transform.forward, killed);
                 if (lighter && !killed)
                 {
-                    Burning.Apply(((Component)target).gameObject, b.burnSeconds, b.burnDamage);
-                    GameManager.Instance.UI.ShowMessage($"불이 붙었다! ({b.burnSeconds:0}초 동안 화상)", 1.6f);
+                    var go = ((Component)target).gameObject;
+                    bool wasBurning = Burning.IsBurning(go);
+                    Burning.Apply(go, b.burnSeconds, b.burnDamage);
+                    // 처음 불을 붙일 때만, 게임을 켠 뒤 두 번까지만 알려 준다 (타고 있는 적을 다시 때릴 때마다 뜨지 않게. 불꽃이 보이면 충분하다)
+                    if (!wasBurning && burnNotices < 2)
+                    {
+                        burnNotices++;
+                        GameManager.Instance.UI.ShowMessage($"불이 붙었다! ({b.burnSeconds:0}초 동안 화상)", 1.6f);
+                    }
                 }
             }
         }
     }
+
+    static int burnNotices;
 
     static bool IsDead(IDamageable t) => (t is Zombie z && z.IsDead) || (t is Animal a && a.IsDead);
 

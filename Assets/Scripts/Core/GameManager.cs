@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 // 턴·상태·씬 이동·게임오버를 관리한다. 어느 씬에서 플레이를 눌러도 자동으로 생긴다.
@@ -32,6 +34,7 @@ public class GameManager : MonoBehaviour
     public UIManager UI { get; private set; }
     public bool IsGameOver { get; private set; }
     public bool IsTransitioning { get; private set; }
+    public bool IsDying { get; private set; } // 죽는 연출(쓰러짐 → 검은 화면 → 끝 화면)이 진행 중
 
     Dictionary<string, int> expeditionStartItems;
     // 탐험 일지에 적을 기록
@@ -338,8 +341,9 @@ public class GameManager : MonoBehaviour
         UI.ShowSleepText(null);
         if (!alive)
         {
-            // 자다가 죽거나 마지막 턴이 끝났다: 검은 화면을 걷어야 그 아래 끝 화면이 보인다 (걷지 않으면 8초 동안 까만 화면만 보인다)
-            yield return UI.Fade(0, 1.0f);
+            // 마지막 턴이 끝났다: 검은 화면을 걷어야 그 아래 끝 화면이 보인다 (걷지 않으면 8초 동안 까만 화면만 보인다).
+            // 자다가 죽었으면 죽음 연출(DeathRoutine)이 알아서 걷는다
+            if (!IsDying) yield return UI.Fade(0, 1.0f);
             IsTransitioning = false;
             yield break;
         }
@@ -405,8 +409,79 @@ public class GameManager : MonoBehaviour
         if (IsGameOver) return;
         IsGameOver = true;
         SaveSystem.Delete(); // 죽으면 저장도 사라진다
-        UI.ShowEndScreen(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}", EndScreenSeconds);
-        StartCoroutine(ReturnToMenuAfter(EndScreenSeconds));
+        StartCoroutine(DeathRoutine(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}"));
+    }
+
+    // 죽음: 쓰러지며(카메라가 바닥으로 기울고, 색이 빠지고, 소리가 먹먹해진다) 화면이 검어진 뒤 끝 화면이 천천히 나타난다.
+    // 자다가 죽어 이미 검은 화면이면 쓰러지는 부분은 건너뛴다
+    IEnumerator DeathRoutine(string title, string body)
+    {
+        IsDying = true;
+        UI.ClosePanel();
+        const float fallSeconds = 1.7f, fadeIn = 1.4f;
+        if (UI.FadeAlpha < 0.99f)
+        {
+            var pc = PlayerController.Instance;
+            if (pc != null) pc.PlayDeath(fallSeconds);
+            sfx.pitch = 0.75f;
+            sfx.PlayOneShot(ProceduralAudio.Hurt(), 0.9f);
+            sfx.PlayOneShot(ProceduralAudio.Heartbeat(), 0.8f);
+            var grade = new DeathGrade();
+            for (float t = 0; t < fallSeconds; t += Time.unscaledDeltaTime)
+            {
+                grade.Apply(Mathf.Clamp01(t / fallSeconds));
+                yield return null;
+            }
+            grade.Apply(1);
+            sfx.pitch = 0.6f;
+            sfx.PlayOneShot(ProceduralAudio.Heartbeat(), 0.5f);
+            yield return UI.Fade(1, 1.3f);
+            sfx.pitch = 1f;
+        }
+        yield return new WaitForSecondsRealtime(0.8f);
+        UI.ShowEndScreen(title, body, EndScreenSeconds + fadeIn);
+        StartCoroutine(ReturnToMenuAfter(EndScreenSeconds + fadeIn));
+        yield return UI.Fade(0, fadeIn);
+        IsDying = false;
+    }
+
+    // 죽을 때 화면 색을 뺀다: 채도·노출이 떨어지고 가장자리가 어두워지며 소리가 먹먹해진다 (이 씬의 포스트 프로세싱 복사본만 바꾼다)
+    class DeathGrade
+    {
+        readonly ColorAdjustments color;
+        readonly Vignette vignette;
+        readonly AudioLowPassFilter lowPass;
+        readonly float saturation, exposure, edge;
+
+        public DeathGrade()
+        {
+            var volume = FindAnyObjectByType<Volume>();
+            var profile = volume != null ? volume.profile : null;
+            if (profile != null)
+            {
+                if (profile.TryGet(out color)) { saturation = color.saturation.value; exposure = color.postExposure.value; }
+                if (profile.TryGet(out vignette)) edge = vignette.intensity.value;
+            }
+            var listener = FindAnyObjectByType<AudioListener>();
+            if (listener != null)
+            {
+                lowPass = listener.GetComponent<AudioLowPassFilter>();
+                if (lowPass == null) lowPass = listener.gameObject.AddComponent<AudioLowPassFilter>();
+                lowPass.cutoffFrequency = 22000f;
+            }
+        }
+
+        public void Apply(float k)
+        {
+            float e = k * k * (3 - 2 * k);
+            if (color != null)
+            {
+                color.saturation.value = Mathf.Lerp(saturation, -85f, e);
+                color.postExposure.value = exposure - 1.0f * e;
+            }
+            if (vignette != null) vignette.intensity.value = Mathf.Lerp(edge, 0.8f, e);
+            if (lowPass != null) lowPass.cutoffFrequency = Mathf.Exp(Mathf.Lerp(Mathf.Log(22000f), Mathf.Log(380f), e));
+        }
     }
 
     // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때). loadingTitle: 로딩 화면 제목 (없으면 씬에 맞게)

@@ -131,6 +131,12 @@ public static partial class GameSceneBuilder
         M["dirty"] = TexMat("M_DirtyConcrete", "dirty_concrete", new Color(0.66f, 0.66f, 0.64f));
         M["asphalt"] = TexMat("M_Asphalt", "asphalt_02", new Color(0.68f, 0.68f, 0.68f), 0.2f);
         M["metal"] = TexMat("M_RustyMetal", "rusty_metal_02", new Color(0.8f, 0.76f, 0.72f), 0.35f, 0.4f);
+        // 밝은 강철판 (제작대): 녹슨 쇠의 요철(노멀)만 빌리고 색은 밝은 회색으로. 금속성을 낮게 둬야 어두운 방에서도 전구 빛을 받아 보인다
+        M["steel"] = TexMat("M_Steel", "rusty_metal_02", new Color(0.45f, 0.45f, 0.44f), 0.5f, 0.3f);
+        M["steel"].SetTexture("_BaseMap", null);
+        M["steel"].SetTexture("_MainTex", null);
+        M["steel"].SetFloat("_BumpScale", 0.6f);
+        EditorUtility.SetDirty(M["steel"]);
         M["brick"] = TexMat("M_Brick", "brick_wall_10", new Color(0.62f, 0.56f, 0.52f));
         M["floor"] = TexMat("M_ConcreteFloor", "concrete_floor_worn_001", new Color(0.68f, 0.68f, 0.66f), 0.2f);
         M["wood"] = TexMat("M_WoodPlanks", "wood_planks_dirt", new Color(0.66f, 0.6f, 0.55f));

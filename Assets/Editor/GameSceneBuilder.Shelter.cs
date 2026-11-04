@@ -153,15 +153,16 @@ public static partial class GameSceneBuilder
         g.gameObject.AddComponent<Bed>();
     }
 
+    // 제작대: 어두운 나무판은 어두운 방에서 잘 안 보인다는 피드백에 따라 상판·선반·공구판을 밝은 강철로 만든다
     static void BuildWorkbench(Transform parent, Vector3 pos)
     {
         var g = Group("Workbench", parent, pos);
-        Box("Top", g, new Vector3(0, 0.9f, 0), new Vector3(2.2f, 0.08f, 0.8f), M["wood"], 1.2f, false);
+        Box("Top", g, new Vector3(0, 0.9f, 0), new Vector3(2.2f, 0.08f, 0.8f), M["steel"], 1.2f, false);
         foreach (var x in new[] { -1.02f, 1.02f })
             foreach (var z in new[] { -0.34f, 0.34f })
                 Box("Leg", g, new Vector3(x, 0.43f, z), new Vector3(0.06f, 0.86f, 0.06f), M["metal"], 1f, false);
-        Box("Shelf", g, new Vector3(0, 0.25f, 0), new Vector3(2.04f, 0.04f, 0.7f), M["wood"], 1.2f, false); // 다리 바깥면보다 안쪽에서 끝난다
-        Box("Pegboard", g, new Vector3(0, 1.65f, 0.36f), new Vector3(2.2f, 1.1f, 0.03f), M["wood"], 1.2f, false);
+        Box("Shelf", g, new Vector3(0, 0.25f, 0), new Vector3(2.04f, 0.04f, 0.7f), M["steel"], 1.2f, false); // 다리 바깥면보다 안쪽에서 끝난다
+        Box("Pegboard", g, new Vector3(0, 1.65f, 0.36f), new Vector3(2.2f, 1.1f, 0.03f), M["steel"], 1.2f, false);
         Box("Vise", g, new Vector3(0.85f, 1.0f, -0.2f), new Vector3(0.18f, 0.12f, 0.22f), M["metal"], 1f, false);
         Prim(PrimitiveType.Cylinder, "HammerHandle", g, new Vector3(-0.4f, 0.96f, -0.1f), new Vector3(0.03f, 0.15f, 0.03f), M["wood"], new Vector3(90, 30, 0));
         Box("HammerHead", g, new Vector3(-0.33f, 0.96f, 0.03f), new Vector3(0.12f, 0.05f, 0.05f), M["metal"], 1f, false, new Vector3(0, 30, 0));
