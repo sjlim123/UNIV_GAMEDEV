@@ -12,6 +12,7 @@ public class CharacterRig
     public Transform Neck, Tail;
     public Transform[] Legs, Knees; // 들개: 앞왼·앞오·뒤왼·뒤오
     public Transform Lantern;       // 잡상인 등불 (불빛을 단다)
+    public Transform Mouth;         // 입 가운데 (매끄러운 얼굴에만 있다. 컷씬 배우가 손으로 입을 가릴 때 쓴다)
     // 맞으면 하나씩 떨어져 나가는 가죽 갑옷 (가슴·어깨·무릎·모자)
     public readonly List<Transform> Armor = new List<Transform>();
     public Renderer[] Renderers;
@@ -19,7 +20,7 @@ public class CharacterRig
 
 // 실행 중에 매끈한 관(ProcMesh)과 무늬 재질(ProcTex)로 사람·들개 몸을 짓는다.
 // 크기는 Unity 1 = 1m (사람 1.75m, 들개 어깨 0.6m·몸길이 1.1m)
-public static class CharacterModels
+public static partial class CharacterModels
 {
     // 사람 뼈대 길이 (m). 컷씬 배우(CutsceneActor)가 관절을 IK로 굽힐 때도 쓴다
     public const float HipY = 0.92f, Thigh = 0.44f, Shin = 0.40f, UpperArm = 0.30f, Forearm = 0.27f;
@@ -143,6 +144,7 @@ public static class CharacterModels
         public Material Skin, Shirt, Pants, Shoes, Hair, Sleeve, Eyes;
         public float Bulk = 1f, Limb = 1f, HeadSize = 1f, SleeveTo = -0.18f; // SleeveTo: 소매 끝 (위팔 기준 y, 아래팔까지면 -0.6)
         public bool Zombie = true, LongHair, Boots, Belt = true, PantsBaggy = true;
+        public bool SmoothFace;  // 한 덩어리로 이어진 매끄러운 얼굴 (CharacterModels.Face)
         public float Hunch;     // 몸통이 앞으로 굽은 정도 (m)
         public float Shoulders = 1f;
     }
@@ -272,7 +274,8 @@ public static class CharacterModels
         // --- 머리 ---
         rig.Head = b.Joint("Head", rig.Body, new Vector3(0, headY, 0.012f + neckZ + h.Hunch * 0.4f));
         rig.Head.localScale = Vector3.one * h.HeadSize;
-        Head(b, h);
+        if (h.SmoothFace) SmoothHead(b, h);
+        else Head(b, h);
 
         // --- 팔 ---
         float shoulderX = 0.176f * bulk * h.Shoulders + (bulk > 1.3f ? 0.04f : 0f);
@@ -838,16 +841,15 @@ public static class CharacterModels
             Zombie = false,
             PantsBaggy = false,
             Belt = true,
+            SmoothFace = true,
         };
+        h.Skin.SetFloat("_BumpScale", 0.12f);   // 가까이 찍히는 얼굴이라 모공 요철을 약하게
         Humanoid(b, h);
         var rig = b.Rig;
         // 티셔츠 아랫단(허리띠 위로 살짝 늘어진다)과 목둘레 띠
         b.Part(rig.Body, Tube(b.Key + "hem", -0.03f, 0.158f, 0.106f, 0.004f, 0.03f, 0.154f, 0.102f, 0.002f), shirt, Vector3.zero);
         b.Part(rig.Body, Tube(b.Key + "neckband", 0.515f, 0.072f, 0.068f, 0f, 0.535f, 0.07f, 0.066f, 0.002f), ProcTex.Get(ProcTex.Kind.Cloth, Hex("c4bfb3"), seed + 1, 0, 0.06f), Vector3.zero);
-        // 눈썹과 손목시계
-        var brow = ProcTex.Get(ProcTex.Kind.Hair, Hex("2a2220"), seed);
-        b.Part(rig.Head, ProcMesh.Box("eyebrow", 0.03f, 0.006f, 0.006f), brow, new Vector3(-0.033f, 0.168f, 0.097f), new Vector3(0, 0, 6), null, false);
-        b.Part(rig.Head, ProcMesh.Box("eyebrow", 0.03f, 0.006f, 0.006f), brow, new Vector3(0.033f, 0.168f, 0.097f), new Vector3(0, 0, -6), null, false);
+        // 손목시계 (눈썹은 얼굴 조각으로 붙는다)
         b.Part(rig.ForeL, Tube(b.Key + "watchband", -0.255f, 0.028f, 0.023f, 0f, -0.235f, 0.029f, 0.024f, 0f), ProcTex.Plain(Hex("2a2522"), 0.3f), Vector3.zero);
         b.Part(rig.ForeL, ProcMesh.Box("watchface", 0.024f, 0.02f, 0.006f), ProcTex.Plain(Hex("8c8f93"), 0.8f, 0.7f), new Vector3(-0.028f, -0.245f, 0f), new Vector3(0, 90, 0), null, false);
     }

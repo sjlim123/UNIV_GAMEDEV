@@ -712,6 +712,110 @@ public static class ProceduralAudio
         }, 0.6f);
     }
 
+    // 민방위 공습경보 (반복 10초): 300~650Hz를 5초 주기로 올라갔다 내려오는 기계식 사이렌.
+    // 배음이 많은 거친 소리에 살짝 어긋난 둘째 소리가 울리고, 회전자가 바람을 끊는 떨림이 있다
+    public static AudioClip CivilSiren()
+    {
+        var lp = Biquad.LowPass(3000, 0.8f);
+        float phase = 0, phase2 = 0;
+        return Make("civilsiren", 10f, t =>
+        {
+            float u = (t % 5f) / 5f;
+            float sweep = u < 0.42f ? Mathf.SmoothStep(0f, 1f, u / 0.42f) : 1 - Mathf.SmoothStep(0f, 1f, (u - 0.42f) / 0.58f);
+            float f = 300 + 350 * sweep;
+            phase += f / SR;
+            phase2 += f * 1.006f / SR;
+            float s = 0;
+            for (int n = 1; n <= 7; n++) s += Mathf.Sin(2 * Mathf.PI * n * phase) / n;
+            s += 0.5f * Mathf.Sin(2 * Mathf.PI * phase2) + 0.25f * Mathf.Sin(4 * Mathf.PI * phase2);
+            s *= 0.8f + 0.2f * Mathf.Sin(2 * Mathf.PI * 7f * t);
+            return (float)System.Math.Tanh(lp.Process(s) * 1.1f) * (0.75f + 0.25f * sweep);
+        }, 0.75f, 0.4f);
+    }
+
+    // 군 헬기 (반복 4초): 두 날 로터의 '두두두'(초당 10.75번) 펄스 + 몸통 울림 + 꼬리 로터 윙윙 + 터빈 쉭 소리
+    public static AudioClip Helicopter()
+    {
+        var thump = Biquad.LowPass(150, 1.1f);
+        var slap = Biquad.BandPass(380, 1.4f);
+        var tail = Biquad.BandPass(1100, 5f);
+        var turbine = Biquad.BandPass(2600, 1.5f);
+        return Make("helicopter", 4f, t =>
+        {
+            float ph = (t * 10.75f) % 1f;
+            float pulse = Mathf.Exp(-ph * 12f);
+            float n = Noise();
+            float body = thump.Process(n * 4f) * (0.6f + pulse * 2.4f);
+            float sl = slap.Process(n) * pulse * 2.6f;
+            float tl = tail.Process(n) * (0.7f + 0.3f * Mathf.Sin(2 * Mathf.PI * 64f * t)) * 0.5f;
+            float tb = turbine.Process(n) * 0.3f;
+            return body + sl + tl + tb;
+        }, 0.9f, 0.25f);
+    }
+
+    // 멀리서 건물이 무너지는 소리 (6초): 낮은 땅울림이 커지고, 갈라지는 소리와 콘크리트가 쏟아지는 소리, 2.6초에 큰 쿵과 먼지 쏴아
+    public static AudioClip BuildingCollapse()
+    {
+        float brown = 0;
+        var low = Biquad.LowPass(110, 0.9f);
+        var bigLow = Biquad.LowPass(90, 0.9f);
+        var crack = Biquad.BandPass(1700, 2.5f);
+        var rubble = Biquad.LowPass(520);
+        var dust = Biquad.BandPass(2800, 0.5f);
+        float crackEnv = 0, rubbleEnv = 0;
+        return Make("collapse", 6f, t =>
+        {
+            brown = (brown + 0.04f * Noise()) / 1.04f;
+            float onset = Mathf.Clamp01(t * 1.2f);
+            float rumble = low.Process(brown * 10f) * onset * Mathf.Exp(-t * 0.33f) * (1 + 0.3f * Mathf.Sin(2 * Mathf.PI * 0.9f * t));
+            if (rng.NextDouble() < 0.0015 * (t < 3.5f ? 1f : Mathf.Clamp01((6f - t) / 2.5f))) crackEnv = Rand(0.4f, 1f);
+            crackEnv *= 0.9985f;
+            float cr = crack.Process(Noise() * crackEnv) * 5f;
+            if (rng.NextDouble() < 0.004 * onset * Mathf.Clamp01((5.5f - t) / 2f)) rubbleEnv = Rand(0.3f, 1f);
+            rubbleEnv *= 0.997f;
+            float rb = rubble.Process(Noise() * rubbleEnv) * 3f;
+            float t2 = t - 2.6f;
+            float big = t2 > 0 ? (Mathf.Sin(2 * Mathf.PI * 38f * t2) + bigLow.Process(Noise() * 6f)) * Mathf.Exp(-t2 * 2.2f) * 1.6f : 0;
+            float ds = t2 > 0 ? dust.Process(Noise()) * Mathf.Clamp01(t2 / 1.2f) * Mathf.Exp(-t2 * 0.7f) * 0.35f : 0;
+            return rumble + cr + rb + big + ds;
+        }, 0.95f);
+    }
+
+    // 멀리서 터지는 2차 폭발 (3.5초): 먹먹한 쿵과 낮은 울림, 건물 사이를 굴러오는 긴 꼬리 (0.9초쯤 메아리)
+    public static AudioClip FarExplosion()
+    {
+        var body = Biquad.LowPass(240, 1.0f);
+        var tail = Biquad.LowPass(800);
+        var sub = Biquad.LowPass(60, 1.2f);
+        return Make("farexplosion", 3.5f, t =>
+        {
+            float a = body.Process(Noise() * 3f) * Mathf.Exp(-t * 4.5f) * 2.2f;
+            float s = sub.Process(Noise() * 6f) * Mathf.Exp(-t * 1.6f) * 1.5f + Mathf.Sin(2 * Mathf.PI * 44f * t) * Mathf.Exp(-t * 3f) * 0.8f;
+            float r = tail.Process(Noise()) * Mathf.Clamp01(t * 20f) * Mathf.Exp(-t * 1.1f) * (1 + 0.6f * Mathf.Exp(-(t - 0.9f) * (t - 0.9f) * 12f));
+            return a + s + r;
+        }, 0.95f);
+    }
+
+    // 유리 달린 쇠문이 스토퍼나 틀에 부딪히는 소리 (0.7초): 둔탁한 쿵 + 쇠 울림 + 유리·틀이 덜컹거리는 꼬리
+    public static AudioClip DoorBang()
+    {
+        var thud = Biquad.LowPass(520, 1.1f);
+        var ring = Biquad.BandPass(2100, 12f);
+        var ring2 = Biquad.BandPass(3300, 18f);
+        var rattle = Biquad.BandPass(2500, 1.2f);
+        float rtEnv = 0;
+        return Make("doorbang", 0.7f, t =>
+        {
+            float n = Noise();
+            float th = thud.Process(n * 3f) * Mathf.Exp(-t * 22f) * 2.5f + Mathf.Sin(2 * Mathf.PI * 95f * t) * Mathf.Exp(-t * 18f);
+            float rg = (ring.Process(n) * 6f + ring2.Process(n) * 4f) * Mathf.Exp(-t * 9f);
+            if (rng.NextDouble() < (t < 0.35f ? 0.01 : 0.002)) rtEnv = Rand(0.3f, 1f);
+            rtEnv *= 0.995f;
+            float rt = rattle.Process(n * rtEnv) * 2f * Mathf.Exp(-t * 4f);
+            return th + rg + rt;
+        }, 0.9f);
+    }
+
     // 적 소리용 감쇠 곡선 (가로축 = 거리 / maxDistance). 가까우면 크고 멀어질수록 빠르게 작아져 거리감이 분명하다
     static AnimationCurve enemyRolloff, enemyLowPass;
 

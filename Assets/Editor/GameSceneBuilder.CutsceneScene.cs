@@ -656,6 +656,8 @@ public static partial class GameSceneBuilder
             for (float z = 2; z < 110;)
             {
                 float dd = R(8f, 13f), w = R(8f, 12f), h = R(9f, 26f);
+                // 길 동쪽 z 16.5~30.5는 주인공이 뛰쳐나오는 건물 자리
+                if (side > 0 && z < 30.5f && z + dd > 16f) { z = 30.5f + R(0.5f, 2f); continue; }
                 float x0 = side < 0 ? -13 - w : 13;
                 var g = Group("Building", root, new Vector3(0, 0.15f, 0));
                 CsBox("Mass", g, new Vector3(x0 + w / 2, h / 2, z + dd / 2), new Vector3(w, h, dd), Pick(M["wall"], M["brick"], M["cracked"]), null, 3f);
@@ -666,6 +668,13 @@ public static partial class GameSceneBuilder
         // 먼 끝을 막는 큰 건물들
         for (float x = -60; x < 60; x += 18)
             CsBox("FarBlock", root, new Vector3(x + 9, 14, 130 + R(0, 10)), new Vector3(16, R(20, 36), 16), Pick(M["wall"], M["cracked"]), null, 3f, true, false);
+
+        // 주인공이 뛰쳐나오는 건물, 길 중간 서쪽 건물 뒤에서 무너지는 탑(실행 중 가라앉는다 — 터널 안에서 내다볼 때 보인다), 서쪽 건물 뒤 2차 폭발 자리
+        CsBuildExitBuilding(root, d);
+        d.collapseBlock = CsBox("CollapseTower", root, new Vector3(-32f, 14f, 62f), new Vector3(14f, 28f, 14f), M["cracked"], null, 3f, false).transform;
+        d.collapseSpot = Group("CollapseSpot", root, new Vector3(-32f, 0, 62f));
+        d.farBlastSpot = Group("FarBlastSpot", root, new Vector3(-70f, 6f, 40f));
+        d.farBlastLight = PointLight("FarBlastLight", root, new Vector3(-36f, 12f, 40f), new Color(1f, 0.6f, 0.3f), 0f, 110f);
 
         // 버려진 차·잔해·가로등·죽은 나무
         WreckedCar(root, new Vector3(-3.6f, 0, 18f), 14, false);
@@ -705,6 +714,87 @@ public static partial class GameSceneBuilder
         d.runDoor = Group("RunDoor", root, new Vector3(0.45f, 0, 1.4f));
         d.runInside = Group("RunInside", root, new Vector3(0.3f, 0, -7.5f));
         d.cloudStreet = Group("CloudStreet", root, new Vector3(120f, 0, 480f));
+    }
+
+    // ================= 주인공이 뛰쳐나오는 건물 =================
+
+    // 길 동쪽(x 13, z 16.5~30.5)의 아파트 현관: 유리 쌍여닫이문(경첩 피벗 exitDoorL/R, 실행 중 CutsceneDirector가 돌린다),
+    // 어두운 로비(떨리는 형광등·붉은 비상등·우편함·승강기·게시판·소화기·떨어진 천장판), 쇠 문틀·채광창·캐노피·계단, 위층 창문
+    static void CsBuildExitBuilding(Transform root, CutsceneDirector d)
+    {
+        var g = Group("ExitBuilding", root, new Vector3(0, 0.15f, 0));
+        const float X = 13f, Z0 = 16.5f, Z1 = 30.5f, H = 15f, T = 0.4f, XBack = 24f;
+        const float DZ = 23.5f, OpenW = 2.6f, OpenH = 2.95f;                 // 문 가운데 z, 출입구 폭·높이
+        const float LX1 = 21.4f, LZ0 = 19.5f, LZ1 = 27.5f, FloorY = 0.32f, CeilY = 3.05f;   // 로비 (바닥은 인도보다 두 계단 높다)
+        float LX0 = X + T, zL = DZ - OpenW / 2, zR = DZ + OpenW / 2;
+        var wall = M["wall"];
+        var metal = M["metal"];
+        // 앞면(출입구 왼쪽·오른쪽·위)과 로비를 둘러싼 덩어리, 위층
+        CsBox("FacadeL", g, new Vector3(X + T / 2, H / 2, (Z0 + zL) / 2), new Vector3(T, H, zL - Z0), wall, null, 3f);
+        CsBox("FacadeR", g, new Vector3(X + T / 2, H / 2, (zR + Z1) / 2), new Vector3(T, H, Z1 - zR), wall, null, 3f);
+        CsBox("FacadeTop", g, new Vector3(X + T / 2, (OpenH + H) / 2, DZ), new Vector3(T, H - OpenH, OpenW), wall, null, 3f);
+        CsBox("Upper", g, new Vector3((LX0 + XBack) / 2, (CeilY + 0.3f + H) / 2, (Z0 + Z1) / 2), new Vector3(XBack - LX0, H - CeilY - 0.3f, Z1 - Z0), wall, null, 3f);
+        CsBox("SideMassL", g, new Vector3((LX0 + XBack) / 2, (CeilY + 0.3f) / 2, (Z0 + LZ0) / 2), new Vector3(XBack - LX0, CeilY + 0.3f, LZ0 - Z0), wall, null, 3f);
+        CsBox("SideMassR", g, new Vector3((LX0 + XBack) / 2, (CeilY + 0.3f) / 2, (LZ1 + Z1) / 2), new Vector3(XBack - LX0, CeilY + 0.3f, Z1 - LZ1), wall, null, 3f);
+        CsBox("BackMass", g, new Vector3((LX1 + XBack) / 2, (CeilY + 0.3f) / 2, DZ), new Vector3(XBack - LX1, CeilY + 0.3f, LZ1 - LZ0), wall, null, 3f);
+        FacadeWindows(g, X, Z0, XBack - X, Z1 - Z0, 3.6f, 3);
+        // 로비 바닥(문턱까지)과 천장
+        CsBox("LobbyFloor", g, new Vector3((X + LX1) / 2, FloorY / 2, DZ), new Vector3(LX1 - X, FloorY, LZ1 - LZ0), M["floor"], null, 2f);
+        CsBox("LobbyCeiling", g, new Vector3((LX0 + LX1) / 2, CeilY + 0.15f, DZ), new Vector3(LX1 - LX0, 0.3f, LZ1 - LZ0), CM["ceiling"], null, 2f);
+        // 문틀: 양쪽 기둥, 상인방, 그 위 채광창
+        foreach (var z in new[] { zL + 0.06f, zR - 0.06f })
+            CsBox("Jamb", g, new Vector3(X + 0.04f, OpenH / 2, z), new Vector3(0.12f, OpenH, 0.12f), metal, null, 1f, true, false);
+        CsBox("Header", g, new Vector3(X + 0.04f, 2.66f, DZ), new Vector3(0.12f, 0.1f, OpenW), metal, null, 1f, true, false);
+        var transom = CsBox("Transom", g, new Vector3(X + 0.04f, (2.71f + OpenH) / 2, DZ), new Vector3(0.02f, OpenH - 2.71f, OpenW - 0.24f), CM["glass"], null, 1f, true, false);
+        transom.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        // 문짝 둘: 경첩 피벗의 +z가 바깥(길 쪽), +x가 나오는 사람의 오른쪽. 열리는 각도는 실행 중에 준다 (움직이므로 static이 아니다)
+        d.exitDoorL = Group("ExitDoorL", g, new Vector3(X - 0.04f, FloorY + 0.01f, zL + 0.09f), -90f);
+        d.exitDoorR = Group("ExitDoorR", g, new Vector3(X - 0.04f, FloorY + 0.01f, zR - 0.09f), -90f);
+        CsDoorLeaf(d.exitDoorL, 1f);
+        CsDoorLeaf(d.exitDoorR, -1f);
+        // 캐노피와 계단 (문턱 0.32 → 0.16 → 인도)
+        CsBox("Canopy", g, new Vector3(X - 0.55f, OpenH + 0.2f, DZ), new Vector3(1.3f, 0.18f, OpenW + 1.4f), M["dirty"], null, 2f);
+        CsBox("Landing", g, new Vector3(X - 0.4f, FloorY / 2, DZ), new Vector3(0.8f, FloorY, OpenW + 0.8f), M["dirty"], null, 2f);
+        CsBox("Step", g, new Vector3(X - 1.05f, FloorY / 4, DZ), new Vector3(0.5f, FloorY / 2, OpenW + 0.8f), M["dirty"], null, 2f);
+        // 로비 안: 승강기 문, 우편함, 게시판, 소화기, 떨어진 천장판
+        foreach (var z in new[] { DZ - 0.42f, DZ + 0.42f })
+            CsBox("ElevatorDoor", g, new Vector3(LX1 - 0.03f, FloorY + 1.1f, z), new Vector3(0.05f, 2.2f, 0.8f), metal, null, 1f, true, false);
+        CsBox("ElevatorFrame", g, new Vector3(LX1 - 0.05f, FloorY + 2.3f, DZ), new Vector3(0.08f, 0.2f, 1.9f), CM["black"], null, 1f, true, false);
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 3; j++)
+                CsBox("Mailbox", g, new Vector3(LX0 + 1.5f + i * 0.32f, FloorY + 1.0f + j * 0.28f, LZ0 + 0.1f), new Vector3(0.3f, 0.26f, 0.16f), metal, null, 1f, true, false);
+        CsBox("Notice", g, new Vector3(LX0 + 2.2f, FloorY + 1.5f, LZ1 - 0.03f), new Vector3(1.2f, 0.8f, 0.04f), CM["frame"], null, 1f, true, false);
+        CsBox("NoticeInner", g, new Vector3(LX0 + 2.2f, FloorY + 1.5f, LZ1 - 0.052f), new Vector3(1.1f, 0.7f, 0.004f), CM["book2"], null, 1f, true, false);
+        Prim(PrimitiveType.Cylinder, "Extinguisher", g, new Vector3(LX1 - 0.35f, FloorY + 0.3f, LZ0 + 0.4f), new Vector3(0.16f, 0.28f, 0.16f), M["paintRed"]);
+        foreach (var (x, z, yaw) in new[] { (LX0 + 1.2f, DZ - 1.3f, 20f), (LX0 + 3.4f, DZ + 1.6f, -35f), (LX0 + 5.0f, DZ - 0.4f, 70f) })
+            CsBox("FallenPanel", g, new Vector3(x, FloorY + 0.03f, z), new Vector3(0.6f, 0.02f, 0.6f), CM["ceiling"], new Vector3(0, yaw, R(-4f, 4f)), 1f, true, false);
+        // 빛: 떨리는 형광등(실행 중 깜빡인다), 붉은 비상등, 천장 가루 자리, 출발 자리, 계단 아래 길목
+        d.lobbyLight = PointLight("LobbyLight", g, new Vector3(LX0 + 3.8f, CeilY - 0.1f, DZ), new Color(0.8f, 0.88f, 1f), 1.4f, 11f);
+        d.lobbyRed = PointLight("LobbyRed", g, new Vector3(LX1 - 0.5f, CeilY - 0.4f, DZ), new Color(1f, 0.2f, 0.1f), 1.2f, 7f);
+        CsBox("FluorescentPanel", g, new Vector3(LX0 + 3.8f, CeilY - 0.02f, DZ), new Vector3(1.2f, 0.04f, 0.3f), M["bulb"], null, 1f, true, false);
+        CsBox("ExitLamp", g, new Vector3(LX1 - 0.1f, CeilY - 0.3f, DZ), new Vector3(0.12f, 0.08f, 0.3f), M["redLamp"], null, 1f, true, false);
+        d.exitDustSpot = Group("LobbyDust", g, new Vector3(LX0 + 3.6f, CeilY - 0.05f, DZ));
+        d.exitStart = Group("ExitStart", g, new Vector3(X + 5.8f, FloorY, DZ));
+        d.exitOut = Group("ExitOut", root, new Vector3(10.3f, 0, 21.6f));
+    }
+
+    // 유리문 한 짝 (경첩 피벗 기준, side: +1이면 +x로 뻗는 왼쪽 문짝). 쇠 테·유리·발판·안쪽 밀대·바깥 손잡이
+    static void CsDoorLeaf(Transform pivot, float side)
+    {
+        const float LW = 1.18f, LH = 2.3f;
+        float cx = side * (0.03f + LW / 2);
+        var metal = M["metal"];
+        CsBox("RailTop", pivot, new Vector3(cx, LH - 0.05f, 0), new Vector3(LW, 0.1f, 0.05f), metal, null, 1f, false, false);
+        CsBox("RailBottom", pivot, new Vector3(cx, 0.2f, 0), new Vector3(LW, 0.4f, 0.05f), metal, null, 1f, false, false);
+        CsBox("RailMid", pivot, new Vector3(cx, 0.98f, 0), new Vector3(LW, 0.07f, 0.05f), metal, null, 1f, false, false);
+        CsBox("StileHinge", pivot, new Vector3(side * 0.07f, LH / 2, 0), new Vector3(0.08f, LH, 0.05f), metal, null, 1f, false, false);
+        CsBox("StileFree", pivot, new Vector3(side * (0.03f + LW - 0.04f), LH / 2, 0), new Vector3(0.08f, LH, 0.05f), metal, null, 1f, false, false);
+        var glass = CsBox("Glass", pivot, new Vector3(cx, (0.4f + LH - 0.1f) / 2, 0), new Vector3(LW - 0.14f, LH - 0.5f, 0.012f), CM["glass"], null, 1f, false, false);
+        glass.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        Prim(PrimitiveType.Cylinder, "PushBar", pivot, new Vector3(cx, 1.07f, -0.075f), new Vector3(0.035f, (LW - 0.2f) / 2, 0.035f), M["steel"], new Vector3(0, 0, 90));
+        foreach (var bx in new[] { cx - side * (LW / 2 - 0.15f), cx + side * (LW / 2 - 0.15f) })
+            CsBox("BarMount", pivot, new Vector3(bx, 1.07f, -0.05f), new Vector3(0.05f, 0.05f, 0.06f), metal, null, 1f, false, false);
+        Prim(PrimitiveType.Cylinder, "Pull", pivot, new Vector3(side * (0.03f + LW - 0.16f), 1.05f, 0.065f), new Vector3(0.025f, 0.18f, 0.025f), M["steel"]);
     }
 
     // ================= 빛·카메라·후처리 =================
