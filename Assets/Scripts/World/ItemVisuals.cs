@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 아이템마다 다른 모양을 기본 도형으로 만든다 (바닥 아이템, 손에 든 물건, 아이콘이 함께 쓴다)
-public static class ItemVisuals
+public static partial class ItemVisuals
 {
     static readonly Color Steel = new Color(0.6f, 0.6f, 0.63f);
     static readonly Color DarkSteel = new Color(0.3f, 0.3f, 0.32f);
@@ -16,17 +16,15 @@ public static class ItemVisuals
             case "water":
                 PetBottle(t);
                 break;
+            // 사실적인 소품(통조림·붕대·구급상자·배터리·손전등·연료통)은 ItemVisuals.Models.cs
             case "canned_food":
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.06f, 0), new Vector3(0.09f, 0.06f, 0.09f), new Color(0.55f, 0.52f, 0.48f), 0.7f);
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.06f, 0), new Vector3(0.093f, 0.035f, 0.093f), new Color(0.6f, 0.3f, 0.2f), 0.6f);
+                CannedFood(t);
                 break;
             case "bandage":
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.03f, 0), new Vector3(0.1f, 0.03f, 0.1f), new Color(0.85f, 0.83f, 0.78f));
+                Bandage(t);
                 break;
             case "medkit":
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.08f, 0), new Vector3(0.32f, 0.16f, 0.22f), new Color(0.8f, 0.8f, 0.76f), 0.4f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.165f, 0), new Vector3(0.18f, 0.01f, 0.05f), new Color(0.7f, 0.1f, 0.1f));
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.165f, 0), new Vector3(0.05f, 0.01f, 0.14f), new Color(0.7f, 0.1f, 0.1f));
+                Medkit(t);
                 break;
             case "cloth":
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.025f, 0), new Vector3(0.4f, 0.05f, 0.3f), new Color(0.55f, 0.48f, 0.38f), 0.05f, new Vector3(0, 0, 3));
@@ -73,8 +71,8 @@ public static class ItemVisuals
             case "metal":
                 // 고철: 꺾인 철판 브래킷 + 녹슨 파이프 + 너트 (SurvivalInventory 아이콘과 같은 모양)
                 var rust = new Color(0.55f, 0.28f, 0.12f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.05f, 0.0125f, 0.05f), new Vector3(0.3f, 0.025f, 0.09f), Steel, 0.45f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.19f, 0.075f, 0.05f), new Vector3(0.22f, 0.025f, 0.09f), Steel, 0.45f, new Vector3(0, 0, 35));
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.05f, 0.0125f, 0.05f), new Vector3(0.3f, 0.025f, 0.09f), Steel, 0.45f, null, 0.5f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.19f, 0.075f, 0.05f), new Vector3(0.22f, 0.025f, 0.09f), Steel, 0.45f, new Vector3(0, 0, 35), 0.5f);
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.11f, 0.014f, 0.04f), new Vector3(0.05f, 0.026f, 0.04f), rust, 0.1f);
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.17f, 0.064f, 0.06f), new Vector3(0.04f, 0.026f, 0.035f), rust, 0.1f, new Vector3(0, 0, 35));
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.04f, -0.09f), new Vector3(0.08f, 0.15f, 0.08f), new Color(0.5f, 0.5f, 0.53f), 0.5f, new Vector3(0, 0, 90));
@@ -87,28 +85,13 @@ public static class ItemVisuals
                 RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(0.09f, 0.03f, 0.05f), new Vector3(0.08f, 0.06f, 0.07f), new Color(0.37f, 0.36f, 0.34f), 0.15f, new Vector3(10, -20, 0));
                 break;
             case "battery":
-                // 검은 몸통 + 금색 띠 + 볼록한 + 극. 몸통과 띠는 맞닿기만 하고 겹치지 않는다 (같은 옆면이 겹치면 깨져 보인다)
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(-0.0075f, 0.035f, 0), new Vector3(0.05f, 0.0625f, 0.05f), new Color(0.15f, 0.15f, 0.15f), 0.6f, new Vector3(0, 0, 90));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.065f, 0.035f, 0), new Vector3(0.05f, 0.01f, 0.05f), new Color(0.8f, 0.6f, 0.1f), 0.6f, new Vector3(0, 0, 90));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0.079f, 0.035f, 0), new Vector3(0.018f, 0.004f, 0.018f), new Color(0.72f, 0.72f, 0.74f), 0.8f, new Vector3(0, 0, 90));
+                Battery(t);
                 break;
             case "fuel":
-                // 연료통: 빨간 몸통 + 주둥이 마개 + 위쪽 손잡이 (손에 들 때 손가락을 건다)
-                var can = new Color(0.55f, 0.1f, 0.08f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.22f, 0), new Vector3(0.18f, 0.44f, 0.34f), can, 0.5f);
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.47f, 0.1f), new Vector3(0.05f, 0.04f, 0.05f), new Color(0.2f, 0.2f, 0.2f));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.49f, -0.02f), new Vector3(0.02f, 0.07f, 0.02f), can, 0.5f, new Vector3(90, 0, 0));
-                foreach (var z in new[] { -0.08f, 0.04f })
-                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.462f, z), new Vector3(0.016f, 0.026f, 0.016f), can, 0.5f);
+                JerryCan(t);
                 break;
             case "flashlight":
-                // 손전등: 검은 몸통 + 넓은 머리 + 렌즈 + 꽁무니 마개 + 위쪽 고무 버튼 (+z가 빛 나가는 쪽)
-                var body = new Color(0.09f, 0.09f, 0.1f);
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0), new Vector3(0.04f, 0.08f, 0.04f), body, 0.55f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0.095f), new Vector3(0.056f, 0.025f, 0.056f), new Color(0.14f, 0.14f, 0.15f), 0.65f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, 0.1205f), new Vector3(0.048f, 0.0015f, 0.048f), new Color(1f, 0.95f, 0.8f), 0.95f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.028f, -0.084f), new Vector3(0.043f, 0.006f, 0.043f), new Color(0.16f, 0.16f, 0.17f), 0.4f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.0475f, 0.03f), new Vector3(0.012f, 0.006f, 0.018f), new Color(0.25f, 0.08f, 0.06f), 0.2f);
+                Flashlight(t);
                 break;
             case "raw_meat":
                 Meat(t, new Color(0.52f, 0.1f, 0.09f), new Color(0.86f, 0.74f, 0.66f), false);
@@ -135,14 +118,14 @@ public static class ItemVisuals
                 Bat(t, new Color(0.5f, 0.55f, 0.6f));
                 // 몸통을 감싼 합금판 띠와 나사
                 foreach (var z in new[] { 0.16f, 0.27f, 0.38f })
-                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.034f, z), new Vector3(0.076f, 0.03f, 0.076f), new Color(0.72f, 0.76f, 0.82f), 0.8f, new Vector3(90, 0, 0));
+                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.034f, z), new Vector3(0.076f, 0.03f, 0.076f), new Color(0.72f, 0.76f, 0.82f), 0.8f, new Vector3(90, 0, 0), 0.7f);
                 break;
             case "dagger":
                 // 단검: 밧줄 감은 손잡이 + 가드 + 날 (+z가 칼끝)
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.02f, 0), new Vector3(0.032f, 0.06f, 0.032f), new Color(0.55f, 0.43f, 0.27f), 0.1f, new Vector3(90, 0, 0));
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0.07f), new Vector3(0.09f, 0.022f, 0.016f), DarkSteel, 0.5f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0.16f), new Vector3(0.036f, 0.008f, 0.17f), new Color(0.75f, 0.77f, 0.8f), 0.85f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0.255f), new Vector3(0.025f, 0.008f, 0.025f), new Color(0.75f, 0.77f, 0.8f), 0.85f, new Vector3(0, 45, 0));
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0.16f), new Vector3(0.036f, 0.008f, 0.17f), new Color(0.75f, 0.77f, 0.8f), 0.85f, null, 0.85f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0.255f), new Vector3(0.025f, 0.008f, 0.025f), new Color(0.75f, 0.77f, 0.8f), 0.85f, new Vector3(0, 45, 0), 0.85f);
                 break;
             case "slingshot":
                 Slingshot(t);
@@ -150,8 +133,8 @@ public static class ItemVisuals
             case "hammer":
                 // 망치: 나무 자루 + 쇠머리
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.025f, 0), new Vector3(0.035f, 0.17f, 0.035f), Wood, 0.2f, new Vector3(90, 0, 0));
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.045f, 0.18f), new Vector3(0.17f, 0.07f, 0.07f), DarkSteel, 0.55f);
-                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.1f, 0.045f, 0.18f), new Vector3(0.03f, 0.076f, 0.076f), Steel, 0.7f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.045f, 0.18f), new Vector3(0.17f, 0.07f, 0.07f), DarkSteel, 0.55f, null, 0.55f);
+                RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.1f, 0.045f, 0.18f), new Vector3(0.03f, 0.076f, 0.076f), Steel, 0.7f, null, 0.7f);
                 break;
 
             // 장비 칸 (가방·방어구)
@@ -190,8 +173,8 @@ public static class ItemVisuals
                 {
                     var p = new Vector3(-0.05f + i * 0.05f, 0.012f, (i - 1) * 0.03f);
                     var rot = new Vector3(0, i * 50 - 40, 90);
-                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, p, new Vector3(0.016f, 0.05f, 0.016f), Steel, 0.7f, rot);
-                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, p + Quaternion.Euler(rot) * Vector3.up * 0.05f, new Vector3(0.034f, 0.008f, 0.034f), Steel, 0.7f, rot);
+                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, p, new Vector3(0.016f, 0.05f, 0.016f), Steel, 0.7f, rot, 0.7f);
+                    RuntimeVisuals.Part(PrimitiveType.Cylinder, t, p + Quaternion.Euler(rot) * Vector3.up * 0.05f, new Vector3(0.034f, 0.008f, 0.034f), Steel, 0.7f, rot, 0.7f);
                 }
                 break;
             case "circuit_board":
@@ -470,15 +453,15 @@ public static class ItemVisuals
     // 철주괴: 위가 좁은 쇳덩이 두 단
     static void Ingot(Transform t, Color body, Color top)
     {
-        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0), new Vector3(0.24f, 0.04f, 0.1f), body, 0.55f);
-        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.05f, 0), new Vector3(0.2f, 0.022f, 0.075f), top, 0.65f);
+        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.02f, 0), new Vector3(0.24f, 0.04f, 0.1f), body, 0.55f, null, 0.5f);
+        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.05f, 0), new Vector3(0.2f, 0.022f, 0.075f), top, 0.65f, null, 0.55f);
     }
 
     // 판: 겹쳐 놓은 두 장 + 모서리 구멍 + 표면 줄무늬
     static void Plate(Transform t, Color under, Color plate)
     {
-        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.011f, 0), new Vector3(0.4f, 0.022f, 0.28f), under, 0.55f);
-        var top = RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.015f, 0.033f, -0.01f), new Vector3(0.38f, 0.022f, 0.26f), plate, 0.75f, new Vector3(0, 9, 0)).transform;
+        RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.011f, 0), new Vector3(0.4f, 0.022f, 0.28f), under, 0.55f, null, 0.5f);
+        var top = RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0.015f, 0.033f, -0.01f), new Vector3(0.38f, 0.022f, 0.26f), plate, 0.75f, new Vector3(0, 9, 0), 0.6f).transform;
         // 아래 장식은 위 판 기준으로 붙인다 (크기 비율을 되돌려 원래 치수로 만든다)
         for (int i = 0; i < 4; i++)
         {

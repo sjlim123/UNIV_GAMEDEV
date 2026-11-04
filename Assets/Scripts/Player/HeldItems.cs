@@ -87,7 +87,7 @@ public static class HeldItems
         specs["medkit"].Use = UseGesture.Medkit;
 
         // 작은 것: 주먹에 감아쥔다
-        specs["battery"] = Power(HoldPose.Hold, new Vector3(0, 0.035f, 0), Vector3.right, Vector3.up, 0.025f, 0.5f);
+        specs["battery"] = Power(HoldPose.Hold, new Vector3(0, 0.025f, 0), Vector3.right, Vector3.up, 0.025f, 0.5f);
         // 부싯돌과 라이터: 라이터 몸통을 쥐고 뚜껑이 위로 (부싯돌은 감춘다). 넓은 면이 손바닥에 닿는다
         specs[ItemDatabase.LighterId] = Power(HoldPose.Hold, new Vector3(0, 0.045f, 0), Vector3.up, Vector3.right, 0.0125f);
         specs[ItemDatabase.LighterId].Hide = new[] { 3 };
