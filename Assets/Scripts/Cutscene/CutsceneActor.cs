@@ -2,7 +2,8 @@ using UnityEngine;
 
 // 컷씬의 주인공 (평범한 시민). 게임의 절차적 캐릭터(CharacterModels.Civilian)로 몸을 짓고 관절을 코드로 움직인다.
 // 자세는 손·발이 닿을 곳(두 마디 IK)과 몸통·머리 각도로 적는다: 앉기 → 일어서기 → 굳기 → 달리기.
-// 두 자세 사이는 부드럽게 섞이고, 달리기는 주기 함수로 매 프레임 만든다. 좌표는 사람 기준 (발밑 원점, +z 앞, +x 오른쪽, m)
+// 두 자세 사이는 부드럽게 섞이고, 달리기는 주기 함수로 매 프레임 만든다. 좌표는 사람 기준 (발밑 원점, +z 앞, +x 오른쪽, m).
+// 손은 바깥 세계의 한 점에 붙일 수도 있다(LockHand: 문을 미는 손). 굳은 자세의 왼손은 머리의 입 위치를 따라가 입을 가린다
 public class CutsceneActor : MonoBehaviour
 {
     public enum Mode { Sit, Stand, Freeze, Shield, Run }
@@ -14,6 +15,7 @@ public class CutsceneActor : MonoBehaviour
         public Vector3 HandL, ElbowL, HandR, ElbowR; // 손목이 닿을 곳, 팔꿈치가 향할 곳
         public Vector3 FootL, KneeL, FootR, KneeR;   // 발목이 닿을 곳, 무릎이 향할 곳
         public Vector3 HandRotL, HandRotR;      // 손목 회전 (도)
+        public float MouthL;                    // 왼손으로 입을 가리는 정도 (0~1): 손바닥이 머리의 입 위치를 따라간다
         public Pose Clone() => (Pose)MemberwiseClone();
 
         public static Pose Mix(Pose a, Pose b, float t)
@@ -27,6 +29,7 @@ public class CutsceneActor : MonoBehaviour
                 FootL = Vector3.Lerp(a.FootL, b.FootL, t), KneeL = Vector3.Lerp(a.KneeL, b.KneeL, t),
                 FootR = Vector3.Lerp(a.FootR, b.FootR, t), KneeR = Vector3.Lerp(a.KneeR, b.KneeR, t),
                 HandRotL = Vector3.Lerp(a.HandRotL, b.HandRotL, t), HandRotR = Vector3.Lerp(a.HandRotR, b.HandRotR, t),
+                MouthL = Mathf.Lerp(a.MouthL, b.MouthL, t),
             };
         }
     }
@@ -54,16 +57,17 @@ public class CutsceneActor : MonoBehaviour
         FootR = new Vector3(0.1f, 0.08f, 0f), KneeR = new Vector3(0.1f, 0.5f, 1f),
     };
 
-    // 속보를 보고 굳어 선 자세: 왼손으로 입을 막고 오른팔은 뻣뻣하게 내린 채, 고개를 살짝 든다
+    // 속보를 보고 굳어 선 자세: 왼손으로 입을 막고(MouthL: 손바닥이 입 위로 간다) 오른팔은 뻣뻣하게 내린 채, 고개를 살짝 든다
     public static readonly Pose Freeze = new Pose
     {
         Drop = 0.01f,
         Body = new Vector3(3, 0, 0), Head = new Vector3(-3, 0, 2),
-        HandL = new Vector3(-0.03f, 1.51f, 0.13f), ElbowL = new Vector3(-0.42f, 1.0f, 0.22f),
+        HandL = new Vector3(-0.06f, 1.5f, 0.14f), ElbowL = new Vector3(-0.42f, 1.0f, 0.22f),
         HandR = new Vector3(0.25f, 0.84f, 0.1f), ElbowR = new Vector3(0.5f, 1.1f, -0.2f),
         FootL = new Vector3(-0.15f, 0.08f, -0.03f), KneeL = new Vector3(-0.15f, 0.5f, 1f),
         FootR = new Vector3(0.14f, 0.08f, 0.07f), KneeR = new Vector3(0.14f, 0.5f, 1f),
         HandRotL = new Vector3(20, 0, -40),
+        MouthL = 1f,
     };
 
     // 섬광에 오른팔로 눈을 가리고 몸을 뒤로 젖힌다
@@ -98,10 +102,20 @@ public class CutsceneActor : MonoBehaviour
     // 발이 땅을 디딜 때 (달리기 발소리용)
     public System.Action<Vector3> OnFootstep;
 
+    const float PalmDepth = 0.065f;   // 손목에서 손바닥 가운데까지
+    // 입을 가릴 때 손바닥이 입 앞에 떠 있는 거리, 입을 찾지 못할 때의 머리 기준 입 위치
+    const float MouthGap = 0.012f;
+    static readonly Vector3 MouthFallback = new Vector3(0, 0.061f, 0.096f);
+
     Transform model, backpack;
     Pose from, to;
     float blend = 1, blendTime = 1, phase, breath;
     bool lastLeftDown;
+    // 바깥 좌표에 붙인 손 (문 밀기): 손바닥 가운데 자리, 손 회전, 팔꿈치가 향할 곳, 섞는 정도
+    Vector3 lockPalmL, lockPalmR, lockPoleL, lockPoleR;
+    Quaternion lockRotL = Quaternion.identity, lockRotR = Quaternion.identity;
+    float lockWL, lockWR;
+    bool lockPoleOnL, lockPoleOnR;
 
     // 몸을 짓는다. glow: 발광 재질 원본 (빌드에서 발광 셰이더가 빠지지 않게)
     public void Build(Material glow = null)
@@ -155,6 +169,30 @@ public class CutsceneActor : MonoBehaviour
         blend = 0;
     }
 
+    // 손을 바깥 세계의 한 점에 붙인다: 손바닥 가운데가 palm에 놓이고 손이 rot을 향한다(HandRotation으로 만든다).
+    // pole: 팔꿈치가 향할 곳 (null이면 자세의 것), weight: 자세의 손 위치와 섞는 정도 (0이면 풀린다)
+    public void LockHand(bool left, Vector3 palm, Quaternion rot, Vector3? pole, float weight)
+    {
+        if (left) { lockPalmL = palm; lockRotL = rot; lockPoleOnL = pole.HasValue; if (pole.HasValue) lockPoleL = pole.Value; lockWL = Mathf.Clamp01(weight); }
+        else { lockPalmR = palm; lockRotR = rot; lockPoleOnR = pole.HasValue; if (pole.HasValue) lockPoleR = pole.Value; lockWR = Mathf.Clamp01(weight); }
+    }
+
+    public void ReleaseHands()
+    {
+        lockWL = lockWR = 0;
+    }
+
+    // 손바닥이 palmNormal 쪽을 보고 손가락이 fingers 쪽을 가리키는 손의 회전.
+    // 손 모델은 손가락이 -y로 뻗고, 손바닥은 왼손이 +x, 오른손이 -x를 본다 (팔을 내렸을 때 허벅지 쪽)
+    public static Quaternion HandRotation(bool left, Vector3 palmNormal, Vector3 fingers)
+    {
+        Vector3 x = (left ? palmNormal : -palmNormal).normalized;
+        Vector3 y = -Vector3.ProjectOnPlane(fingers, x).normalized;
+        if (y.sqrMagnitude < 1e-6f) y = Vector3.ProjectOnPlane(Vector3.down, x).normalized;
+        Vector3 z = Vector3.Cross(x, y);
+        return Quaternion.LookRotation(z, y);
+    }
+
     Pose PoseOf(Mode m)
     {
         switch (m)
@@ -186,7 +224,7 @@ public class CutsceneActor : MonoBehaviour
         float br = Mathf.Sin(breath * (Current == Mode.Run ? 6f : Current == Mode.Freeze ? 3.2f : 1.5f));
         p.Body += new Vector3(br * (Current == Mode.Freeze ? 0.9f : 0.6f), 0, 0);
         p.Head += new Vector3(-br * 0.4f, 0, 0);
-        // 굳어서 떨린다
+        // 굳어서 떨린다 (입을 가린 손은 머리와 함께 떨린다)
         if (Tremble > 0)
         {
             float t = Time.time * 23f;
@@ -238,10 +276,44 @@ public class CutsceneActor : MonoBehaviour
         Vector3 P(Vector3 local) => transform.TransformPoint(local);
         Reach(Rig.LegL, Rig.ShinL, CharacterModels.Thigh, CharacterModels.Shin, P(p.FootL), P(p.KneeL), fwd);
         Reach(Rig.LegR, Rig.ShinR, CharacterModels.Thigh, CharacterModels.Shin, P(p.FootR), P(p.KneeR), fwd);
-        Reach(Rig.ArmL, Rig.ForeL, CharacterModels.UpperArm, CharacterModels.Forearm, P(p.HandL), P(p.ElbowL), fwd);
-        Reach(Rig.ArmR, Rig.ForeR, CharacterModels.UpperArm, CharacterModels.Forearm, P(p.HandR), P(p.ElbowR), fwd);
-        Rig.HandL.localRotation = Quaternion.Euler(p.HandRotL);
-        Rig.HandR.localRotation = Quaternion.Euler(p.HandRotR);
+        ArmIK(true, P(p.HandL), P(p.ElbowL), p.HandRotL, p.MouthL);
+        ArmIK(false, P(p.HandR), P(p.ElbowR), p.HandRotR, 0f);
+    }
+
+    // 팔 하나: 자세의 손목 자리에 '입 가리기'와 '바깥 점에 붙이기'를 섞어 굽히고, 손목을 돌린다
+    void ArmIK(bool left, Vector3 wrist, Vector3 pole, Vector3 handRot, float mouth)
+    {
+        var upper = left ? Rig.ArmL : Rig.ArmR;
+        var fore = left ? Rig.ForeL : Rig.ForeR;
+        var hand = left ? Rig.HandL : Rig.HandR;
+        var fwd = transform.forward;
+        var worldRot = Quaternion.identity;
+        float w = 0;
+        if (mouth > 0)
+        {
+            // 머리의 입 위치: 손바닥이 입을 보고, 손가락은 (사람의) 오른쪽 위로 입을 가로지른다
+            var mouthPos = Rig.Mouth != null ? Rig.Mouth.position : Rig.Head.TransformPoint(MouthFallback);
+            var hf = Rig.Head.forward;
+            var fingers = (Rig.Head.right * 0.62f + Rig.Head.up * 0.78f).normalized;
+            worldRot = HandRotation(left, -hf, fingers);
+            var palm = mouthPos + hf * MouthGap;
+            wrist = Vector3.Lerp(wrist, palm - worldRot * new Vector3(0, -PalmDepth, 0), mouth);
+            w = mouth;
+        }
+        float lw = left ? lockWL : lockWR;
+        if (lw > 0)
+        {
+            var lr = left ? lockRotL : lockRotR;
+            var lp = left ? lockPalmL : lockPalmR;
+            wrist = Vector3.Lerp(wrist, lp - lr * new Vector3(0, -PalmDepth, 0), lw);
+            if (left ? lockPoleOnL : lockPoleOnR) pole = Vector3.Lerp(pole, left ? lockPoleL : lockPoleR, lw);
+            worldRot = w > 0 ? Quaternion.Slerp(worldRot, lr, lw) : lr;
+            w = Mathf.Max(w, lw);
+        }
+        Reach(upper, fore, CharacterModels.UpperArm, CharacterModels.Forearm, wrist, pole, fwd);
+        var local = Quaternion.Euler(handRot);
+        if (w > 0) local = Quaternion.Slerp(local, Quaternion.Inverse(fore.rotation) * worldRot, w);
+        hand.localRotation = local;
     }
 
     // 두 마디 팔다리를 목표 지점에 닿게 굽힌다 (코사인 법칙). pole: 팔꿈치·무릎이 향할 쪽 (월드 좌표)

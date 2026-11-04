@@ -156,7 +156,8 @@ public static class ProcMesh
             foreach (var mf in kv.Value)
             {
                 mf.gameObject.SetActive(false);
-                Object.Destroy(mf.gameObject);
+                if (Application.isPlaying) Object.Destroy(mf.gameObject);
+                else Object.DestroyImmediate(mf.gameObject);   // 편집 모드 미리보기(컷씬 얼굴 확인)에서는 Destroy를 쓸 수 없다
             }
         }
     }

@@ -8,16 +8,17 @@ using UnityEngine.Rendering.Universal;
 // 카메라(돌리·팬·핸드헬드·흔들림), 조명, 하늘, 후처리, 소리, 사람(CutsceneActor), 버섯구름(MushroomCloud)과
 // 효과(유리·커튼·먼지·재: CutsceneDirector.Fx.cs)를 모두 여기서 움직인다.
 // 자막·버튼·섬광 막은 UIManager.Cutscene이 이 연출기의 Shot/ShotTime/Flash/Dark를 읽어 그린다.
-// 장면은 시간이 다 되면 저절로 넘어가고, Advance()로 바로 넘길 수 있다. 씬의 물체 참조는 GameSceneBuilder(컷씬 씬 생성)가 채운다
+// 장면은 시간이 다 되면 저절로 넘어가고, Advance()로 바로 넘길 수 있다. 씬의 물체 참조는 GameSceneBuilder(컷씬 씬 생성)가 채운다.
+// 3번 장면(로비 문 박차기·거리 달리기·사이렌·붕괴·헬기)은 CutsceneDirector.Exit.cs에 있다
 public partial class CutsceneDirector : MonoBehaviour
 {
     public static CutsceneDirector Instance { get; private set; }
 
-    public static readonly float[] ShotLength = { 10f, 11.5f, 13f, 11.5f };
+    public static readonly float[] ShotLength = { 10f, 11.5f, 13f, 12.5f };
     // 1번 장면: 지지직 → 속보 → 일어선다 → 굳는다. 2번 장면: 섬광 → 충격파
     const float NewsAt = 0.9f, RiseAt = 2.4f, FreezeAt = 4.3f;
     const float FlashAt = 0.5f, ShockAt = 3.4f, ShockSpeed = 133f;
-    const float RunSpeed = 3.7f, RunDelay = 0.5f;
+    const float RunSpeed = 4.0f;
     // 절차적 하늘(Skybox/Procedural)의 SkyTint는 보색으로 작동한다: 청록을 주면 빨간 하늘, 회색(0.5)이 맑은 파란 하늘
     static readonly Color ClearSkyTint = new Color(0.5f, 0.55f, 0.62f);
     static readonly Color BlastSkyTint = new Color(0.4f, 0.8f, 1f);     // 주황빛 붉은 하늘
@@ -54,9 +55,9 @@ public partial class CutsceneDirector : MonoBehaviour
     ChromaticAberration chroma;
     MotionBlur motionBlur;
     float baseExposure;
-    AudioSource ambience, tv, boom, breath, heart, sfx, siren1, siren2;
+    AudioSource ambience, tv, boom, breath, heart, sfx, siren1, siren2;   // siren3·헬기는 Exit.cs
     float shake, tremor, tickTimer, lastStepTime, cloudProgress;
-    bool flashed, shocked, risen, stood, frozen, newsOn, tvOff, shielded, stunned, runnerInside;
+    bool flashed, shocked, risen, frozen, newsOn, tvOff, shielded, stunned;
     float actorYaw, actorYawFrom, actorYawTo, actorTurnT = 1, actorTurnTime = 1;
     Vector3 actorFrom, actorTo; float actorMoveT = 1, actorMoveTime = 1;
     int runLeg;
@@ -105,6 +106,7 @@ public partial class CutsceneDirector : MonoBehaviour
         if (tvScreenRenderer != null) tvScreenRenderer.sharedMaterial = tvCur;
         BuildAudio();
         BuildFx();
+        BuildExitFx();
         BeginShot(0);
         ApplyLook(true);
     }
@@ -150,14 +152,17 @@ public partial class CutsceneDirector : MonoBehaviour
         ShotTime = 0;
         shake = tremor = 0;
         Flash = 0;
-        flashed = shocked = risen = stood = frozen = newsOn = tvOff = shielded = stunned = runnerInside = false;
+        flashed = shocked = risen = frozen = newsOn = tvOff = shielded = stunned = false;
         bool atHome = shot < 3;
         if (home != null) home.gameObject.SetActive(atHome);
         if (street != null) street.gameObject.SetActive(!atHome);
         cloud.gameObject.SetActive(shot >= 2);
         ResetFx(shot);
+        ResetExit(shot);
         actor.Tremble = 0;
         actor.RunAmount = 0;
+        actor.RunLean = 14f;
+        actor.ReleaseHands();
         actor.SetBackpack(shot == 3);
         if (tv != null) tv.Stop();
         if (heart != null) heart.Stop();
@@ -186,19 +191,7 @@ public partial class CutsceneDirector : MonoBehaviour
             cloud.gameObject.SetActive(false); // 섬광과 함께 켠다
             if (Playing && tv != null) { tv.clip = ProceduralAudio.NewsMurmur(); tv.loop = true; tv.Play(); }
         }
-        else
-        {
-            PlaceActor(runStart.position, Quaternion.LookRotation(runDoor.position - runStart.position).eulerAngles.y);
-            actor.Set(CutsceneActor.Mode.Run, 0.3f);
-            actor.RunAmount = 0;
-            runLeg = 0;
-            cloudProgress = 0.62f;
-            cloud.transform.position = cloudStreet.position;
-            cloud.Size = 240f;
-            cloud.SetProgress(cloudProgress, 0);
-            if (Playing && breath != null) { breath.volume = 0.3f; breath.Play(); }
-            if (siren1 != null && !siren1.isPlaying) { siren1.Play(); siren2.Play(); }
-        }
+        else BeginExit();
         SetLightsForShot(shot, 0f, true);
         ApplyLook(true);
     }
@@ -265,6 +258,7 @@ public partial class CutsceneDirector : MonoBehaviour
         }
         actor.Tick(dt, moved);
         UpdateFx(dt);
+        UpdateExit(dt);
         UpdateLook(dt);
         UpdateAudio(dt);
         if (Playing && !Finished && ShotTime >= ShotLength[Shot]) Advance();
@@ -452,75 +446,6 @@ public partial class CutsceneDirector : MonoBehaviour
         handheld = 0.3f;
     }
 
-    // ---------- 3: 방공호로 ----------
-
-    float UpdateShot3(float dt)
-    {
-        float t = ShotTime;
-        float moved = 0;
-        // 달리기: 출발 → 문 앞 → 터널 안
-        float speed = RunSpeed * Window(t, RunDelay, RunDelay + 0.7f);
-        actor.RunAmount = Mathf.Clamp01(speed / RunSpeed);
-        if (speed > 0)
-        {
-            var target = runLeg == 0 ? runDoor.position : runInside.position;
-            var pos = actor.transform.position;
-            var to = target - pos;
-            to.y = 0;
-            float step = speed * dt;
-            if (to.magnitude <= step)
-            {
-                pos = target;
-                if (runLeg == 0) runLeg = 1;
-                else runnerInside = true;
-            }
-            else pos += to.normalized * step;
-            moved = step;
-            actor.transform.position = pos;
-            if (to.sqrMagnitude > 0.001f)
-            {
-                var face = Quaternion.LookRotation(to.normalized);
-                actor.transform.rotation = Quaternion.Slerp(actor.transform.rotation, face, dt * 6f);
-                actorYaw = actor.transform.eulerAngles.y;
-            }
-        }
-        cloudProgress = Mathf.Min(1f, cloudProgress + dt * 0.012f);
-        cloud.SetProgress(cloudProgress, dt);
-        SetLightsForShot(3, t, false);
-        // 검은 화면에서 열리고, 끝에 다시 어두워진다
-        Dark = Mathf.Max(1f - t / 0.6f, Window(t, ShotLength[3] - 1.4f, ShotLength[3] - 0.2f));
-        if (breath != null) breath.volume = Mathf.Lerp(0.3f, 0.45f, Window(t, 0f, 6f)) * (1 - Dark);
-
-        var head = actor.Rig.Head.position;
-        var fwd = actor.transform.forward;
-        var right = actor.transform.right;
-        if (t < 5.8f)
-        {
-            // 달리는 옆에서 따라가는 카메라 (조금 앞에서 얼굴을 본다)
-            var want = actor.transform.position + right * -2.3f + fwd * 1.1f + Vector3.up * 1.2f;
-            camPos = t < 0.05f ? want : Vector3.Lerp(camPos, want, dt * 5f);
-            camLook = head + fwd * 0.2f - Vector3.up * 0.25f;
-            camFov = 46f;
-            focusDist = Vector3.Distance(camPos, head);
-            aperture = 4f;
-            handheld = 1.0f;
-        }
-        else
-        {
-            // 터널 안에서 입구를 내다본다: 뛰어 들어오는 사람이 카메라 옆을 지나 어둠 속으로
-            float u = (t - 5.8f) / 5.7f;
-            camPos = Vector3.Lerp(street.TransformPoint(new Vector3(1.0f, 1.35f, -2.8f)), street.TransformPoint(new Vector3(0.9f, 1.3f, -2.5f)), Smooth(u));
-            var far = street.TransformPoint(new Vector3(0.6f, 1.3f, 14f));
-            float near = Mathf.Clamp01(1 - Vector3.Distance(camPos, head) / 12f);
-            camLook = Vector3.Lerp(far, head, Smooth(near));
-            camFov = 52f;
-            focusDist = Vector3.Distance(camPos, head);
-            aperture = 5.6f;
-            handheld = 0.55f;
-        }
-        return moved;
-    }
-
     // ================= 조명·하늘·색보정 =================
 
     // 장면별 빛·하늘·안개·색보정 목표. immediate면 바로 맞춘다 (장면이 시작될 때)
@@ -653,6 +578,12 @@ public partial class CutsceneDirector : MonoBehaviour
         float dt = Time.deltaTime;
         shake = Mathf.Max(tremor, shake - dt * 0.5f);
         float t = Time.time;
+        if (debugCamera != null)
+        {
+            cam.transform.SetPositionAndRotation(debugCamera.position, debugCamera.rotation);
+            cam.fieldOfView = camFov;
+            return;
+        }
         var jitterPos = new Vector3(Mathf.PerlinNoise(t * 0.9f, 1.3f) - 0.5f, Mathf.PerlinNoise(2.1f, t * 1.1f) - 0.5f, Mathf.PerlinNoise(t * 0.7f, t * 0.6f) - 0.5f) * (0.025f * handheld);
         var jitterRot = new Vector3((Mathf.PerlinNoise(t * 0.8f, 5.3f) - 0.5f) * 1.6f, (Mathf.PerlinNoise(7.7f, t * 0.6f) - 0.5f) * 2.2f, (Mathf.PerlinNoise(t * 0.5f, 9.1f) - 0.5f) * 0.8f) * handheld;
         if (shake > 0.001f)
@@ -753,11 +684,12 @@ public partial class CutsceneDirector : MonoBehaviour
             tv.maxDistance = 14f;
             tv.volume = 0.4f;
         }
-        // 거리의 먼 사이렌 둘 (높낮이가 다르다)
+        // 옥상의 민방위 공습경보 사이렌 셋 (거리·높낮이·시작 지점이 다르다)
         if (street != null)
         {
-            siren1 = MakeSiren(street.TransformPoint(new Vector3(-34f, 4f, 62f)), 0.82f);
-            siren2 = MakeSiren(street.TransformPoint(new Vector3(38f, 4f, 96f)), 1.07f);
+            siren1 = MakeSiren(street.TransformPoint(new Vector3(-40f, 22f, 60f)), 1f);
+            siren2 = MakeSiren(street.TransformPoint(new Vector3(62f, 28f, 150f)), 0.96f);
+            siren3 = MakeSiren(street.TransformPoint(new Vector3(-130f, 30f, 240f)), 1.03f);
         }
     }
 
@@ -769,16 +701,16 @@ public partial class CutsceneDirector : MonoBehaviour
         var a = go.AddComponent<AudioSource>();
         AudioCategory.Tag(a, SoundCategory.Ambient);
         a.playOnAwake = false;
-        a.clip = ProceduralAudio.Siren();
+        a.clip = ProceduralAudio.CivilSiren();
         a.loop = true;
         a.pitch = pitch;
         a.spatialBlend = 1f;
         a.rolloffMode = AudioRolloffMode.Linear;
-        a.minDistance = 6f;
-        a.maxDistance = 190f;
+        a.minDistance = 8f;
+        a.maxDistance = 420f;
         a.volume = 0.55f;
         var lp = go.AddComponent<AudioLowPassFilter>();
-        lp.cutoffFrequency = 2200f;
+        lp.cutoffFrequency = 3200f;
         return a;
     }
 
@@ -791,10 +723,12 @@ public partial class CutsceneDirector : MonoBehaviour
         ambience.volume = Mathf.MoveTowards(ambience.volume, amb * fade, dt * 0.3f);
         ambience.pitch = Mathf.MoveTowards(ambience.pitch, pitch, dt * 0.4f);
         if (tv != null) tv.volume = 0.4f * fade;
+        audioFade = fade;
         if (siren1 != null)
         {
             siren1.volume = 0.55f * fade;
             siren2.volume = 0.5f * fade;
+            if (siren3 != null) siren3.volume = 0.4f * fade;
         }
         if (breath != null && Finished) breath.volume *= fade;
         if (heart != null && Finished) heart.volume *= fade;
