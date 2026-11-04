@@ -123,6 +123,18 @@ public class PlayerController : MonoBehaviour
         sleepBlend = Mathf.Clamp01(blend);
     }
 
+    // 죽음 연출: seconds초에 걸쳐 무릎이 꺾이듯 가라앉으며 옆으로 쓰러진다 (GameManager.DeathRoutine이 부른다)
+    float deathBlend = -1f, deathSeconds = 1.7f; // 0 이상이면 쓰러지는 중/쓰러짐
+
+    public bool IsDead => deathBlend >= 0f;
+
+    public void PlayDeath(float seconds)
+    {
+        if (deathBlend >= 0f) return;
+        deathBlend = 0f;
+        deathSeconds = Mathf.Max(0.2f, seconds);
+    }
+
     void UpdateStamina(bool runHeld, float dt, GameBalance balance)
     {
         if (IsRunning)
@@ -275,6 +287,18 @@ public class PlayerController : MonoBehaviour
             float k = Mathf.SmoothStep(0, 1, sleepBlend);
             cameraRoot.position = Vector3.Lerp(cameraRoot.position, sleepAnchor.position, k);
             cameraRoot.rotation = Quaternion.Slerp(cameraRoot.rotation, sleepAnchor.rotation, k);
+        }
+
+        // 죽음: 점점 빠르게 가라앉으며 옆으로 쓰러진다. 바닥에 닿는 순간 한 번 덜컹
+        if (deathBlend >= 0f)
+        {
+            float before = deathBlend;
+            deathBlend = Mathf.Min(1f, deathBlend + Time.unscaledDeltaTime / deathSeconds);
+            float k = Mathf.Pow(deathBlend, 1.7f);
+            if (before < 1f && deathBlend >= 1f) shake = Mathf.Max(shake, 0.5f);
+            cameraRoot.localPosition = Vector3.Lerp(cameraRoot.localPosition, new Vector3(0.12f, 0.28f, 0.1f), k) + shakeOffset * k;
+            cameraRoot.localRotation = Quaternion.Slerp(cameraRoot.localRotation, Quaternion.Euler(14f + shakeOffset.y * 20f, 0, 76f + shakeOffset.x * 15f), k);
+            if (cam != null) cam.fieldOfView = GameSettings.Fov - 8f * k;
         }
 
         Noise = !moving ? 0 : IsCrouching ? 0.25f : IsRunning ? 2f : 1f;

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 // 화로: F로 제련 창을 연다 (화면은 UIManager.Workbench.cs를 화로 모드로 쓴다).
@@ -26,7 +27,7 @@ public class Furnace : Interactable
     float flickerPhase; // 깜빡임 잡음 위치. 속도가 바뀌어도 튀지 않게 시간 대신 쌓아 간다
     Color baseColor, baseEmission;
     MaterialPropertyBlock block;
-    bool quitting, shown = true;
+    bool quitting, shown = true, installing;
 
     public bool IsSmelting => smelting != null;
     public Recipe CurrentRecipe => smelting;
@@ -56,11 +57,49 @@ public class Furnace : Interactable
     // 늘 나는 작은 탁탁 소리 (화로가 보일 때만)
     void StartAmbience()
     {
+        if (crackle.clip == null) return;
         crackle.time = Random.Range(0f, crackle.clip.length * 0.9f); // 매번 같은 곳부터 들리지 않게
         crackle.Play();
     }
 
-    // 재료를 바로 쓰고 녹이기 시작한다
+    // 제작대에서 화로를 만들었다: 망치질이 끝날 때까지 숨었다가 위에서 쿵 내려앉으며 먼지가 퍼진다 (RefreshBuilt 뒤에 부른다)
+    public void PlayInstall()
+    {
+        if (!shown || installing) return;
+        StartCoroutine(InstallRoutine());
+    }
+
+    IEnumerator InstallRoutine()
+    {
+        installing = true;
+        var home = transform.position;
+        const float drop = 0.6f, fall = 0.3f;
+        foreach (Transform child in transform) child.gameObject.SetActive(false);
+        yield return new WaitForSeconds(0.5f);
+        foreach (Transform child in transform) child.gameObject.SetActive(true);
+        StartAmbience();
+        for (float t = 0; t < fall; t += Time.deltaTime)
+        {
+            float k = t / fall;
+            transform.position = home + Vector3.up * drop * (1f - k * k);
+            yield return null;
+        }
+        transform.position = home;
+        // 쾅: 먼지는 벽 반대쪽(화구 쪽)으로 퍼진다
+        Vfx.DustSlam(home, 0.8f, -transform.forward, 1.3f);
+        ProceduralAudio.PlayAt(EffectAudio.Slam(), home + Vector3.up * 0.3f, 1f, Random.Range(0.95f, 1.05f), 1f, 30f);
+        if (PlayerController.Instance != null) PlayerController.Instance.Shake(0.8f);
+        // 살짝 튀어 올랐다 가라앉는다
+        for (float t = 0; t < 0.16f; t += Time.deltaTime)
+        {
+            transform.position = home + Vector3.up * 0.04f * Mathf.Sin(t / 0.16f * Mathf.PI);
+            yield return null;
+        }
+        transform.position = home;
+        installing = false;
+    }
+
+    // 재료를 바로 쓰고 녹이기 시작한다. 쇠는 불꽃이 튀고, 고기는 김이 오르며 지글거린다
     public bool StartSmelt(Recipe recipe)
     {
         var s = GameManager.Instance.State;
@@ -71,10 +110,32 @@ public class Furnace : Interactable
         smeltTimer = 0;
         ProceduralAudio.PlayAt(FurnaceAudio.Ignite(), MouthPosition, 0.8f, Random.Range(0.92f, 1.06f), 1f, 18f);
         if (embers != null) embers.Emit(18);
+        if (IsFood(recipe))
+        {
+            Vfx.Steam(SteamSpot, MouthOut * 0.3f, SmeltSeconds + 0.8f, 9f);
+            ProceduralAudio.PlayAt(EffectAudio.Sizzle(), MouthOpening, 0.6f, Random.Range(0.95f, 1.05f), 1f, 14f);
+        }
+        else
+        {
+            Vfx.SparkFlash(MouthOpening, MouthOut, 56, 1f);
+            Vfx.SparkShower(MouthOpening, MouthOut, SmeltSeconds, 22f);
+            ProceduralAudio.PlayAt(EffectAudio.Sparks(), MouthOpening, 0.7f, Random.Range(0.95f, 1.05f), 1f, 18f);
+        }
         return true;
     }
 
+    static bool IsFood(Recipe recipe)
+    {
+        var def = ItemDatabase.Get(recipe.ResultId);
+        return def != null && def.Category == ItemCategory.Food;
+    }
+
     Vector3 MouthPosition => fireLight != null ? fireLight.transform.position : transform.position + Vector3.up * 0.6f;
+    // 화구 구멍 (불꽃·김이 나오는 자리)과 그 앞 위쪽 방향
+    Vector3 MouthOpening => transform.TransformPoint(new Vector3(0, 0.58f, -0.4f));
+    Vector3 MouthOut => (-transform.forward + Vector3.up * 0.55f).normalized;
+    // 김이 나오는 자리: 화구 문턱 바로 앞·위 (불구멍 안에서 나오면 밝은 불빛에 묻힌다)
+    Vector3 SteamSpot => transform.TransformPoint(new Vector3(0, 0.68f, -0.5f));
 
     void Awake()
     {
@@ -181,6 +242,14 @@ public class Furnace : Interactable
         string where = toHand ? "" : toStorage ? " (창고에 넣었다)" : " (무거워서 창고에 넣었다)";
         gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)} x{recipe.ResultCount} 녹이기 완료" + where);
         ProceduralAudio.PlayAt(ProceduralAudio.Clang(), MouthPosition, 0.6f, 0.75f);
+        // 다 됐다: 쇳물을 꺼내며 불꽃이 왈칵 / 고기에서 김이 확
+        if (IsFood(recipe))
+            for (int i = 0; i < 10; i++) Vfx.SteamPuff(SteamSpot, MouthOut * 0.3f);
+        else
+        {
+            Vfx.SparkFlash(MouthOpening, MouthOut, 70, 1.2f);
+            ProceduralAudio.PlayAt(EffectAudio.Sparks(), MouthOpening, 0.6f, 0.9f, 1f, 18f);
+        }
     }
 
     void OnApplicationQuit()

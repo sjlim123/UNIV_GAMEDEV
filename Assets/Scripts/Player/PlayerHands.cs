@@ -141,8 +141,8 @@ public class PlayerHands : MonoBehaviour
         if (dt <= 0 || handsRoot == null) return;
         var s = GameManager.Instance.State;
 
-        // 침대에 누우면 손을 감춘다
-        bool asleep = pc.SleepBlend > 0.05f;
+        // 침대에 누우면(그리고 쓰러져 죽으면) 손을 감춘다
+        bool asleep = pc.SleepBlend > 0.05f || pc.IsDead;
         if (handsRoot.gameObject.activeSelf == asleep) handsRoot.gameObject.SetActive(!asleep);
 
         string want = hotbar != null ? hotbar.SelectedId : null;

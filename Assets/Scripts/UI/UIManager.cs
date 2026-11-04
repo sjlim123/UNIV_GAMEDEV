@@ -329,13 +329,14 @@ public partial class UIManager : MonoBehaviour
         Stretch(promptText.rectTransform);
         promptBox.gameObject.SetActive(false);
 
+        // 알림 띠: 글 길이에 맞게 줄어든다 (FitToast)
         var toast = BlackBand(h, "Toast");
-        Place(toast, new Vector2(0.5f, 0.5f), new Vector2(0, 230), new Vector2(980, 60));
+        Place(toast, new Vector2(0.5f, 0.5f), new Vector2(0, 230), new Vector2(520, 46));
         toastRect = toast;
         toastGroup = toast.gameObject.AddComponent<CanvasGroup>();
         toastGroup.alpha = 0;
         toastGroup.blocksRaycasts = false;
-        toastText = NewText(toast, "", 23, TextAnchor.MiddleCenter, Text);
+        toastText = NewText(toast, "", 20, TextAnchor.MiddleCenter, Text);
         Stretch(toastText.rectTransform, 24, 4);
     }
 
@@ -495,7 +496,7 @@ public partial class UIManager : MonoBehaviour
         UpdateLoading();
         WatchItemDrag(); // 끌던 그림이 남지 않도록 버튼이 떼어졌는지 매 프레임 본다
         UpdateTipKnob();
-        bool inField = PlayerController.Instance != null;
+        bool inField = PlayerController.Instance != null && !gm.IsGameOver; // 죽거나 엔딩이면 HUD는 치운다
         if (inField && !hud.activeSelf) ShowKeyHints(); // HUD가 켜지는 순간(씬에 들어온 뒤) 조작키를 잠깐 보여 준다
         hud.SetActive(inField);
         if (hud.activeSelf)
@@ -703,6 +704,23 @@ public partial class UIManager : MonoBehaviour
     {
         toastText.text = text;
         toastTimer = duration;
+        FitToast();
+    }
+
+    // 알림 띠를 글에 맞게 줄인다: 한 줄이면 글 너비만큼, 길면 최대 너비에서 줄을 접고 높이를 늘린다
+    const float ToastMaxWidth = 980f, ToastMinWidth = 220f, ToastHeight = 46f;
+
+    void FitToast()
+    {
+        if (toastRect == null) return;
+        float need = toastText.preferredWidth + 60f;
+        float w = Mathf.Clamp(need, ToastMinWidth, ToastMaxWidth), h = ToastHeight;
+        if (need > ToastMaxWidth)
+        {
+            var settings = toastText.GetGenerationSettings(new Vector2(ToastMaxWidth - 48f, 0));
+            h = Mathf.Max(ToastHeight, toastText.cachedTextGeneratorForLayout.GetPreferredHeight(toastText.text, settings) / toastText.pixelsPerUnit + 18f);
+        }
+        toastRect.sizeDelta = new Vector2(w, h);
     }
 
     // 붉은 밤 화면 효과 (0 = 없음, 1 = 가득)
@@ -750,6 +768,9 @@ public partial class UIManager : MonoBehaviour
         // 천천히 떠오르며 흔들린다
         sleepText.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(Time.unscaledTime * 1.3f) * 6f, Mathf.Sin(Time.unscaledTime * 0.9f) * 8f);
     }
+
+    // 검은 막의 현재 투명도 (1 = 완전히 검다)
+    public float FadeAlpha => fadeOverlay != null ? fadeOverlay.color.a : 0f;
 
     public IEnumerator Fade(float target, float duration)
     {

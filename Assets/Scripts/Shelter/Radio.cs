@@ -27,6 +27,17 @@ public class Radio : Interactable
 
     public override string Prompt => playing ? "라디오 끄기" : "라디오 듣기";
 
+    // 스피커 그릴 자리와 앞면 방향 (앞면이 -Z)
+    Vector3 GrillePos => transform.TransformPoint(new Vector3(-0.085f, 0.09f, -0.1f));
+    Vector3 Front => -transform.forward;
+
+    // 낡은 라디오의 치지직: 스피커 그릴에서 전기가 튄다
+    void Spark(float scale, int bursts, float volume, int variant)
+    {
+        Vfx.Zap(GrillePos, Front, scale, bursts);
+        ProceduralAudio.PlayAt(EffectAudio.Zap(variant), GrillePos, volume, Random.Range(0.9f, 1.15f), 1f, 12f, SoundCategory.Ambient);
+    }
+
     void Awake()
     {
         voice = gameObject.AddComponent<AudioSource>();
@@ -77,6 +88,7 @@ public class Radio : Interactable
         voice.pitch = 1f;
         voice.Play();
         if (glow != null) glow.enabled = true;
+        Spark(0.08f, 3, 0.45f, 0);
     }
 
     void TurnOff()
@@ -86,6 +98,7 @@ public class Radio : Interactable
         voice.Stop();
         if (glow != null) glow.enabled = false;
         if (needle != null) needle.localPosition = needleHome;
+        Spark(0.06f, 1, 0.25f, 2);
     }
 
     // 켤 때마다 두 방송이 번갈아 잡힌다 (○○ 지명은 나중에 정한다):
@@ -155,8 +168,9 @@ public class Radio : Interactable
     {
         timer = durations[i];
         string line = lines[i];
-        // 잡음만 있는 줄이 아니면 뭉개진 목소리를 섞는다
-        if (!line.StartsWith("치지직", System.StringComparison.Ordinal))
+        // 잡음만 있는 줄이면 전기가 튀고, 아니면 뭉개진 목소리를 섞는다
+        if (line.StartsWith("치지직", System.StringComparison.Ordinal)) Spark(0.06f, 2, 0.3f, 1);
+        else
         {
             voice.clip = RadioAudio.Garble();
             voice.pitch = Random.Range(0.92f, 1.08f);
