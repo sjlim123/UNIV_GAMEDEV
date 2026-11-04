@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // 아이템마다 다른 모양을 기본 도형으로 만든다 (바닥 아이템, 손에 든 물건, 아이콘이 함께 쓴다)
@@ -13,8 +14,7 @@ public static class ItemVisuals
         switch (itemId)
         {
             case "water":
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.15f, 0), new Vector3(0.09f, 0.15f, 0.09f), new Color(0.35f, 0.5f, 0.65f), 0.8f);
-                RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.32f, 0), new Vector3(0.035f, 0.025f, 0.035f), new Color(0.2f, 0.3f, 0.7f));
+                PetBottle(t);
                 break;
             case "canned_food":
                 RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(0, 0.06f, 0), new Vector3(0.09f, 0.06f, 0.09f), new Color(0.55f, 0.52f, 0.48f), 0.7f);
@@ -252,6 +252,162 @@ public static class ItemVisuals
                 RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(0, 0.1f, 0), Vector3.one * 0.2f, Color.gray);
                 break;
         }
+    }
+
+    // ---------- 플라스틱 페트병 (물) ----------
+    // 둥근 바닥, 홈 세 줄, 잘록한 허리, 둥근 어깨, 목 받침 고리, 남색 뚜껑. 투명한 껍질 안에 물이 2/3쯤 차 있고 허리 바깥에 미색 라벨이 감겨 있다
+    // (HUD 갈증 계기 아이콘과 같은 색). 바닥이 y=0, 위가 +y. 손에 들 때는 허리(y≈0.13, 반지름 0.045)를 감아쥔다 (HeldItems)
+    static readonly float[] BottleProfile =
+    {
+        // y, 반지름 — 아래에서 위로
+        0.000f, 0.030f, 0.006f, 0.040f, 0.016f, 0.0445f, 0.030f, 0.045f,
+        0.040f, 0.045f, 0.043f, 0.0425f, 0.048f, 0.0425f, 0.051f, 0.045f,   // 홈 1
+        0.062f, 0.045f, 0.065f, 0.0425f, 0.070f, 0.0425f, 0.073f, 0.045f,   // 홈 2
+        0.084f, 0.045f, 0.095f, 0.0445f, 0.120f, 0.0435f, 0.145f, 0.0445f, 0.156f, 0.045f, // 허리 (라벨 자리)
+        0.166f, 0.045f, 0.169f, 0.0425f, 0.174f, 0.0425f, 0.177f, 0.045f,   // 홈 3
+        0.190f, 0.045f, 0.200f, 0.0445f, 0.210f, 0.042f, 0.219f, 0.037f, 0.226f, 0.030f, 0.232f, 0.022f, 0.236f, 0.016f, // 어깨
+        0.238f, 0.014f, 0.250f, 0.014f, 0.252f, 0.0185f, 0.256f, 0.0185f, 0.258f, 0.014f, 0.264f, 0.014f,  // 목과 받침 고리
+    };
+    const float BottleLabelBottom = 0.086f, BottleLabelTop = 0.150f, BottleLabelRadius = 0.0458f;
+
+    static Material plasticTemplate, labelMat;
+    static Texture2D labelTex;
+    static readonly Dictionary<string, Material> plastics = new Dictionary<string, Material>();
+
+    // 아이콘 카메라가 찍는 동안 true (ItemIcons가 켠다). 투명 배경 위에서는 맑은 플라스틱이 사라져 보이므로 아이콘에서는 더 진하게 칠한다
+    public static bool IconMode;
+
+    static void PetBottle(Transform t)
+    {
+        const int Radial = 28;
+        float shellAlpha = IconMode ? 0.85f : 0.32f, waterAlpha = IconMode ? 0.95f : 0.8f;
+        // 물: 껍질보다 조금 작게, 2/3 높이까지. 관의 윗뚜껑이 평평한 수면이 된다. 먼저 그리고(3000) 그 위에 껍질을 섞는다(3001)
+        MeshPart(t, "Water", ProcMesh.Tube("pet_water", 2, Radial, BottleRings(0.94f, 0.004f, 0.162f)), Plastic(new Color(0.3f, 0.58f, 0.9f, waterAlpha), 0.9f, 3000));
+        // 라벨: 허리 바깥을 감은 미색 띠 (껍질보다 조금 커서 껍질 밖에 붙어 보인다)
+        MeshPart(t, "Label", ProcMesh.Tube("pet_label", 2, Radial, BottleLabelBottom, BottleLabelRadius, BottleLabelRadius, 0, BottleLabelTop, BottleLabelRadius, BottleLabelRadius, 0), LabelMaterial());
+        // 투명한 껍질 (그림자는 안의 물이 드리운다)
+        var shell = MeshPart(t, "Shell", ProcMesh.Tube("pet_shell", 2, Radial, BottleRings(1f, 0f, 0.264f)), Plastic(new Color(0.72f, 0.84f, 0.95f, shellAlpha), 0.95f, 3001));
+        shell.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // 뚜껑: 아래 봉인 띠에 홈이 한 줄 파여 있고 위가 살짝 둥글다
+        MeshPart(t, "Cap", ProcMesh.Tube("pet_cap", 2, Radial,
+            0.258f, 0.0165f, 0.0165f, 0, 0.2605f, 0.0165f, 0.0165f, 0, 0.261f, 0.0152f, 0.0152f, 0, 0.2625f, 0.0152f, 0.0152f, 0,
+            0.263f, 0.0165f, 0.0165f, 0, 0.292f, 0.0165f, 0.0165f, 0, 0.296f, 0.015f, 0.015f, 0, 0.299f, 0.010f, 0.010f, 0),
+            RuntimeVisuals.Mat(new Color(0.16f, 0.32f, 0.62f), 0.5f));
+    }
+
+    // 병 프로필의 높이 y에서의 반지름 (점 사이는 직선으로 잇는다)
+    static float BottleRadiusAt(float y)
+    {
+        for (int i = 2; i < BottleProfile.Length; i += 2)
+            if (y <= BottleProfile[i])
+                return Mathf.Lerp(BottleProfile[i - 1], BottleProfile[i + 1], Mathf.InverseLerp(BottleProfile[i - 2], BottleProfile[i], y));
+        return BottleProfile[BottleProfile.Length - 1];
+    }
+
+    // yMin~yMax 사이의 프로필을 ProcMesh.Tube 고리(y, rx, rz, 치우침)로 만든다. 반지름은 rScale배, 양 끝은 보간한 고리로 닫는다
+    static float[] BottleRings(float rScale, float yMin, float yMax)
+    {
+        var rings = new List<float>();
+        System.Action<float, float> add = (y, r) => { rings.Add(y); rings.Add(r * rScale); rings.Add(r * rScale); rings.Add(0); };
+        add(yMin, BottleRadiusAt(yMin));
+        for (int i = 0; i < BottleProfile.Length; i += 2)
+            if (BottleProfile[i] > yMin && BottleProfile[i] < yMax) add(BottleProfile[i], BottleProfile[i + 1]);
+        add(yMax, BottleRadiusAt(yMax));
+        return rings.ToArray();
+    }
+
+    static GameObject MeshPart(Transform parent, string name, Mesh mesh, Material mat)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var r = go.AddComponent<MeshRenderer>();
+        r.sharedMaterial = mat;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        return go;
+    }
+
+    // 반투명 플라스틱·물 재질 (URP Lit 투명, 알파 미리 곱함, 반사광 유지). Resources/Items/M_Plastic을 본떠 색만 바꾼다
+    // (에셋이 있어야 빌드에 투명 셰이더 변형이 들어간다. 없으면 같은 설정으로 새로 만든다)
+    static Material Plastic(Color color, float smoothness, int queue)
+    {
+        string key = color + "/" + smoothness + "/" + queue;
+        if (plastics.TryGetValue(key, out var m) && m != null) return m;
+        if (plasticTemplate == null) plasticTemplate = Resources.Load<Material>("Items/M_Plastic");
+        if (plasticTemplate != null) m = new Material(plasticTemplate);
+        else
+        {
+            m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            m.SetFloat("_Surface", 1);
+            m.SetFloat("_Blend", 0);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWrite", 0);
+            m.SetFloat("_BlendModePreserveSpecular", 1);
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+        m.name = "Plastic " + key;
+        m.SetColor("_BaseColor", color);
+        m.SetFloat("_Smoothness", smoothness);
+        m.renderQueue = queue;
+        plastics[key] = m;
+        return m;
+    }
+
+    // 라벨 재질: 코드로 그린 라벨 그림을 띠 둘레에 한 바퀴 맞춰 입힌다 (ProcMesh.Tube의 UV: u = 둘레 길이 m, v = 높이 m)
+    static Material LabelMaterial()
+    {
+        if (labelMat != null) return labelMat;
+        labelMat = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "PetLabel" };
+        labelMat.SetTexture("_BaseMap", LabelTexture());
+        labelMat.SetColor("_BaseColor", Color.white);
+        labelMat.SetFloat("_Smoothness", 0.45f);
+        float around = 2 * Mathf.PI * BottleLabelRadius, height = BottleLabelTop - BottleLabelBottom;
+        labelMat.SetTextureScale("_BaseMap", new Vector2(1f / around, 1f / height));
+        labelMat.SetTextureOffset("_BaseMap", new Vector2(0, -BottleLabelBottom / height));
+        return labelMat;
+    }
+
+    // 라벨 그림 (256×64, 가로가 병 둘레): 미색 종이, 아래쪽 파란 물결 띠와 남색 선, 물방울 로고와 글씨처럼 보이는 획, 바코드.
+    // 반 바퀴마다 같은 무늬라 어느 쪽에서 봐도 로고가 보인다
+    static Texture2D LabelTexture()
+    {
+        if (labelTex != null) return labelTex;
+        const int W = 256, H = 64, Half = W / 2;
+        var paper = new Color(0.93f, 0.92f, 0.88f);
+        var blue = new Color(0.3f, 0.58f, 0.9f);
+        var navy = new Color(0.16f, 0.32f, 0.62f);
+        var ink = new Color(0.25f, 0.27f, 0.3f);
+        var px = new Color32[W * H];
+        for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                var c = paper;
+                float wave = 20f + Mathf.Sin((x + 0.5f) / W * Mathf.PI * 6f) * 3f; // 물결 띠의 윗선 (px)
+                int lx = x % Half;
+                if (y < wave)
+                {
+                    c = blue;
+                    if (y >= 8 && y < 12 && lx >= 56 && lx < 96 && (lx - 56) % 8 < 5) c = Color.Lerp(blue, Color.white, 0.85f); // 띠 안의 흰 잔글씨 (용량 표시처럼)
+                }
+                else if (y < wave + 3f) c = navy;
+                else
+                {
+                    float dx = lx - 40f, dy = y - 38f;
+                    if (dx * dx + dy * dy < 64f || (dy >= 0 && dy < 16f && Mathf.Abs(dx) < 8f * (1f - dy / 16f))) c = navy; // 물방울 로고
+                    else if (y >= 40 && y < 47 && lx >= 56 && lx < 110 && (lx - 56) % 11 < 8) c = navy;                  // 상품명처럼 굵은 획
+                    else if (y >= 31 && y < 34 && lx >= 56 && lx < 104 && (lx - 56) % 7 < 5) c = ink;                    // 잔글씨 획
+                    else if (x >= 150 && x < 178 && y >= 30 && y < 44 && x * 7 % 11 < 4) c = ink;                         // 바코드 (한쪽에만)
+                }
+                px[y * W + x] = c;
+            }
+        labelTex = new Texture2D(W, H, TextureFormat.RGBA32, true) { name = "PetLabel", wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear, anisoLevel = 4 };
+        labelTex.SetPixels32(px);
+        labelTex.Apply(true, true);
+        return labelTex;
     }
 
     // 고기: 살코기 + 지방(또는 구운 껍질) + 뼈다귀. 구운 고기는 석쇠 자국을 낸다

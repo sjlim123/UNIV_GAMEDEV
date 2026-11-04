@@ -82,7 +82,10 @@ public static class ItemIcons
         stage.transform.position = new Vector3(0, -500, 0);
         var item = new GameObject("Item");
         item.transform.SetParent(stage.transform, false);
-        ItemVisuals.Build(id, item.transform);
+        // 투명한 부품(페트병 껍질)은 아이콘에서 더 진하게 그리도록 알린다
+        ItemVisuals.IconMode = true;
+        try { ItemVisuals.Build(id, item.transform); }
+        finally { ItemVisuals.IconMode = false; }
         item.transform.localRotation = Quaternion.Euler(IconTilt(id), 35, 0);
 
         var bounds = new Bounds(stage.transform.position, Vector3.zero);
@@ -125,7 +128,17 @@ public static class ItemIcons
 
         var rt = RenderTexture.GetTemporary(Size, Size, 24, RenderTextureFormat.ARGB32);
         cam.targetTexture = rt;
+#if UNITY_EDITOR
+        // 편집기는 처음 쓰는 셰이더 변형을 첫 렌더에서 건너뛰고 컴파일만 한다 (페트병의 투명 플라스틱이 빠진 채 찍혔다).
+        // 비동기 컴파일이 켜져 있으면 하늘색 임시 셰이더로 그리므로 끄고, 두 번 찍어 두 번째 결과를 쓴다 (빌드에서는 미리 컴파일되어 있어 한 번이면 된다)
+        bool asyncWas = UnityEditor.ShaderUtil.allowAsyncCompilation;
+        UnityEditor.ShaderUtil.allowAsyncCompilation = false;
         cam.Render();
+        cam.Render();
+        UnityEditor.ShaderUtil.allowAsyncCompilation = asyncWas;
+#else
+        cam.Render();
+#endif
         var prev = RenderTexture.active;
         RenderTexture.active = rt;
         var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = "Icon_" + id };
