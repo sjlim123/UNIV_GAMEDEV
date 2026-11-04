@@ -29,11 +29,50 @@ public class Workbench : Interactable
     // 벽에 붙은 공구판(Pegboard)을 바라봐도 안내와 윤곽선이 나오게 충돌체를 하나 더 둔다 (씬을 다시 만들지 않아도 되게 실행 중에 붙인다)
     void Start()
     {
+        AddClutter();
         var board = transform.Find("Pegboard");
         if (board == null || GetComponents<BoxCollider>().Length > 1) return;
         var c = gameObject.AddComponent<BoxCollider>();
         c.center = board.localPosition;
         c.size = board.localScale + new Vector3(0, 0, 0.06f);
+    }
+
+    // 상판 위 잡동사니: 흩어진 너트·나사·쇳가루와 기름 걸레. 깨끗한 강철판이 너무 말끔해 보인다는 피드백에 따라 때 묻은 느낌을 더한다
+    // (씬을 다시 만들지 않아도 되게 실행 중에 붙인다). 상판 윗면은 y=0.94
+    void AddClutter()
+    {
+        if (transform.Find("Clutter") != null) return;
+        var c = new GameObject("Clutter").transform;
+        c.SetParent(transform, false);
+        const float top = 0.94f;
+        var steel = new Color(0.58f, 0.58f, 0.6f);
+        var rust = new Color(0.4f, 0.21f, 0.1f);
+        // 너트 (납작한 원기둥 + 구멍처럼 보이는 어두운 원판)
+        var nuts = new[] { new Vector3(0.32f, 0, 0.16f), new Vector3(0.46f, 0, -0.26f), new Vector3(-0.15f, 0, -0.3f) };
+        for (int i = 0; i < nuts.Length; i++)
+        {
+            var p = nuts[i] + Vector3.up * (top + 0.004f);
+            RuntimeVisuals.Part(PrimitiveType.Cylinder, c, p, new Vector3(0.024f, 0.004f, 0.024f), i == 2 ? rust : steel, 0.55f, new Vector3(0, i * 40f, 0), i == 2 ? 0.1f : 0.6f);
+            RuntimeVisuals.Part(PrimitiveType.Cylinder, c, p + Vector3.up * 0.0041f, new Vector3(0.011f, 0.0005f, 0.011f), new Color(0.12f, 0.12f, 0.12f), 0.3f);
+        }
+        // 나사 둘 (몸통 + 머리)
+        foreach (var s in new[] { new Vector3(0.12f, 0, 0.24f), new Vector3(0.55f, 0, 0.1f) })
+        {
+            float yaw = s.x * 300f;
+            var dir = Quaternion.Euler(0, yaw, 0) * Vector3.forward;
+            RuntimeVisuals.Part(PrimitiveType.Cylinder, c, s + Vector3.up * (top + 0.004f), new Vector3(0.008f, 0.025f, 0.008f), steel, 0.6f, new Vector3(90, yaw, 0), 0.6f);
+            RuntimeVisuals.Part(PrimitiveType.Cylinder, c, s + Vector3.up * (top + 0.006f) - dir * 0.025f, new Vector3(0.016f, 0.003f, 0.016f), steel, 0.6f, new Vector3(90, yaw, 0), 0.6f);
+        }
+        // 쇳가루·쇳조각 (바이스 앞)
+        var rnd = new System.Random(7);
+        for (int i = 0; i < 14; i++)
+        {
+            var p = new Vector3(0.62f + (float)rnd.NextDouble() * 0.3f, top + 0.0015f, -0.12f + (float)rnd.NextDouble() * 0.24f);
+            RuntimeVisuals.Part(PrimitiveType.Cube, c, p, new Vector3(0.012f + (float)rnd.NextDouble() * 0.02f, 0.002f, 0.003f), i % 3 == 0 ? rust : steel, 0.5f, new Vector3(0, (float)rnd.NextDouble() * 180f, 0), 0.5f);
+        }
+        // 기름 걸레 (두 겹으로 구겨 놓은 천)
+        RuntimeVisuals.Part(PrimitiveType.Cube, c, new Vector3(-0.08f, top + 0.012f, 0.24f), new Vector3(0.26f, 0.024f, 0.17f), new Color(0.3f, 0.27f, 0.22f), 0.08f, new Vector3(0, -14f, 0));
+        RuntimeVisuals.Part(PrimitiveType.Cube, c, new Vector3(-0.03f, top + 0.03f, 0.22f), new Vector3(0.14f, 0.016f, 0.1f), new Color(0.25f, 0.22f, 0.18f), 0.08f, new Vector3(0, 28f, 0));
     }
 
     // 망치 손잡이·머리를 손잡이의 쥐는 쪽 끝을 축으로 묶어, 들어 올렸다 내려찍을 수 있게 한다
