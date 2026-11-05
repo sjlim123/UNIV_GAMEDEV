@@ -88,7 +88,7 @@ public class ShelterDeparture : MonoBehaviour
             camAnchor.rotation = Quaternion.Slerp(fromRot, baseRot, k);
             pc.SetCinematic(camAnchor, Mathf.Clamp01(t / 0.35f));
             int stepNow = Mathf.FloorToInt(k * steps + 0.02f);
-            if (stepNow > stepsDone) { stepsDone = stepNow; ProceduralAudio.Play2D(ProceduralAudio.Footstep(), 0.4f, Random.Range(0.92f, 1.04f)); }
+            if (stepNow > stepsDone) { stepsDone = stepNow; ProceduralAudio.Play2D(Footsteps.Clip(Footsteps.Surface.Stone), 0.5f, Random.Range(0.92f, 1.04f)); }
             yield return null;
         }
         Head(0, 0, 0, 0);
@@ -162,11 +162,11 @@ public class ShelterDeparture : MonoBehaviour
             float gait = Mathf.Sin(walk * Mathf.PI * 2f);
             var pos = Vector3.Lerp(standAt, pushEnd, walk) + Vector3.up * (Mathf.Abs(gait) * 0.02f) + pRight * (gait * 0.006f);
             int stepNow = Mathf.FloorToInt(walk * 2f + 0.02f);
-            if (stepNow > pushSteps) { pushSteps = stepNow; ProceduralAudio.Play2D(ProceduralAudio.Footstep(), 0.45f, Random.Range(0.9f, 1.0f)); }
+            if (stepNow > pushSteps) { pushSteps = stepNow; ProceduralAudio.Play2D(Footsteps.Clip(Footsteps.Surface.Stone), 0.55f, Random.Range(0.9f, 1.0f)); }
             camAnchor.position = pos;
             camAnchor.rotation = Quaternion.Slerp(baseRot, Quaternion.LookRotation(tunnelLook - pos, Vector3.up), Mathf.SmoothStep(0, 1, Mathf.Clamp01((k - 0.12f) / 0.7f)));
             // 손바닥은 문짝 앞면 오른쪽(경첩 반대쪽)에 얹힌 채 문과 함께 간다. 어깨에서 팔 길이를 넘어가면 놓는다
-            var palm = door.TransformPoint(new Vector3(0.32f, 0.06f, -0.07f));
+            var palm = door.TransformPoint(new Vector3(0.32f, 0.06f, -0.105f)); // 한 단 올라온 문짝 판 위
             var rot = FpHandRot(door.forward, Vector3.up - pRight * 0.35f);
             float reach = Vector3.Distance(pos + shoulderOffset, palm);
             if (!released && reach > 0.66f) released = true;
@@ -191,7 +191,7 @@ public class ShelterDeparture : MonoBehaviour
             camAnchor.position = Vector3.Lerp(stepFrom, stepTo, k) + Vector3.up * (Mathf.Abs(Mathf.Sin(k * Mathf.PI * 2f)) * 0.025f);
             camAnchor.rotation = Quaternion.Slerp(stepRotFrom, stepRot, k);
             int stepNow = Mathf.FloorToInt(k * 2f + 0.02f);
-            if (stepNow > walkSteps) { walkSteps = stepNow; ProceduralAudio.Play2D(ProceduralAudio.Footstep(), 0.5f, Random.Range(0.9f, 1.0f)); }
+            if (stepNow > walkSteps) { walkSteps = stepNow; ProceduralAudio.Play2D(Footsteps.Clip(Footsteps.Surface.Stone), 0.6f, Random.Range(0.9f, 1.0f)); }
             yield return null;
         }
         gm.UI.SetLetterbox(false);

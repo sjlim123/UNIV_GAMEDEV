@@ -144,7 +144,7 @@ public static class ItemDatabase
         Add("rope", "밧줄", ItemCategory.Material, ItemRarity.Common, 0.3f, "질긴 밧줄. 조합 재료");
         Add("copper_wire", "구리선", ItemCategory.Material, ItemRarity.Common, 0.2f, "벗겨낸 구리선. 전기 부품 재료");
         Add("rubber", "고무", ItemCategory.Material, ItemRarity.Common, 0.2f, "타이어에서 잘라낸 고무. 조합 재료");
-        Add("leather", "가죽", ItemCategory.Material, ItemRarity.Common, 0.3f, "들개 가죽. 가방·방어구 재료");
+        Add("leather", "가죽", ItemCategory.Material, ItemRarity.Common, 0.3f, "좀비개 가죽. 가방·방어구 재료");
         Add("stone", "돌", ItemCategory.Material, ItemRarity.Common, 0.3f, "주먹만 한 돌. 새총 총알(1개 = 5발) · 화로 재료");
         Add("fuel", "연료통", ItemCategory.Material, ItemRarity.Common, 1.5f, "발전기에 넣으면 전력 +35%", icon: "fuel");
         Add("flashlight", "손전등", ItemCategory.Equipment, ItemRarity.Common, 0.3f, "Q로 켜고 끈다. 배터리를 쓴다", icon: "flashlight");

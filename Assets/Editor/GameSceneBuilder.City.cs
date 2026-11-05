@@ -939,7 +939,8 @@ public static partial class GameSceneBuilder
         Prim(PrimitiveType.Cylinder, "Vent", g, new Vector3(0.9f, 3.2f, -0.6f), new Vector3(0.25f, 0.5f, 0.25f), M["metal"], null, true);
         var door = Box("HatchDoor", g, new Vector3(0, 1.05f, 1.53f), new Vector3(1.1f, 2.1f, 0.08f), M["metal"], 1.2f);
         door.AddComponent<CityExit>();
-        Prim(PrimitiveType.Cylinder, "Wheel", g, new Vector3(0, 1.1f, 1.6f), new Vector3(0.4f, 0.02f, 0.4f), M["metal"], new Vector3(90, 0, 0));
+        HandWheel(g, new Vector3(0, 1.1f, 1.6f), 1f); // 붉은 핸드휠 + 격벽식 철문 꾸밈 (GameSceneBuilder.Doors.cs)
+        BulkheadDoor(g, door.transform, 1.1f, 2.1f, 0.08f, 1f, true);
         Box("Lamp", g, new Vector3(0, 2.3f, 1.55f), new Vector3(0.22f, 0.12f, 0.1f), M["redLamp"], 1f, false);
         var l = PointLight("BeaconLight", g, new Vector3(0, 2.25f, 1.9f), new Color(1f, 0.12f, 0.08f), 8f, 10f);
         Flicker(l, 0.1f, 3f, false);

@@ -92,6 +92,15 @@ public static class Ragdoll
             Joint(neck, body, Vector3.right, Vector3.up, -40f, 40f, 30f, 30f);
             list.Add(neck);
         }
+        // 꼬리: 몸통 관절의 형제(Model 아래)라 그대로 두면 몸이 쓰러져도 제자리에 떠 있었다. 몸통에 붙이고 가벼운 관절로 늘어지게 한다
+        if (rig.Tail != null)
+        {
+            rig.Tail.SetParent(rig.Body, true);
+            var tail = Add(rig.Tail, 0.4f);
+            Capsule(rig.Tail, new Vector3(0, 0.16f, 0), 0.025f, 0.3f);
+            Joint(tail, body, Vector3.right, Vector3.up, -45f, 45f, 35f, 35f);
+            list.Add(tail);
+        }
         if (rig.Legs != null)
             for (int i = 0; i < rig.Legs.Length; i++)
             {

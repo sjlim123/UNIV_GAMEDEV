@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 방공호 장치 이펙트 소리를 코드로 합성한다 (FurnaceAudio와 같은 방식):
 // 무거운 것이 바닥에 쾅 놓이는 소리, 망치질, 불꽃이 튀는 치직 소리, 전기가 튀는 지직 소리, 고기가 지글거리는 소리,
-// 미닫이 철문이 레일 위를 구르는 소리·걸쇠·끝에서 탁 멈추는 소리
+// 미닫이 철문이 레일 위를 구르는 소리·걸쇠·끝에서 탁 멈추는 소리, 방폭문의 공압 치이익
 public static class EffectAudio
 {
     const int SR = 44100;
@@ -216,6 +216,28 @@ public static class EffectAudio
             float shake = rattle.Process(Noise()) * Mathf.Exp(-t * 6f) * 0.5f * (0.5f + 0.5f * Mathf.Sin(2 * Mathf.PI * 23f * t));
             return hp.Process(boom + clang + shake);
         }, 0.95f);
+    }
+
+    // 방폭문의 공압 장치: 압축 공기가 치이익 빠지는 소리 (연구 시설 기밀문처럼). release: 잠금을 풀 때(길고 거세다) / 아니면 닫혀 밀봉될 때(짧고 끝에 걸쇠가 탁)
+    public static AudioClip Pneumatic(bool release)
+    {
+        float dur = release ? 1.5f : 1.05f;
+        var hiss = Filter.BandPass(release ? 3000f : 2500f, 0.6f);
+        var hiss2 = Filter.BandPass(5400f, 0.8f);
+        var body = Filter.LowPass(900f, 0.8f);
+        var clack = Filter.BandPass(1900f, 4f);
+        var hp = Filter.HighPass(120f);
+        return Make(release ? "fx_pneu_release" : "fx_pneu_seal", dur, t =>
+        {
+            // 처음에 확 터졌다가 점점 가늘어진다 (높은 쉭 소리가 먼저 사그라져 음이 내려가는 느낌)
+            float env = Mathf.Exp(-t * (release ? 2.4f : 3.2f)) * (1f - Mathf.Exp(-t * 90f));
+            float wob = 0.85f + 0.15f * Mathf.Sin(2 * Mathf.PI * 9f * t);
+            float h = hiss.Process(Noise()) * env * wob + hiss2.Process(Noise()) * env * env * 0.7f;
+            float b = body.Process(Noise()) * env * 0.35f;
+            float tc = dur - 0.22f;
+            float c = t > tc ? clack.Process(Noise()) * Mathf.Exp(-(t - tc) * 70f) * 2.2f : 0f;
+            return hp.Process(h * 2.5f + b + c);
+        }, 0.8f);
     }
 
     // 걸쇠를 풀고 손잡이를 당기는 짧은 철컥

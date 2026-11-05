@@ -206,6 +206,33 @@ public static class Vfx
             Random.Range(1.4f, 2.4f), Random.Range(0.16f, 0.28f), SteamTint, Random.Range(0.5f, 0.7f));
     }
 
+    // 흰 증기 한 뭉치 (방폭문 공압 배출 등): 시킨 속도로 뿜어 나가며 퍼진다
+    public static void Vapor(Vector3 pos, Vector3 vel, float life, float size, float alpha)
+    {
+        Init();
+        Puff(pos, vel, life, size, SteamTint, alpha);
+    }
+
+    // 문짝이 문틀에 쾅 닿는 자리: a→b 세로 틈을 따라 먼지가 밀려 나오고 녹 부스러기가 떨어지며 불꽃이 몇 개 튄다. normal: 먼지가 밀려 나올 쪽
+    public static void SeamSlam(Vector3 a, Vector3 b, Vector3 normal, float strength = 1f)
+    {
+        Init();
+        normal = normal.normalized;
+        int puffs = Count(26 * strength), bits = Count(12 * strength);
+        for (int i = 0; i < puffs; i++)
+        {
+            var p = Vector3.Lerp(a, b, Random.value);
+            var dir = Spread(normal, 0.5f);
+            Puff(p, dir * Random.Range(0.8f, 2.4f) * strength + Vector3.up * Random.Range(-0.1f, 0.3f), Random.Range(1.2f, 2.6f), Random.Range(0.18f, 0.42f), DustTint, Random.Range(0.5f, 0.85f));
+        }
+        for (int i = 0; i < bits; i++)
+        {
+            var p = Vector3.Lerp(a, b, Random.value);
+            Chip(p, Spread(normal, 0.6f) * Random.Range(0.8f, 2.5f) + Vector3.up * Random.Range(0.4f, 1.6f), Random.Range(0.01f, 0.025f));
+        }
+        SparkBurst(Vector3.Lerp(a, b, Random.Range(0.3f, 0.7f)), normal + Vector3.down * 0.4f, Mathf.RoundToInt(8 * strength), 1.5f, 4f, 0.7f, 0.8f);
+    }
+
     // 배기 연기 한 뭉치 (발전기): 검회색 먼지 뭉치가 느리게 오르며 퍼진다. dark 0~1 = 더 검게 (연료를 막 넣었을 때).
     // 먼지처럼 그 자리 조명으로 물들이되, 어두운 천장 아래서도 읽히게 밝기 바닥값을 둔다
     public static void Smoke(Vector3 pos, Vector3 vel, float life, float size, float alpha, float dark = 0.5f)

@@ -106,7 +106,7 @@ public class CutsceneActor : MonoBehaviour
 
     const float PalmDepth = 0.065f;   // 손목에서 손바닥 가운데까지
     // 입을 가릴 때 손바닥이 입 앞에 떠 있는 거리, 입을 찾지 못할 때의 머리 기준 입 위치
-    const float MouthGap = 0.012f;
+    const float MouthGap = 0.016f;
     static readonly Vector3 MouthFallback = new Vector3(0, 0.061f, 0.096f);
 
     Transform model, backpack;
@@ -118,16 +118,44 @@ public class CutsceneActor : MonoBehaviour
     Quaternion lockRotL = Quaternion.identity, lockRotR = Quaternion.identity;
     float lockWL, lockWR;
     bool lockPoleOnL, lockPoleOnR;
+    // 왼손 손가락·엄지 마디 (입을 가릴 때 더 감겨 손이 입과 뺨을 둥글게 감싼다): 마디, 쉬는 회전, 더 감는 각도
+    readonly System.Collections.Generic.List<Transform> cupJoints = new System.Collections.Generic.List<Transform>();
+    readonly System.Collections.Generic.List<Quaternion> cupRest = new System.Collections.Generic.List<Quaternion>();
+    readonly System.Collections.Generic.List<float> cupDeg = new System.Collections.Generic.List<float>();
 
     // 몸을 짓는다. glow: 발광 재질 원본 (빌드에서 발광 셰이더가 빠지지 않게). variant: 0 집에서의 차림(인트로), 1 탐험 차림(1인칭과 같은 야상·반장갑·군화: 방공호로 돌아올 때)
     public void Build(Material glow = null, int variant = 0)
     {
         if (glow != null) ProcTex.GlowTemplate = glow;
+        if (backpack != null) { Destroy(backpack.gameObject); backpack = null; } // 다시 지으면 옛 몸과 함께 사라진다
         Rig = CharacterModels.Build(transform, FigureKind.Civilian, variant);
+        CollectCupJoints();
         model = Rig.Model;
         from = to = Sit;
         blend = 1;
         Apply(Sit);
+    }
+
+    // 왼손의 손가락·엄지 마디를 모은다 (Hand()가 지은 이름: …finger0 / …finger0b, …thumb / …thumbb; LiveFingers라 합쳐지지 않고 남아 있다).
+    // 쉬는 감김과 같은 방향으로 더 감는다
+    void CollectCupJoints()
+    {
+        cupJoints.Clear(); cupRest.Clear(); cupDeg.Clear();
+        if (Rig == null || Rig.HandL == null) return;
+        foreach (Transform c in Rig.HandL)
+        {
+            bool thumb = c.name.EndsWith("thumb");
+            if (!thumb && !(c.name.Contains("finger") && !c.name.EndsWith("b"))) continue;
+            AddCupJoint(c, thumb ? 10f : 8f);
+            foreach (Transform d in c) if (d.name.EndsWith("b")) AddCupJoint(d, thumb ? 14f : 12f);
+        }
+    }
+
+    void AddCupJoint(Transform t, float deg)
+    {
+        float z = t.localEulerAngles.z;
+        if (z > 180f) z -= 360f;
+        cupJoints.Add(t); cupRest.Add(t.localRotation); cupDeg.Add(z < 0 ? -deg : deg);
     }
 
     // 등에 멘 가방 (방공호로 달릴 때)
@@ -405,10 +433,15 @@ public class CutsceneActor : MonoBehaviour
             // 머리의 입 위치: 손바닥이 입을 보고, 손가락은 (사람의) 오른쪽 위로 입을 가로지른다
             var mouthPos = Rig.Mouth != null ? Rig.Mouth.position : Rig.Head.TransformPoint(MouthFallback);
             var hf = Rig.Head.forward;
-            var fingers = (Rig.Head.right * 0.62f + Rig.Head.up * 0.78f).normalized;
-            worldRot = HandRotation(left, -hf, fingers);
-            var palm = mouthPos + hf * MouthGap;
+            var hr = Rig.Head.right;
+            // 손바닥은 입을 보되 손가락 쪽이 얼굴에서 살짝 들리게 12° 기운다: 감긴 손가락이 다시 뺨 쪽으로 내려와 얼굴의 곡면을 감싼다
+            var palmNormal = (-hf * 0.978f + hr * 0.208f).normalized;
+            var fingers = (hr * 0.8f + Rig.Head.up * 0.5f).normalized;
+            worldRot = HandRotation(left, palmNormal, fingers);
+            var palm = mouthPos + hf * MouthGap - hr * 0.01f;
             wrist = Vector3.Lerp(wrist, palm - worldRot * new Vector3(0, -PalmDepth, 0), mouth);
+            // 곧장 직선으로 올라오지 않고 바깥·위로 둥글게 돌아 감싸듯 닿는다 (놀라 입을 막는 손)
+            wrist += (Rig.Head.up * 0.07f - Rig.Head.right * 0.06f + Rig.Head.forward * 0.05f) * Mathf.Sin(mouth * Mathf.PI);
             w = mouth;
         }
         float lw = left ? lockWL : lockWR;
@@ -425,6 +458,10 @@ public class CutsceneActor : MonoBehaviour
         var local = Quaternion.Euler(handRot);
         if (w > 0) local = Quaternion.Slerp(local, Quaternion.Inverse(fore.rotation) * worldRot, w);
         hand.localRotation = local;
+        // 입을 가리는 왼손: 손가락·엄지 마디를 더 감아 손이 입과 뺨을 둥글게 감싼다
+        if (left)
+            for (int i = 0; i < cupJoints.Count; i++)
+                if (cupJoints[i] != null) cupJoints[i].localRotation = cupRest[i] * Quaternion.Euler(0, 0, cupDeg[i] * mouth);
     }
 
     // 두 마디 팔다리를 목표 지점에 닿게 굽힌다 (코사인 법칙). pole: 팔꿈치·무릎이 향할 쪽 (월드 좌표). right: 사람의 오른쪽 (마디의 비틀림 기준)

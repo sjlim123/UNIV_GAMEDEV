@@ -11,7 +11,8 @@ public class Generator : Interactable
     public Transform vibe;             // 돌 때 떨리는 몸체
     public Transform fan;              // 냉각 팬 (로컬 X 축으로 돈다)
     public Transform needleA, needleB; // 계기 바늘 (전력 / 회전수). 로컬 Z 축으로 돈다
-    public Transform smokeTip;         // 배기관 끝
+    public Transform smokeTip;         // 배기관 끝 (굴뚝이 천장까지 이어진 지금은 비어 있다: 방에 연기를 풀지 않는다)
+    public ParticleSystem chimney;     // 굴뚝 안에서 올라가는 연기 (유리 구간에서 보인다)
     public Renderer glow;              // 철창 안 벌건 뒷판
     public Renderer lamp;              // 계기판 초록 표시등
     public Renderer[] manifold;        // 달아오르는 배기관 조각
@@ -52,6 +53,7 @@ public class Generator : Interactable
         surge = 0.45f;
         // 철창 안 불티가 확 날리고 배기관에서 검은 연기가 뭉게뭉게 솟는다
         if (embers != null) embers.Emit(26);
+        if (chimney != null) chimney.Emit(18);
         if (smokeTip != null)
             for (int i = 0; i < 10; i++)
                 Vfx.Smoke(smokeTip.position + Random.insideUnitSphere * 0.04f,
@@ -119,6 +121,7 @@ public class Generator : Interactable
             sputterTimer = Random.Range(2.5f, 6f) / (0.3f + low);
             misfire = 1f;
             ProceduralAudio.PlayAt(GeneratorAudio.Sputter(), at, 0.65f, Random.Range(0.9f, 1.1f), 1f, 18f);
+            if (chimney != null) chimney.Emit(7);
             if (smokeTip != null)
                 for (int i = 0; i < 3; i++)
                     Vfx.Smoke(smokeTip.position, smokeDrift * Random.Range(0.8f, 1.3f) + Random.insideUnitSphere * 0.2f, Random.Range(2f, 3f), Random.Range(0.2f, 0.34f), 0.65f, 0.95f);
@@ -160,6 +163,11 @@ public class Generator : Interactable
         {
             var em = embers.emission;
             em.rateOverTime = run * (1.6f + 7f * surge);
+        }
+        if (chimney != null)
+        {
+            var ce = chimney.emission;
+            ce.rateOverTime = run * (11f + 28f * surge + 8f * low);
         }
         if (smokeTip != null && run > 0.01f)
         {

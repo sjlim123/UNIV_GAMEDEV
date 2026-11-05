@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 // 복도 옆 옛 통로를 막는 방폭문. 전력이 있는 동안 닫혀 있고, 정전되면 옆으로 밀려 열린다 (ShelterInvasion이 연다).
+// 움직이기 시작하면 공압 장치가 치이익 하며 문 위 배출구에서 흰 증기가 문짝을 타고 아래로 흐르고, 끝에 닿으면 밀봉되는 치익과 둔탁한 쿵,
+// 닫힐 때는 문틀 틈을 따라 먼지·녹 부스러기·불꽃이 튄다.
 // 이 오브젝트(문틀)의 로컬 +Z가 통로 쪽이고, 문짝(leaf)은 로컬 +X로 밀려 벽 속에 들어간다.
 // 닫혀 있을 때만 NavMeshObstacle로 내비메시를 끊는다 (씬을 구울 때는 문을 빼고 굽는다).
 public class BlastDoor : Interactable
@@ -17,7 +19,7 @@ public class BlastDoor : Interactable
     public Bounds outsideArea;
 
     Vector3 closedPos;
-    float amount, target, warnBase, debrisTimer;
+    float amount, target, warnBase, debrisTimer, vaporLeft, vaporTimer, vaporStrength;
 
     public bool IsOpen => target > 0.5f;            // 열렸거나 열리는 중
     public bool IsMoving => amount != target;
@@ -46,6 +48,8 @@ public class BlastDoor : Interactable
     {
         if (motor != null && motor.clip == null) motor.clip = RadioAudio.DoorGrind();
         RadioAudio.DoorBoom(); // 처음 움직일 때 끊기지 않게 미리 만든다
+        EffectAudio.Pneumatic(true);
+        EffectAudio.Pneumatic(false);
     }
 
     public void Open() => SetTarget(1);
@@ -55,10 +59,17 @@ public class BlastDoor : Interactable
     {
         if (target == value) return;
         target = value;
-        // 잠금장치가 풀리는 철컥 소리 + 모터 + 문틀에서 쏟아지는 먼지·녹
-        if (leaf != null) ProceduralAudio.PlayAt(ProceduralAudio.Clang(), leaf.position, 0.7f, 0.45f, 1f, 40f);
+        // 잠금장치가 풀리는 철컥 + 압축 공기가 치이익 빠지며 흰 증기가 문 위 배출구에서 아래로 흐른다 + 모터 + 문틀에서 쏟아지는 먼지·녹
+        if (leaf != null)
+        {
+            ProceduralAudio.PlayAt(ProceduralAudio.Clang(), leaf.position, 0.5f, 0.45f, 1f, 40f);
+            ProceduralAudio.PlayAt(EffectAudio.Pneumatic(true), leaf.position + Vector3.up * 2.1f, 0.9f, Random.Range(0.95f, 1.05f), 1f, 36f);
+        }
         if (motor != null && !motor.isPlaying) motor.Play();
         Debris(1.6f);
+        vaporLeft = 1.4f;
+        vaporStrength = 1f;
+        for (int i = 0; i < 14; i++) Vapor(1.3f); // 압력이 빠지는 순간 확 뿜는다
     }
 
     // 문 위 틀 모서리(문짝이 지나가는 길)에서 콘크리트 먼지와 녹 조각이 떨어진다
@@ -85,6 +96,17 @@ public class BlastDoor : Interactable
             debrisTimer -= Time.deltaTime;
             if (debrisTimer <= 0) { debrisTimer = 0.22f; Debris(0.3f); }
         }
+        // 흰 증기: 문 위 배출구 넷(양면)에서 문짝을 타고 아래로 흘러내린다
+        if (vaporLeft > 0)
+        {
+            vaporLeft -= Time.deltaTime;
+            vaporTimer -= Time.deltaTime;
+            if (vaporTimer <= 0)
+            {
+                vaporTimer = 0.02f;
+                Vapor(vaporStrength * Mathf.Clamp01(vaporLeft / 0.5f + 0.3f));
+            }
+        }
         // 무거운 문이 덜컹거리며 미끄러진다
         float wobble = IsMoving ? (Mathf.PerlinNoise(Time.time * 18f, 0) - 0.5f) * 0.012f : 0;
         leaf.localPosition = closedPos + new Vector3(Mathf.SmoothStep(0, 1, amount) * slideDistance, wobble, 0);
@@ -102,9 +124,35 @@ public class BlastDoor : Interactable
     void Arrive()
     {
         if (motor != null) motor.Stop();
-        ProceduralAudio.PlayAt(RadioAudio.DoorBoom(), leaf.position, 1f, 1f, 1f, 45f);
+        // 밀봉되는 치익 + 둔탁한 쿵 (예전의 쩌렁쩌렁한 둥은 줄였다)
+        ProceduralAudio.PlayAt(EffectAudio.Pneumatic(false), leaf.position + Vector3.up * 2.1f, 0.8f, Random.Range(0.95f, 1.05f), 1f, 36f);
+        ProceduralAudio.PlayAt(RadioAudio.DoorBoom(), leaf.position, 0.4f, 0.9f, 1f, 40f);
+        vaporLeft = 0.6f;
+        vaporStrength = 0.6f;
         var player = PlayerController.Instance;
-        if (player != null && Vector3.Distance(player.transform.position, transform.position) < 12f) player.Shake(0.25f);
+        if (player != null && Vector3.Distance(player.transform.position, transform.position) < 12f) player.Shake(target <= 0f ? 0.22f : 0.14f);
+        // 닫히며 문짝 앞 가장자리가 문틀에 닿는 자리: 틈을 따라 양면으로 먼지·부스러기·불꽃. 열려서 벽 속에 들어갈 때는 벽 틈에서 약하게
+        float edgeX = target <= 0f ? -width / 2 - 0.03f : width / 2 + 0.03f;
+        float strength = target <= 0f ? 1f : 0.45f;
+        foreach (var side in new[] { -1f, 1f })
+        {
+            var a = transform.TransformPoint(new Vector3(edgeX, 0.1f, side * 0.17f));
+            var b = transform.TransformPoint(new Vector3(edgeX, 2.2f, side * 0.17f));
+            Vfx.SeamSlam(a, b, transform.forward * side, strength);
+        }
+    }
+
+    // 문 위 가장자리의 배출 틈(양면, 문 너비 전체)에서 흰 증기가 커튼처럼 문짝을 타고 아래로 흘러내린다
+    void Vapor(float strength)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            float side = Random.value < 0.5f ? -1f : 1f;
+            float x = Random.Range(-0.8f, 0.8f);
+            var pos = transform.TransformPoint(new Vector3(x, 2.2f, side * 0.13f));
+            var vel = Vector3.down * Random.Range(1.2f, 1.9f) + transform.forward * side * Random.Range(0.06f, 0.2f) + Random.insideUnitSphere * 0.06f;
+            Vfx.Vapor(pos, vel * (0.6f + 0.4f * strength), Random.Range(0.9f, 1.4f), Random.Range(0.11f, 0.2f), Random.Range(0.5f, 0.8f) * strength);
+        }
     }
 
     // 문간(문짝이 지나가는 자리 근처)에 있는가

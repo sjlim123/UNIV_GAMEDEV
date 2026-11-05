@@ -61,6 +61,7 @@ public partial class CutsceneDirector : MonoBehaviour
     float actorYaw, actorYawFrom, actorYawTo, actorTurnT = 1, actorTurnTime = 1;
     Vector3 actorFrom, actorTo; float actorMoveT = 1, actorMoveTime = 1;
     int runLeg;
+    int actorVariant; // 0 집에서의 차림, 1 탐험 차림 (3번 장면부터: 방공호 출입 연출과 같은 모습)
     Vector3 camPos, camLook;
     float camFov = 45f, focusDist = 3f, aperture = 5.6f, handheld = 0.3f;
     // 색보정 목표 (장면마다 바뀌고, 매 프레임 부드럽게 따라간다)
@@ -159,6 +160,13 @@ public partial class CutsceneDirector : MonoBehaviour
         cloud.gameObject.SetActive(shot >= 2);
         ResetFx(shot);
         ResetExit(shot);
+        int wantVariant = shot >= 3 ? 1 : 0;
+        if (actorVariant != wantVariant)
+        {
+            if (remote != null && actor.Rig != null && remote.IsChildOf(actor.transform)) remote.SetParent(home, true); // 손에 든 리모컨은 몸과 함께 지워지지 않게
+            actor.Build(glowTemplate, wantVariant);
+            actorVariant = wantVariant;
+        }
         actor.Tremble = 0;
         actor.RunAmount = 0;
         actor.RunLean = 14f;

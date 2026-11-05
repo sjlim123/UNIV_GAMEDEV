@@ -136,7 +136,7 @@ public class GameBalance : ScriptableObject
     public EnemyStats leatherZombie = new EnemyStats("가죽 좀비", 200, 20, 10, 1.6f, 10);
     public EnemyStats rangedZombie = new EnemyStats("원거리 좀비", 150, 10, 8, 3f, 15);
     public EnemyStats heavyZombie = new EnemyStats("거대 좀비", 300, 30, 8, 3f, 30);
-    public EnemyStats dog = new EnemyStats("들개", 80, 8, 13, 2f, 1);
+    public EnemyStats dog = new EnemyStats("좀비개", 80, 8, 13, 2f, 1);
     public EnemyStats raider = new EnemyStats("약탈자", 100, 15, 10, 1f, 5);
     [Tooltip("좀비가 배회할 때 속도(m/s)")]
     public float zombieWanderSpeed = 0.7f;

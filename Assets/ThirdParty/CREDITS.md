@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-03 · 항목 10개
+갱신: 2026-11-05 · 항목 13개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -10,6 +10,7 @@
 |---|---|---|---|
 | CC0 | Creative Commons CC0 1.0 (퍼블릭 도메인 기증) | 표기 없이 상업용 포함 자유롭게 사용·수정 가능 | https://creativecommons.org/publicdomain/zero/1.0/ |
 | OFL | SIL Open Font License 1.1 | 게임에 내장·배포 가능, 글꼴 자체를 단독 판매만 금지, 라이선스 문서 동봉 | https://openfontlicense.org/ |
+| CC-BY-3.0 | Creative Commons Attribution 3.0 (저작자 표시) | 제작자와 출처를 표기하면 상업용 포함 사용·수정 가능 (이 목록과 게임 크레딧에 표기) | https://creativecommons.org/licenses/by/3.0/ |
 
 ## 에셋 목록
 
@@ -25,6 +26,9 @@
 | 8 | 글꼴 | Nanum Pen Script (나눔손글씨 펜) | 산돌커뮤니케이션 (네이버 나눔글꼴) | OFL | `Assets/Resources/Fonts/NanumPenScript-Regular.ttf (+ NanumPenScript-LICENSE.txt)` | 손글씨 메모·일지 | 2026-11-03 | 사용 중 |
 | 9 | 글꼴 | Share Tech Mono | Carrois Apostrophe (Ralph du Carrois) | OFL | `Assets/Resources/Fonts/ShareTechMono-Regular.ttf (+ ShareTechMono-LICENSE.txt)` | 숫자·시간 표시 (라틴·숫자만) | 2026-11-03 | 사용 중 |
 | 10 | 파티클 스프라이트 | Kenney Particle Pack (80장, 512px) | Kenney (kenney.nl) | CC0 | `(파티클 단계에서 받을 예정) Assets/ThirdParty/Kenney/ParticlePack/` | 연기·먼지·불티 파티클 | 2026-11-03 | 예정 |
+| 11 | 효과음 | Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z<br><small>Fantozzi-StoneL1~L3·R1~R3 → stone, Fantozzi-SandL1~L3·R1~R3 → sand</small> | Fantozzi (Freesound 팩 10338), 잘라 올린 이 qubodup (OpenGameArt) | CC0 | `Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)` | 플레이어 발소리: 방공호·복도·터널·보도(돌), 흙·재(모래), 출발 연출 걸음 | 2026-11-05 | 사용 중 |
+| 12 | 효과음 | Impact Sounds 1.0 — footstep_concrete_000~004 | Kenney (kenney.nl) | CC0 | `Assets/Resources/Audio/Footsteps/interior/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)` | 플레이어 발소리: 건물 안 바닥 | 2026-11-05 | 사용 중 |
+| 13 | 효과음 | footsteps on different surfaces (footsteps_0.zip) — gravel 0~9, boots 0~8, water 0~4<br><small>gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0, boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0, water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0</small> | 묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound) | CC-BY-3.0 | `Assets/Resources/Audio/Footsteps/gravel/, boots/, water/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)` | 플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화) | 2026-11-05 | 사용 중 |
 
 ## 출처 링크
 
@@ -38,6 +42,9 @@
 - Nanum Pen Script (나눔손글씨 펜) — https://fonts.google.com/specimen/Nanum+Pen+Script
 - Share Tech Mono — https://fonts.google.com/specimen/Share+Tech+Mono
 - Kenney Particle Pack (80장, 512px) — https://kenney.nl/assets/particle-pack
+- Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z — https://opengameart.org/content/fantozzis-footsteps-grasssand-stone
+- Impact Sounds 1.0 — footstep_concrete_000~004 — https://kenney.nl/assets/impact-sounds
+- footsteps on different surfaces (footsteps_0.zip) — gravel 0~9, boots 0~8, water 0~4 — https://opengameart.org/content/footsteps-on-different-surfaces
 
 ## 메모
 

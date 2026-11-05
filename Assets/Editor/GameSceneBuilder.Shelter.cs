@@ -34,6 +34,7 @@ public static partial class GameSceneBuilder
         M["genHot"] = Emissive("M_GeneratorHot", new Color(0.2f, 0.12f, 0.1f), new Color(1.5f, 0.22f, 0.04f));
         M["gaugeFace"] = Emissive("M_GaugeFace", new Color(0.85f, 0.8f, 0.65f), new Color(0.35f, 0.32f, 0.22f));
         M["oilStain"] = TexMat("M_OilStain", null, new Color(0.05f, 0.05f, 0.045f), 0.75f, 0.1f);
+        M["chimneyGlass"] = TransparentMat("M_ChimneyGlass", new Color(0.62f, 0.68f, 0.7f, 0.22f), 0.7f); // 굴뚝 내열 유리 구간 (광택을 낮춰 안이 보인다)
         M["doorRust"] = TexMat("M_DarkRustDoor", "rusty_metal_02", new Color(0.36f, 0.33f, 0.3f), 0.28f, 0.45f);
 
         // 바닥·천장
@@ -94,7 +95,8 @@ public static partial class GameSceneBuilder
         var exit = Group("Exit", root, new Vector3(0, 0, 11.82f));
         var door = Box("SteelDoor", exit, new Vector3(0, 1.1f, 0), new Vector3(1.2f, 2.2f, 0.12f), M["metal"], 1.2f);
         door.AddComponent<ShelterExit>();
-        Prim(PrimitiveType.Cylinder, "Wheel", exit, new Vector3(0, 1.15f, -0.1f), new Vector3(0.45f, 0.02f, 0.45f), M["metal"], new Vector3(90, 0, 0));
+        HandWheel(exit, new Vector3(0, 1.15f, -0.1f), -1f); // 붉은 핸드휠 (연출이 "Wheel"을 돌린다, 링 반지름 0.2)
+        BulkheadDoor(exit, door.transform, 1.2f, 2.2f, 0.12f, -1f, false); // 격벽식 철문 꾸밈 (GameSceneBuilder.Doors.cs)
         Box("FrameL", exit, new Vector3(-0.68f, 1.15f, -0.02f), new Vector3(0.14f, 2.3f, 0.18f), M["metal"], 1f, false);
         Box("FrameR", exit, new Vector3(0.68f, 1.15f, -0.02f), new Vector3(0.14f, 2.3f, 0.18f), M["metal"], 1f, false);
         Box("FrameT", exit, new Vector3(0, 2.3f, -0.02f), new Vector3(1.5f, 0.14f, 0.18f), M["metal"], 1f, false);
@@ -389,14 +391,67 @@ public static partial class GameSceneBuilder
         for (int i = 0; i < 6; i++) Box("Slat", vibe, new Vector3(sx - 0.05f, 0.21f + i * 0.09f, 0), new Vector3(0.01f, 0.012f, 0.56f), dark, 1f, false);
         Box("WarnPlate", vibe, new Vector3(sx - 0.045f, 0.78f, 0), new Vector3(0.004f, 0.04f, 0.4f), M["blastStripe"], 1f, false);
 
-        // 배기: 블록 위 뒤쪽에서 나와 머플러를 지나 위로. 끝은 열려 있고 그을렸으며 빗물 뚜껑이 반쯤 들려 있다 (연기는 Generator가 끝에서 낸다)
+        // 배기: 블록 위 뒤쪽에서 나와 머플러를 지나 위로. 지하라 연기를 방에 풀지 않고 굴뚝이 천장을 뚫고 나간다.
+        // 떨리는 몸체(vibe)의 관은 주름 이음새까지, 그 위 굴뚝은 정적(g). 굴뚝 중간 두 군데는 내열 유리 구간이라 안에서 연기가 올라가는 것이 보인다 (ChimneySmoke, Generator가 양을 조절)
         const float ex = bx - 0.2f, ez = -0.2f;
         Prim(PrimitiveType.Cylinder, "ExhaustElbow", vibe, new Vector3(ex, 0.72f, ez), new Vector3(0.08f, 0.09f, 0.08f), rust);
         Prim(PrimitiveType.Cylinder, "Muffler", vibe, new Vector3(ex, 1.02f, ez), new Vector3(0.2f, 0.17f, 0.2f), rust);
-        Prim(PrimitiveType.Cylinder, "ExhaustPipe", vibe, new Vector3(ex, 1.62f, ez), new Vector3(0.08f, 0.44f, 0.08f), rust);
-        Prim(PrimitiveType.Cylinder, "ExhaustTip", vibe, new Vector3(ex, 2.08f, ez), new Vector3(0.085f, 0.035f, 0.085f), dark);
-        Box("RainCap", vibe, new Vector3(ex + 0.03f, 2.15f, ez), new Vector3(0.11f, 0.008f, 0.11f), rust, 1f, false, new Vector3(0, 0, -35));
-        var smokeTip = Group("SmokeTip", vibe, new Vector3(ex, 2.13f, ez));
+        Prim(PrimitiveType.Cylinder, "ExhaustPipe", vibe, new Vector3(ex, 1.5f, ez), new Vector3(0.08f, 0.32f, 0.08f), rust);
+        for (int i = 0; i < 5; i++)
+            Prim(PrimitiveType.Cylinder, "Bellows", vibe, new Vector3(ex, 1.83f + i * 0.035f, ez), new Vector3(i % 2 == 0 ? 0.1f : 0.086f, 0.012f, i % 2 == 0 ? 0.1f : 0.086f), dark);
+        var chimney = Group("Chimney", g, new Vector3(ex, 0, ez));
+        Prim(PrimitiveType.Cylinder, "Stack1", chimney, new Vector3(0, 2.08f, 0), new Vector3(0.08f, 0.1f, 0.08f), rust);
+        foreach (float cy in new[] { 2.19f, 2.49f, 2.69f, 2.93f })
+            Prim(PrimitiveType.Cylinder, "Collar", chimney, new Vector3(0, cy, 0), new Vector3(0.1f, 0.016f, 0.1f), dark);
+        Prim(PrimitiveType.Cylinder, "SightGlass1", chimney, new Vector3(0, 2.34f, 0), new Vector3(0.078f, 0.14f, 0.078f), M["chimneyGlass"]);
+        Prim(PrimitiveType.Cylinder, "Stack2", chimney, new Vector3(0, 2.59f, 0), new Vector3(0.08f, 0.09f, 0.08f), rust);
+        Prim(PrimitiveType.Cylinder, "SightGlass2", chimney, new Vector3(0, 2.81f, 0), new Vector3(0.078f, 0.11f, 0.078f), M["chimneyGlass"]);
+        Prim(PrimitiveType.Cylinder, "Stack3", chimney, new Vector3(0, 2.965f, 0), new Vector3(0.08f, 0.03f, 0.08f), rust);
+        Prim(PrimitiveType.Cylinder, "Flange", chimney, new Vector3(0, 2.985f, 0), new Vector3(0.26f, 0.012f, 0.26f), rust);
+        for (int i = 0; i < 4; i++)
+        {
+            float a = i * 90f * Mathf.Deg2Rad;
+            Prim(PrimitiveType.Cylinder, "Bolt", chimney, new Vector3(Mathf.Cos(a) * 0.1f, 2.974f, Mathf.Sin(a) * 0.1f), new Vector3(0.018f, 0.008f, 0.018f), dark);
+        }
+        Prim(PrimitiveType.Cylinder, "Soot", chimney, new Vector3(0, 2.994f, 0), new Vector3(0.6f, 0.002f, 0.6f), M["oilStain"]);
+        // 굴뚝 안의 연기: 관 아래에서 천장까지 0.5m/s로 오르며 유리 구간을 지난다
+        var smokeGo = new GameObject("ChimneySmoke");
+        smokeGo.transform.SetParent(chimney, false);
+        smokeGo.transform.localPosition = new Vector3(0, 1.95f, 0);
+        smokeGo.transform.localRotation = Quaternion.Euler(-90, 0, 0);
+        var smoke = smokeGo.AddComponent<ParticleSystem>();
+        var sm = smoke.main;
+        sm.startLifetime = new ParticleSystem.MinMaxCurve(1.9f, 2.2f);
+        sm.startSpeed = new ParticleSystem.MinMaxCurve(0.46f, 0.56f);
+        sm.startSize = new ParticleSystem.MinMaxCurve(0.07f, 0.12f);
+        sm.startColor = new ParticleSystem.MinMaxGradient(new Color(0.62f, 0.62f, 0.64f, 0.85f), new Color(0.82f, 0.82f, 0.84f, 0.7f)); // 어두운 관 속이라 밝은 회색이어야 유리 너머로 읽힌다
+        sm.startRotation = new ParticleSystem.MinMaxCurve(0f, 6.28f);
+        sm.gravityModifier = -0.01f;
+        sm.simulationSpace = ParticleSystemSimulationSpace.Local;
+        sm.maxParticles = 200;
+        var se = smoke.emission;
+        se.rateOverTime = 0f;
+        var ss = smoke.shape;
+        ss.shapeType = ParticleSystemShapeType.Circle;
+        ss.radius = 0.03f;
+        ss.radiusThickness = 1f;
+        var sol = smoke.sizeOverLifetime;
+        sol.enabled = true;
+        sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.7f, 1, 1.3f));
+        var scol = smoke.colorOverLifetime;
+        scol.enabled = true;
+        var sgrad = new Gradient();
+        sgrad.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+            new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.12f), new GradientAlphaKey(1f, 0.85f), new GradientAlphaKey(0f, 1f) });
+        scol.color = sgrad;
+        var sn = smoke.noise;
+        sn.enabled = true;
+        sn.strength = 0.025f;
+        sn.frequency = 1.6f;
+        var sr = smokeGo.GetComponent<ParticleSystemRenderer>();
+        sr.renderMode = ParticleSystemRenderMode.Billboard;
+        sr.material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Effects/M_VfxDust.mat");
+        sr.shadowCastingMode = ShadowCastingMode.Off;
 
         // 계기판 (발전부 앞, 거실 쪽): 기둥 위 검은 상자에 계기 둘(바늘은 Generator가 돌린다)·빨간 정지 버튼·초록 표시등·열쇠 스위치·차단기 레버·경고 띠
         const float px = 0.55f;
@@ -471,7 +526,7 @@ public static partial class GameSceneBuilder
         gen.fan = fan;
         gen.needleA = needles[0];
         gen.needleB = needles[1];
-        gen.smokeTip = smokeTip;
+        gen.chimney = smoke;
         gen.glow = glowGo.GetComponent<Renderer>();
         gen.lamp = lampGo.GetComponent<Renderer>();
         gen.manifold = manifold.ToArray();
@@ -567,6 +622,23 @@ public static partial class GameSceneBuilder
         door.roll = roll;
         door.slideDistance = slide;
         door.insideDirection = -wall.forward;
+    }
+
+    // 반투명 유리 (URP Lit 투명): 굴뚝 내열 유리 구간. 파티클(3000)보다 뒤(3050)에 그려 안의 연기가 비친다
+    static Material TransparentMat(string name, Color color, float smoothness)
+    {
+        var m = TexMat(name, null, color, smoothness);
+        m.SetFloat("_Surface", 1);
+        m.SetFloat("_Blend", 0);
+        m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        m.SetFloat("_ZWrite", 0);
+        m.SetFloat("_AlphaClip", 0);
+        m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        m.SetOverrideTag("RenderType", "Transparent");
+        m.renderQueue = (int)RenderQueue.Transparent + 50;
+        EditorUtility.SetDirty(m);
+        return m;
     }
 
     // 화로 (제련): 앞면(화구)이 -Z(거실 쪽), 뒤가 북쪽 벽(z 3.85)에 붙는다. 몸통 x ±0.56, z -0.42~0.38.
