@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// HUD 왼쪽 아래 상태 명판(체력·갈증·배고픔·스테미너, 90% 크기)과 오른쪽 위 남은 시간 명판, HUD 움직임.
-// 상태 계기: 녹슨 강철 명판 위에 새긴 아이콘 칸 + 눈금이 있는 홈 안의 색 막대 + 숫자(모노 글꼴) + 줄 끝의 전구.
+// HUD 왼쪽 아래 상태 유리판(체력·갈증·배고픔·스테미너, 90% 크기)과 오른쪽 위 남은 시간 유리판, HUD 움직임.
+// 판은 뒤 화면을 흐려 비추는 어두운 유리(UIManager.HudGlass): 가장자리는 투명하고 가운데로 갈수록 진해 글·막대가 또렷하다 (2026-11-05).
+// 상태 계기: 아이콘 칸 + 눈금이 있는 홈 안의 색 막대 + 숫자(모노 글꼴) + 줄 끝의 전구.
 // 값이 줄면 깎인 만큼 밝은 자국이 남았다가 따라 줄고, 오르면 반짝이며, 25 아래면 막대와 전구가 붉게 깜빡인다. 맞으면 판이 흔들린다.
 // 남은 시간: 모래시계 + 큰 숫자 + 20칸 눈금 + 위험도. 1분 아래면 붉게 고동치고, 붉은 밤이면 경과 시간을 센다
 public partial class UIManager
@@ -36,7 +37,7 @@ public partial class UIManager
 
     void BuildStatusPanel(Transform h)
     {
-        statusPanel = HudPlate(h, "Status", HudFrame);
+        statusPanel = HudGlass(h, "Status", 20f);
         Place(statusPanel, new Vector2(0, 0), new Vector2(24, 24), new Vector2(376, 168));
         statusPanel.localScale = Vector3.one * StatusScale;
         // 짐 경고: 판 바로 위에 작게
@@ -204,7 +205,7 @@ public partial class UIManager
 
     void BuildTimePanel(Transform h)
     {
-        timePanel = HudPlate(h, "Time", HudFrame);
+        timePanel = HudGlass(h, "Time", 18f);
         Place(timePanel, new Vector2(1, 1), new Vector2(-24, -24), new Vector2(318, 128));
         timeFrame = timePanel.Find("Frame").GetComponent<Image>();
         var tile = NewRect("IconTile", timePanel);
@@ -250,7 +251,7 @@ public partial class UIManager
 
     void BuildWeatherPanel(Transform h)
     {
-        weatherPanel = HudPlate(h, "Weather", HudFrame);
+        weatherPanel = HudGlass(h, "Weather", 14f);
         Place(weatherPanel, new Vector2(0, 1), new Vector2(24, -24), new Vector2(172, 58));
         var tile = NewRect("IconTile", weatherPanel);
         Place(tile, new Vector2(0, 1), new Vector2(10, -9), new Vector2(40, 40));
@@ -290,7 +291,7 @@ public partial class UIManager
 
     void BuildObjectivePanel(Transform h)
     {
-        objectivePanel = HudPlate(h, "Objective", HudFrame);
+        objectivePanel = HudGlass(h, "Objective", 16f);
         Place(objectivePanel, new Vector2(0, 1), new Vector2(24, -24), new Vector2(364, 98));
         var purpose = NewText(objectivePanel, "목적 · " + Tutorial.Purpose, 14, TextAnchor.UpperLeft, PaleDim, FontTitle);
         Place(purpose.rectTransform, new Vector2(0, 1), new Vector2(14, -10), new Vector2(340, 20));
@@ -391,7 +392,7 @@ public partial class UIManager
     {
         if (keyHints == null || !GameSettings.Tips) return;
         string K(GameAction a) => KeyBindings.Label(a);
-        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
+        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용·손전등 꺼내기        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
         keyHintTimer = 9f;
     }
 
@@ -409,13 +410,13 @@ public partial class UIManager
     {
         var city = CityDirector.Instance;
         float now = Time.unscaledTime;
-        Color frame = HudFrame;
+        Color frame = Color.clear; // 유리판 테두리는 경고 때만 붉게 켜진다
         if (city != null && city.IsRedNight)
         {
             // 붉은 밤: 지난 시간을 세고 계속 붉게 고동친다
             float pulse = 0.5f + 0.5f * Mathf.Sin(now * 5f);
             int t = (int)city.RedNightElapsed;
-            SetTimeTexts("moon", "붉은 밤", $"+{t / 60}:{t % 60:00}", $"체력 -{GameBalance.Data.redNightDamage:0} / {GameBalance.Data.redNightInterval:0}초 · 해치로 돌아가자!");
+            SetTimeTexts("moon", "시간 초과", $"+{t / 60}:{t % 60:00}", $"체력 -{GameBalance.Data.redNightDamage:0} / {GameBalance.Data.redNightInterval:0}초 · 해치로 돌아가자!");
             timeLabel.color = timeValue.color = Color.Lerp(Alert, new Color(1f, 0.6f, 0.5f), pulse * 0.5f);
             timeIcon.color = Alert;
             for (int i = 0; i < timeSegs.Length; i++)
@@ -492,9 +493,9 @@ public partial class UIManager
         hudIntro = Mathf.Min(1f, hudIntro + dt / 0.7f);
         float intro = 1 - Ease(hudIntro);
         UpdateKeyHints(dt);
-        if (hotbarTray != null) hotbarTray.anchoredPosition = new Vector2(0, 16 - 140 * intro);
-        if (hotbarBar != null) hotbarBar.anchoredPosition = new Vector2(0, 26 - 140 * intro);
-        if (flashBox != null) ((RectTransform)flashBox.transform).anchoredPosition = new Vector2(-24 + 320 * intro, 40);
+        if (hotbarTray != null) hotbarTray.anchoredPosition = new Vector2(0, 14 - 140 * intro);
+        if (hotbarBar != null) hotbarBar.anchoredPosition = new Vector2(0, 30 - 140 * intro);
+        if (flashBox != null) ((RectTransform)flashBox.transform).anchoredPosition = new Vector2(-28 + 320 * intro, 48);
 
         // 알림: 위에서 살짝 내려오며 나타나고 올라가며 사라진다
         if (toastRect != null)

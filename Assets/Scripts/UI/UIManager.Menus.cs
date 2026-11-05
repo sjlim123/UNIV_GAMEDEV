@@ -3,17 +3,27 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 메인 메뉴, 일시정지 메뉴, 설정·조작법·제작진 창
-// 배치: 왼쪽 위 제목 + 왼쪽 세로 메뉴(리썰 컴퍼니·오버워치), 맨 아래 패치노트, 오른쪽 아래 버전
-// 디자인: 메뉴는 왼쪽 세로 유리 기둥 위에 놓는다 (메인 메뉴는 기둥 자리만 뒤 배경을 흐리게, 일시정지는 화면 전체를 흐리게)
+// 배치: 왼쪽 위 제목(옆에 핏빛 세로 막대) + 왼쪽 세로 메뉴, 오른쪽 아래 큰 주요 버튼(메인 메뉴는 그 위에 최근 저장 정보 판), 오른쪽 아래 구석 버전
+// 디자인(2026-11-05, 사용자 확정 '더러운 강판'): 3D 배경을 비네트와 왼쪽 그러데이션으로만 누르고, 버튼은 흙먼지·긁힘이 앉은 어두운 강판 위에
+// 칠이 군데군데 벗겨진 가는 테두리와 오른쪽 끝 붉은 막대를 둔다. 마우스를 올리면 판이 밝아지고 막대가 빛난다. 일시정지는 멈춘 화면을 흐리게 깐다
 public partial class UIManager
 {
     const string GameTitle = "벙커랩";
     const string GameSubtitle = "BUNKER  LAB   ·   NUCLEAR  SURVIVAL";
-    const float MenuColumnWidth = 640;
+    const float MenuColumnWidth = 640; // (옛 유리 기둥 폭, FitMenuGlass가 쓴다)
+    // 메뉴 판: 왼쪽 여백, 판 크기. 포인트 색은 핏빛 붉은색(제목 막대·버튼 끝 막대), 글자 강조는 호박색 그대로
+    const float MenuLeft = 96, SlabW = 440, SlabH = 52;
+    static readonly Color MenuRed = new Color(0.72f, 0.1f, 0.08f);
+    static readonly Color PlateFill = new Color(0.075f, 0.075f, 0.08f, 0.92f);
+    static readonly Color PlateHover = new Color(0.17f, 0.165f, 0.16f, 0.95f);
+    static readonly Color InfoFill = new Color(0.3f, 0.28f, 0.18f, 0.82f);
     GameObject mainMenuRoot, pauseRoot;
     RawImage menuBlur, pauseBlur;
     UnityEngine.UI.Text pauseInfo;
     Button continueButton;
+    // 오른쪽 아래 큰 주요 버튼(메인 메뉴: 저장이 있으면 이어하기, 없으면 새 게임)과 그 위의 흙색 정보 판(최근 저장, 저장이 있을 때만)
+    UnityEngine.UI.Text primaryLabel, primaryNote, primaryInfoTitle;
+    GameObject primaryInfo;
     int settingsTab;
     // 컨트롤 탭에서 새 키를 기다리는 동작 (없으면 null)
     GameAction? rebinding;
@@ -33,48 +43,23 @@ public partial class UIManager
     {
         var m = NewRect("MainMenu", root);
         Stretch(m);
+        MenuBackdrop(m, 0.7f);
+        TitleBlock(m, GameTitle, GameSubtitle, 92, -96);
 
-        // 오른쪽으로 옅어지는 가림막: 유리 기둥과 배경을 자연스럽게 잇는다
-        var shade = NewRect("Shade", m).gameObject.AddComponent<Image>();
-        shade.sprite = UIStyle.HorizontalFade;
-        shade.color = new Color(0, 0, 0, 0.6f);
-        shade.raycastTarget = false;
-        shade.rectTransform.anchorMin = Vector2.zero;
-        shade.rectTransform.anchorMax = new Vector2(0.62f, 1);
-        shade.rectTransform.offsetMin = shade.rectTransform.offsetMax = Vector2.zero;
+        float y = -318, step = SlabH + 10;
+        MenuButton(m, "새 게임", "NEW GAME", new Vector2(MenuLeft, y), ConfirmNewGame);
+        continueButton = MenuButton(m, "이어하기", "CONTINUE", new Vector2(MenuLeft, y -= step), () => OpenSlots(false), true, "");
+        MenuButton(m, "설정", "SETTINGS", new Vector2(MenuLeft, y -= step), () => OpenSettings());
+        MenuButton(m, "조작법", "CONTROLS", new Vector2(MenuLeft, y -= step), OpenControls);
+        MenuButton(m, "제작진", "CREDITS", new Vector2(MenuLeft, y -= step), OpenCredits);
+        MenuButton(m, "패치노트", "PATCH NOTES", new Vector2(MenuLeft, y -= step), OpenPatchNotes);
+        MenuButton(m, "게임 종료", "QUIT", new Vector2(MenuLeft, y -= step + 14), () => GameManager.Instance.QuitGame());
 
-        // 왼쪽 유리 기둥: 흐린 화면 중 기둥 자리만 잘라 깐다 (FitMenuGlass)
-        var col = MenuColumn(m);
-        menuBlur = NewRect("Blur", col).gameObject.AddComponent<RawImage>();
-        menuBlur.transform.SetAsFirstSibling();
-        Stretch(menuBlur.rectTransform);
-        menuBlur.raycastTarget = false;
-        menuBlur.enabled = false;
+        // 오른쪽 아래 큰 주요 버튼: 저장이 있으면 이어하기, 없으면 새 게임 (RefreshContinueButton이 글과 정보 판을 맞춘다)
+        PrimaryButton(m, "새 게임", () => { if (SaveSystem.LatestSlot > 0) OpenSlots(false); else ConfirmNewGame(); }, out primaryLabel, out primaryNote, true);
 
-        var title = NewText(m, GameTitle, 92, TextAnchor.LowerLeft, Text, FontTitle);
-        title.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
-        Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -96), new Vector2(520, 120));
-        var sub = NewText(m, GameSubtitle, 22, TextAnchor.UpperLeft, Accent, FontSemiBold);
-        Place(sub.rectTransform, new Vector2(0, 1), new Vector2(110, -222), new Vector2(520, 34));
-        var line = NewRect("Line", m);
-        Place(line, new Vector2(0, 1), new Vector2(110, -266), new Vector2(140, 3));
-        line.gameObject.AddComponent<Image>().color = Accent;
-
-        float y = -330, step = 66;
-        MenuButton(m, "새 게임", new Vector2(92, y), ConfirmNewGame);
-        continueButton = MenuButton(m, "이어하기", new Vector2(92, y -= step), () => OpenSlots(false), true, "");
-        MenuButton(m, "설정", new Vector2(92, y -= step), () => OpenSettings());
-        MenuButton(m, "조작법", new Vector2(92, y -= step), OpenControls);
-        MenuButton(m, "제작진", new Vector2(92, y -= step), OpenCredits);
-        MenuButton(m, "게임 종료", new Vector2(92, y -= step), () => GameManager.Instance.QuitGame());
-        // 패치노트는 가는 선으로 나눠 맨 아래에 둔다
-        var divider = NewRect("Divider", m);
-        Place(divider, new Vector2(0, 1), new Vector2(110, y - 70), new Vector2(420, 1));
-        divider.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.1f);
-        MenuButton(m, "패치노트", new Vector2(92, y -= step + 16), OpenPatchNotes);
-
-        var credit = NewText(m, "Team_31   ·   Made with Unity 6", 16, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.4f));
-        Place(credit.rectTransform, new Vector2(0, 0), new Vector2(110, 24), new Vector2(500, 26));
+        var credit = NewText(m, "Team_31   ·   Made with Unity 6", 15, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.35f));
+        Place(credit.rectTransform, new Vector2(0, 0), new Vector2(MenuLeft + 4, 26), new Vector2(500, 24));
         return m.gameObject;
     }
 
@@ -82,33 +67,62 @@ public partial class UIManager
     {
         var p = NewRect("PauseMenu", root);
         Stretch(p);
-        // 멈춘 게임 화면을 흐리게 깔고(막이 뒤 화면 클릭도 막는다) 왼쪽에 유리 기둥을 세운다
-        pauseBlur = BlurBackdrop(p, new Color(0.02f, 0.025f, 0.03f, 0.3f));
+        // 멈춘 게임 화면을 흐리게 깔고(막이 뒤 화면 클릭도 막는다) 어둡게 누른다
+        pauseBlur = BlurBackdrop(p, new Color(0.02f, 0.022f, 0.026f, 0.4f));
         pauseBlur.enabled = false;
-        MenuColumn(p);
+        MenuBackdrop(p, 0.5f);
+        TitleBlock(p, "일시정지", "PAUSED", 64, -120);
+        pauseInfo = NewText(p, "", 18, TextAnchor.UpperLeft, Dim);
+        Place(pauseInfo.rectTransform, new Vector2(0, 1), new Vector2(MenuLeft + 4, -232), new Vector2(480, 30));
 
-        var title = NewText(p, "일시정지", 64, TextAnchor.LowerLeft, Text, FontTitle);
-        title.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
-        Place(title.rectTransform, new Vector2(0, 1), new Vector2(104, -120), new Vector2(500, 90));
-        pauseInfo = NewText(p, "", 19, TextAnchor.UpperLeft, Dim);
-        Place(pauseInfo.rectTransform, new Vector2(0, 1), new Vector2(110, -214), new Vector2(480, 30));
-        var line = NewRect("Line", p);
-        Place(line, new Vector2(0, 1), new Vector2(110, -256), new Vector2(110, 3));
-        line.gameObject.AddComponent<Image>().color = Accent;
+        float y = -300, step = SlabH + 10;
+        MenuButton(p, "설정", "SETTINGS", new Vector2(MenuLeft, y), () => OpenSettings());
+        MenuButton(p, "조작법", "CONTROLS", new Vector2(MenuLeft, y -= step), OpenControls);
+        MenuButton(p, "메인 메뉴로", "MAIN MENU", new Vector2(MenuLeft, y -= step), () => ConfirmLeaveExpedition("메인 메뉴로", () => GameManager.Instance.GoToMainMenu()));
+        MenuButton(p, "게임 종료", "QUIT", new Vector2(MenuLeft, y -= step + 14), () => ConfirmLeaveExpedition("게임 종료", () => GameManager.Instance.QuitGame()));
 
-        float y = -310, step = 66;
-        MenuButton(p, "계속하기", new Vector2(92, y), () => SetPaused(false));
-        MenuButton(p, "설정", new Vector2(92, y -= step), () => OpenSettings());
-        MenuButton(p, "조작법", new Vector2(92, y -= step), OpenControls);
-        MenuButton(p, "메인 메뉴로", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("메인 메뉴로", () => GameManager.Instance.GoToMainMenu()));
-        MenuButton(p, "게임 종료", new Vector2(92, y -= step), () => ConfirmLeaveExpedition("게임 종료", () => GameManager.Instance.QuitGame()));
-
-        // Tip 스위치: 할 일 명판·나침반·대상 불빛·힌트·조작키 안내를 한꺼번에 켜고 끈다 (Esc 안내 바로 위)
-        BuildTipSwitch(p, new Vector2(110, 66));
-
-        var hint = NewText(p, "Esc   계속하기", 17, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.4f));
-        Place(hint.rectTransform, new Vector2(0, 0), new Vector2(110, 24), new Vector2(460, 26));
+        // 오른쪽 아래 큰 '계속하기'. 왼쪽 아래에는 Tip 스위치와 Esc 안내
+        PrimaryButton(p, "계속하기", () => SetPaused(false), out _, out _);
+        BuildTipSwitch(p, new Vector2(MenuLeft + 4, 70));
+        var hint = NewText(p, "ESC   계속하기", 15, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.35f), FontMono);
+        Place(hint.rectTransform, new Vector2(0, 0), new Vector2(MenuLeft + 4, 26), new Vector2(460, 24));
         return p.gameObject;
+    }
+
+    // 메뉴 뒤 배경: 화면 가장자리 비네트 + 왼쪽에서 오른쪽으로 옅어지는 어두운 막 (3D 배경이 오른쪽에 비친다)
+    static void MenuBackdrop(RectTransform parent, float strength)
+    {
+        var vig = NewRect("Vignette", parent).gameObject.AddComponent<Image>();
+        Stretch(vig.rectTransform);
+        vig.sprite = UIStyle.Vignette;
+        vig.color = new Color(0, 0, 0, 0.75f * strength);
+        vig.raycastTarget = false;
+        var shade = NewRect("Shade", parent).gameObject.AddComponent<Image>();
+        shade.sprite = UIStyle.HorizontalFade;
+        shade.color = new Color(0, 0, 0, strength);
+        shade.raycastTarget = false;
+        shade.rectTransform.anchorMin = Vector2.zero;
+        shade.rectTransform.anchorMax = new Vector2(0.6f, 1);
+        shade.rectTransform.offsetMin = shade.rectTransform.offsetMax = Vector2.zero;
+    }
+
+    // 제목 묶음: 왼쪽 핏빛 세로 막대 + 큰 제목 + 작은 영문 부제 + 가는 가로선
+    static void TitleBlock(RectTransform parent, string title, string subtitle, int size, float top)
+    {
+        var bar = NewRect("TitleBar", parent);
+        Place(bar, new Vector2(0, 1), new Vector2(MenuLeft - 22, top + 12), new Vector2(6, size + 4));
+        bar.pivot = new Vector2(0, 1);
+        bar.anchoredPosition = new Vector2(MenuLeft - 22, top + 12);
+        bar.gameObject.AddComponent<Image>().color = MenuRed;
+
+        var t = NewText(parent, title, size, TextAnchor.LowerLeft, Text, FontTitle);
+        t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
+        Place(t.rectTransform, new Vector2(0, 1), new Vector2(MenuLeft + 6, top), new Vector2(620, size + 28));
+        var sub = NewText(parent, subtitle, 17, TextAnchor.UpperLeft, PaleDim, FontMono);
+        Place(sub.rectTransform, new Vector2(0, 1), new Vector2(MenuLeft + 10, top - size - 30), new Vector2(620, 26));
+        var line = NewRect("Rule", parent);
+        Place(line, new Vector2(0, 1), new Vector2(MenuLeft + 8, top - size - 62), new Vector2(SlabW - 8, 1));
+        line.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.14f);
     }
 
     // ---------- Tip 스위치 (일시정지 메뉴): 'Tip' 글자 옆의 좌우 알약 스위치 ----------
@@ -187,46 +201,7 @@ public partial class UIManager
         tipKnob.anchoredPosition = new Vector2(Mathf.Lerp(tipKnob.anchoredPosition.x, TipKnobX(GameSettings.Tips), Time.unscaledDeltaTime * 18f), 0);
     }
 
-    // 왼쪽 세로 유리 기둥 (메인·일시정지 메뉴): 어두운 유리 + 오른쪽 가는 금색 선 + 바깥으로 옅어지는 그림자
-    static RectTransform MenuColumn(Transform parent)
-    {
-        var col = NewRect("Column", parent);
-        col.anchorMin = Vector2.zero;
-        col.anchorMax = new Vector2(0, 1);
-        col.pivot = new Vector2(0, 0.5f);
-        col.offsetMin = Vector2.zero;
-        col.offsetMax = new Vector2(MenuColumnWidth, 0);
-
-        var fill = NewRect("Glass", col).gameObject.AddComponent<Image>();
-        Stretch(fill.rectTransform);
-        fill.color = new Color(0.015f, 0.017f, 0.02f, 0.74f);
-        fill.raycastTarget = false;
-        Grime(col, 0.7f, 1);
-
-        var shadow = NewRect("Shadow", col).gameObject.AddComponent<Image>();
-        var srt = shadow.rectTransform;
-        srt.anchorMin = new Vector2(1, 0);
-        srt.anchorMax = Vector2.one;
-        srt.pivot = new Vector2(0, 0.5f);
-        srt.offsetMin = Vector2.zero;
-        srt.offsetMax = new Vector2(56, 0);
-        shadow.sprite = UIStyle.HorizontalFade;
-        shadow.color = new Color(0, 0, 0, 0.28f);
-        shadow.raycastTarget = false;
-
-        var edge = NewRect("Edge", col).gameObject.AddComponent<Image>();
-        var ert = edge.rectTransform;
-        ert.anchorMin = new Vector2(1, 0);
-        ert.anchorMax = Vector2.one;
-        ert.pivot = new Vector2(1, 0.5f);
-        ert.offsetMin = new Vector2(-1, 0);
-        ert.offsetMax = Vector2.zero;
-        edge.color = new Color(0.72f, 0.48f, 0.2f, 0.3f);
-        edge.raycastTarget = false;
-        return col;
-    }
-
-    // 메인 메뉴 기둥에는 흐린 화면 중 기둥 자리만 잘라 보여 준다
+    // (옛 유리 기둥은 쓰지 않는다. 메인 메뉴 블러도 없으므로 FitMenuGlass는 바로 돌아간다)
     void FitMenuGlass()
     {
         if (menuBlur == null) return;
@@ -234,62 +209,175 @@ public partial class UIManager
         if (w > 0) menuBlur.uvRect = new Rect(0, 0, Mathf.Clamp01(MenuColumnWidth / w), 1);
     }
 
-    // 메뉴 버튼: 평소에는 글자와 왼쪽 금색 막대만 보인다.
-    // 마우스를 올리면 왼쪽부터 번지는 금빛이 켜지고, 막대가 길고 굵어지고, 글자가 살짝 오른쪽으로 밀린다
-    Button MenuButton(Transform parent, string label, Vector2 pos, Action onClick, bool interactable = true, string tag = null)
+    // ---------- 더러운 강판 ----------
+
+    // 더러운 강판 꾸밈: 흙먼지(타일) → 긁힘·먼지 → 가장자리 그늘 → 군데군데 칠이 벗겨진 가는 테두리("WornFrame", 돌려준다. 호버가 색을 바꾼다)
+    static Image DirtyPlate(RectTransform rt, float dirt = 1f)
+    {
+        var dust = NewRect("Dust", rt).gameObject.AddComponent<Image>();
+        Stretch(dust.rectTransform);
+        dust.sprite = UIStyle.Dust;
+        dust.type = Image.Type.Tiled;
+        dust.color = new Color(0.45f, 0.36f, 0.22f, 0.28f * dirt);
+        dust.raycastTarget = false;
+        var grime = NewRect("Grime", rt).gameObject.AddComponent<Image>();
+        Stretch(grime.rectTransform);
+        grime.sprite = UIStyle.Grime;
+        grime.type = Image.Type.Tiled;
+        grime.color = new Color(1, 1, 1, 0.35f * dirt);
+        grime.raycastTarget = false;
+        var shade = NewRect("Shade", rt).gameObject.AddComponent<Image>();
+        Stretch(shade.rectTransform);
+        shade.sprite = UIStyle.Vignette;
+        shade.color = new Color(0, 0, 0, 0.45f);
+        shade.raycastTarget = false;
+        var frame = NewRect("WornFrame", rt).gameObject.AddComponent<Image>();
+        Stretch(frame.rectTransform);
+        frame.sprite = UIStyle.WornFrame;
+        frame.type = Image.Type.Tiled;
+        frame.color = new Color(1, 1, 1, 0.3f);
+        frame.raycastTarget = false;
+        return frame;
+    }
+
+    // 오른쪽 끝의 붉은 막대와 그 빛 (빛을 돌려준다. 호버가 알파를 올린다)
+    static Image RedBar(RectTransform rt, float inset, Vector2 size, float glowSize, float glowAlpha)
+    {
+        var glow = NewRect("RedGlow", rt).gameObject.AddComponent<Image>();
+        Place(glow.rectTransform, new Vector2(1, 0.5f), new Vector2(-inset, 0), new Vector2(glowSize, glowSize));
+        glow.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        glow.sprite = UIStyle.Glow;
+        glow.color = new Color(MenuRed.r, MenuRed.g, MenuRed.b, glowAlpha);
+        glow.raycastTarget = false;
+        var bar = NewRect("RedBar", rt).gameObject.AddComponent<Image>();
+        Place(bar.rectTransform, new Vector2(1, 0.5f), new Vector2(-inset, 0), size);
+        bar.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        bar.color = MenuRed;
+        bar.raycastTarget = false;
+        return glow;
+    }
+
+    // 메뉴 버튼: 더러운 강판 위에 한글 이름(왼쪽)과 영문 꼬리표(오른쪽), 오른쪽 끝 붉은 막대.
+    // 마우스를 올리면 판이 밝아지고 테두리가 또렷해지며 막대가 붉게 빛난다. note가 null이 아니면 꼬리표 자리에 설명 줄(이어하기의 최근 저장)을 둔다
+    Button MenuButton(Transform parent, string label, string tag, Vector2 pos, Action onClick, bool interactable = true, string note = null)
     {
         var rt = NewRect("MenuButton", parent);
-        Place(rt, new Vector2(0, 1), pos, new Vector2(460, 58));
-        var glow = rt.gameObject.AddComponent<Image>(); // 평소에는 투명하지만 클릭은 받는다
-        glow.sprite = UIStyle.HorizontalFade;
+        Place(rt, new Vector2(0, 1), pos, new Vector2(SlabW, SlabH));
+        var slab = rt.gameObject.AddComponent<Image>(); // 판. 클릭을 받는다
+        slab.color = PlateFill;
+        var frame = DirtyPlate(rt);
+
         var b = rt.gameObject.AddComponent<Button>();
-        b.targetGraphic = glow;
+        b.targetGraphic = slab;
         b.transition = Selectable.Transition.None; // 색은 UIHover가 바꾼다
         b.navigation = new Navigation { mode = Navigation.Mode.None };
         b.interactable = interactable;
         if (onClick != null) b.onClick.AddListener(() => onClick());
-        UIPress.Attach(b, 1f);
+        UIPress.Attach(b, 1.01f);
 
-        var bar = NewRect("Bar", rt);
-        bar.anchorMin = bar.anchorMax = new Vector2(0, 0.5f);
-        bar.pivot = new Vector2(0, 0.5f);
-        bar.anchoredPosition = new Vector2(2, 0);
-        bar.sizeDelta = new Vector2(3, 24);
-        var barImg = bar.gameObject.AddComponent<Image>();
-        barImg.raycastTarget = false;
-
-        var t = NewText(rt, label, 30, TextAnchor.MiddleLeft, Text, FontSemiBold);
-        Stretch(t.rectTransform, 24, 0);
+        var glow = RedBar(rt, 12, new Vector2(4, 28), 44, 0.25f);
+        var t = NewText(rt, label, 27, TextAnchor.MiddleLeft, Text, FontTitle);
+        Stretch(t.rectTransform, 22, 0);
         t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
-        if (tag != null)
+        var tg = NewText(rt, tag, 13, TextAnchor.MiddleRight, PaleDim, FontMono);
+        Stretch(tg.rectTransform, 30, 0);
+        UnityEngine.UI.Text nt = null;
+        if (note != null)
         {
-            var tg = NewText(rt, tag, 15, TextAnchor.MiddleRight, new Color(1, 1, 1, 0.38f));
-            Stretch(tg.rectTransform, 16, 0);
+            tg.text = "";
+            nt = NewText(rt, note, 13, TextAnchor.MiddleRight, PaleDim);
+            nt.name = "Note";
+            Stretch(nt.rectTransform, 30, 0);
         }
 
         var hover = rt.gameObject.AddComponent<UIHover>();
         hover.Gate = b;
-        // 평소 알파를 0이 아닌 아주 작은 값으로 둔다 (완전히 투명한 그림은 잘려서 클릭을 못 받을 수 있다)
-        hover.Add(glow, new Color(Accent.r, Accent.g, Accent.b, 0.01f), new Color(Accent.r, Accent.g, Accent.b, 0.2f))
-             .Add(barImg, Color.clear, Color.clear)
-             .Add(t, Color.clear, Color.clear);
+        hover.Add(slab, PlateFill, PlateHover)                                                           // 0 판
+             .Add(frame, new Color(1, 1, 1, 0.3f), new Color(1, 1, 1, 0.75f))                             // 1 테두리
+             .Add(t, Text, Color.white)                                                                    // 2 이름
+             .Add(tg, PaleDim, Pale)                                                                       // 3 꼬리표
+             .Add(glow, new Color(MenuRed.r, MenuRed.g, MenuRed.b, 0.25f), new Color(1f, 0.25f, 0.15f, 0.8f)); // 4 붉은 빛
+        if (nt != null) hover.Add(nt, PaleDim, Pale);                                                      // 5 설명 줄
         hover.Move = t.rectTransform;
         hover.MoveFrom = Vector2.zero;
-        hover.MoveTo = new Vector2(10, 0);
-        hover.Grow = bar;
-        hover.GrowFrom = new Vector2(3, 24);
-        hover.GrowTo = new Vector2(5, 40);
+        hover.MoveTo = new Vector2(6, 0);
         SetMenuButtonColors(hover, interactable);
         return b;
     }
 
-    // 메뉴 버튼의 막대·글자 색 (누를 수 있을 때 / 없을 때). UIHover 항목 순서: 0 금빛, 1 막대, 2 글자
+    // 메뉴 버튼의 글자 색 (누를 수 있을 때 / 없을 때). UIHover 항목 순서: 0 판, 1 테두리, 2 이름, 3 꼬리표, 4 붉은 빛, 5 설명
     static void SetMenuButtonColors(UIHover hover, bool on)
     {
-        var off = new Color(1, 1, 1, 0.35f);
-        var barOff = new Color(1, 1, 1, 0.15f);
-        hover.SetColors(1, on ? new Color(Accent.r, Accent.g, Accent.b, 0.65f) : barOff, on ? Accent : barOff);
-        hover.SetColors(2, on ? Text : off, on ? new Color(1f, 0.95f, 0.84f) : off);
+        var off = new Color(1, 1, 1, 0.3f);
+        hover.SetColors(2, on ? Text : off, on ? Color.white : off);
+        hover.SetColors(3, on ? PaleDim : off, on ? Pale : off);
+        hover.SetColors(5, on ? PaleDim : off, on ? Pale : off);
+    }
+
+    // 오른쪽 아래 큰 주요 버튼: 더러운 강판 + 오른쪽 끝 붉은 막대, 이름은 막대 옆에 오른쪽 정렬.
+    // info면 위에 흙색 정보 판(최근 저장: 제목 + noteText)을 붙인다 — RefreshContinueButton이 글을 채우고 저장이 없으면 감춘다
+    Button PrimaryButton(RectTransform parent, string label, Action onClick, out UnityEngine.UI.Text labelText, out UnityEngine.UI.Text noteText, bool info = false)
+    {
+        var rt = NewRect("PrimaryButton", parent);
+        Place(rt, new Vector2(1, 0), new Vector2(-56, 68), new Vector2(380, 72));
+        var slab = rt.gameObject.AddComponent<Image>();
+        slab.color = PlateFill;
+        var frame = DirtyPlate(rt);
+        var b = rt.gameObject.AddComponent<Button>();
+        b.targetGraphic = slab;
+        b.transition = Selectable.Transition.None;
+        b.navigation = new Navigation { mode = Navigation.Mode.None };
+        b.onClick.AddListener(() => onClick());
+        UIPress.Attach(b, 1.03f);
+        var glow = RedBar(rt, 16, new Vector2(6, 40), 72, 0.35f);
+
+        labelText = NewText(rt, label, 34, TextAnchor.MiddleRight, Text, FontTitle);
+        Stretch(labelText.rectTransform, 28, 0);
+        labelText.rectTransform.offsetMax = new Vector2(-44, 0);
+        labelText.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+
+        var hover = rt.gameObject.AddComponent<UIHover>();
+        hover.Gate = b;
+        hover.Add(slab, PlateFill, PlateHover)
+             .Add(frame, new Color(1, 1, 1, 0.3f), new Color(1, 1, 1, 0.75f))
+             .Add(labelText, Text, Color.white)
+             .Add(glow, new Color(MenuRed.r, MenuRed.g, MenuRed.b, 0.35f), new Color(1f, 0.25f, 0.15f, 0.9f));
+
+        noteText = null;
+        if (info)
+        {
+            var panel = NewRect("Info", parent);
+            Place(panel, new Vector2(1, 0), new Vector2(-56, 68 + 72 + 10), new Vector2(380, 66));
+            var fill = panel.gameObject.AddComponent<Image>();
+            fill.color = InfoFill;
+            fill.raycastTarget = false;
+            var f = DirtyPlate(panel, 0.8f);
+            f.color = new Color(1, 1, 1, 0.18f);
+            primaryInfoTitle = NewText(panel, "최근 저장", 19, TextAnchor.UpperLeft, Text, FontTitle);
+            Place(primaryInfoTitle.rectTransform, new Vector2(0, 1), new Vector2(18, -9), new Vector2(340, 26));
+            noteText = NewText(panel, "", 13, TextAnchor.UpperLeft, PaleDim, FontMono);
+            Place(noteText.rectTransform, new Vector2(0, 1), new Vector2(18, -36), new Vector2(340, 20));
+            noteText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            primaryInfo = panel.gameObject;
+        }
+        return b;
+    }
+
+    // 메뉴 층을 다시 만든다 (설정 변경·디자인 손질용). 그리는 순서(창보다 아래)는 그대로 두고, 열려 있던 메인 메뉴는 다시 연다
+    public void RebuildMenus()
+    {
+        bool menuOn = mainMenuRoot != null && mainMenuRoot.activeSelf;
+        if (IsPaused) SetPaused(false);
+        int mi = mainMenuRoot != null ? mainMenuRoot.transform.GetSiblingIndex() : -1;
+        int pi = pauseRoot != null ? pauseRoot.transform.GetSiblingIndex() : -1;
+        if (mainMenuRoot != null) DestroyImmediate(mainMenuRoot);
+        if (pauseRoot != null) DestroyImmediate(pauseRoot);
+        primaryInfo = null;
+        primaryInfoTitle = primaryLabel = primaryNote = null;
+        BuildMenuLayers();
+        if (mi >= 0) mainMenuRoot.transform.SetSiblingIndex(mi);
+        if (pi >= 0) pauseRoot.transform.SetSiblingIndex(pi);
+        if (menuOn) ShowMainMenu();
     }
 
     public void ShowMainMenu()
@@ -431,17 +519,20 @@ public partial class UIManager
         });
     }
 
-    // 저장 파일이 있을 때만 '이어하기'를 누를 수 있고, 오른쪽에 턴과 저장 시각을 보여 준다
+    // 저장 파일이 있을 때만 '이어하기'를 누를 수 있고, 설명 줄에 턴과 저장 시각을 보여 준다. 오른쪽 아래 큰 버튼의 글과 정보 판도 맞춘다
     void RefreshContinueButton()
     {
         if (continueButton == null) return;
         int latest = SaveSystem.LatestSlot;
         bool has = latest > 0;
         continueButton.interactable = has;
-        var texts = continueButton.GetComponentsInChildren<Text>(true);
-        if (texts.Length > 1) texts[1].text = has ? $"최근: 슬롯 {latest} · {SaveSystem.Summary(latest)}" : "저장된 게임 없음";
+        var note = continueButton.transform.Find("Note");
+        if (note != null) note.GetComponent<UnityEngine.UI.Text>().text = has ? $"슬롯 {latest} · {SaveSystem.Summary(latest)}" : "저장된 게임 없음";
         var hover = continueButton.GetComponent<UIHover>();
         if (hover != null) SetMenuButtonColors(hover, has);
+        if (primaryLabel != null) primaryLabel.text = has ? "이어하기" : "새 게임";
+        if (primaryInfo != null) primaryInfo.SetActive(has);
+        if (primaryNote != null) primaryNote.text = has ? $"SLOT {latest}  ·  {SaveSystem.Summary(latest)}" : "";
     }
 
     public void HideMainMenu() => mainMenuRoot.SetActive(false);
@@ -568,7 +659,7 @@ public partial class UIManager
                 { $"{K(GameAction.MoveForward)} {K(GameAction.MoveLeft)} {K(GameAction.MoveBack)} {K(GameAction.MoveRight)}", "이동" }, { "마우스", "시점 회전" },
                 { K(GameAction.Run), "달리기 (소리가 커진다 · 짐이 무거우면 스테미너가 빨리 준다)" }, { K(GameAction.Jump), "점프" },
                 { K(GameAction.Crouch), "앉기 (조용히 숨기 · 낮은 틈 지나가기)" },
-                { K(GameAction.Interact), "줍기 · 문 열기 · 시설 사용" }, { K(GameAction.Flashlight), "손전등 켜기/끄기" }, { "1 ~ 8 / 휠", "핫바 칸 선택" },
+                { K(GameAction.Interact), "줍기 · 문 열기 · 시설 사용 · 손전등 꺼내기/넣기" }, { K(GameAction.Flashlight), "손전등 켜기/끄기 (꺼내 든 뒤)" }, { "1 ~ 8 / 휠", "핫바 칸 선택" },
                 { K(GameAction.UseItem), "선택한 아이템 사용 (먹기·치료)" }, { K(GameAction.DropItem), "선택한 아이템 버리기" },
                 { K(GameAction.Attack), "공격 (무기를 들면 더 세다 · 새총은 돌을 쏜다 · 라이터는 불을 붙인다)" },
                 { K(GameAction.Inventory), "소지품 열기 (아이템을 핫바로 끌어다 놓기)" }, { "Esc", "일시정지 · 창 닫기" },

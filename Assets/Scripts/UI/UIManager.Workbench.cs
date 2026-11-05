@@ -20,8 +20,8 @@ public partial class UIManager
     RawImage workbenchBlur;
     RectTransform workbenchList, workbenchDetail;
     ScrollRect workbenchScroll;
-    UnityEngine.UI.Text workbenchTitle, workbenchSub, workbenchWeight, workbenchNotice;
-    CanvasGroup workbenchNoticeGroup;
+    UnityEngine.UI.Text workbenchTitle, workbenchSub, workbenchWeight;
+    NoticeBand workbenchNoticeBand;
     Transform workbenchSource;
     Recipe workbenchPick, furnacePick;
     float workbenchBlurTimer;
@@ -40,7 +40,7 @@ public partial class UIManager
     public void OpenWorkbench(Transform source = null)
     {
         Tutorial.Notify("workbench");
-        Tutorial.Hint(Tutorial.HintWorkbench, "재료가 모자란 조합법은 흐리게 보인다. '제작 가능만 보기'를 켜면 지금 만들 수 있는 것만 남는다.");
+        Tutorial.Hint(Tutorial.HintWorkbench, "재료가 모자란 조합법은 흐리게 보인다. '제작 가능만 보기'를 켜면 만들 수 있는 것만 남는다.");
         OpenCrafting(false, source);
     }
 
@@ -89,8 +89,7 @@ public partial class UIManager
             UpdateBlur(workbenchBlur);
         }
         // 창이 HUD 알림을 가리므로 같은 알림을 창 위쪽에 보여 준다
-        workbenchNotice.text = toastText.text;
-        workbenchNoticeGroup.alpha = toastGroup.alpha;
+        SyncNoticeBand(workbenchNoticeBand);
 
         // 화로: 진행 막대를 채우고, 다 녹으면 목록·재료 수·버튼을 다시 만든다
         // (제작대 창이어도 녹이기가 끝나면 철주괴 등 재료 수가 바뀌므로 다시 만든다)
@@ -215,14 +214,8 @@ public partial class UIManager
         workbenchDetail.offsetMin = new Vector2(512, 36);
         workbenchDetail.offsetMax = new Vector2(-44, -124);
 
-        // HUD 알림을 대신 보여 주는 칸: 알림이 떠 있는 동안 제목 옆 안내 문구 자리를 덮는다
-        var notice = Box(glass, "Notice", new Color(0.1f, 0.09f, 0.07f, 0.96f), new Color(Accent.r, Accent.g, Accent.b, 0.55f));
-        Place(notice, new Vector2(0, 1), new Vector2(176, -27), new Vector2(668, 48));
-        workbenchNoticeGroup = notice.gameObject.AddComponent<CanvasGroup>();
-        workbenchNoticeGroup.alpha = 0;
-        workbenchNoticeGroup.blocksRaycasts = false;
-        workbenchNotice = NewText(notice, "", 20, TextAnchor.MiddleLeft, Text);
-        Stretch(workbenchNotice.rectTransform, 16, 2);
+        // HUD 알림을 대신 보여 주는 띠: 알림이 떠 있는 동안 제목 옆 안내 문구 자리를 덮는다 ('힌트 :' 머리글 고정, 두 줄까지)
+        workbenchNoticeBand = MakeNoticeBand(glass, new Vector2(0, 1), new Vector2(176, -27), new Vector2(1000, 48), false);
 
         workbenchRoot.SetActive(false);
     }

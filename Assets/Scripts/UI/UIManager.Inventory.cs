@@ -25,8 +25,8 @@ public partial class UIManager
     RawImage invBlur;
     RectTransform invEquip, invGrid, invDetail;
     ScrollRect invScroll;
-    UnityEngine.UI.Text invCount, invEmpty, invNotice;
-    CanvasGroup invNoticeGroup;
+    UnityEngine.UI.Text invCount, invEmpty;
+    NoticeBand invNoticeBand;
     float invBlurTimer;
     string invSignature;
 
@@ -105,8 +105,7 @@ public partial class UIManager
             if (InventorySignature(s, s.Carried.Sorted()) != invSignature) RefreshInventory();
         }
         // 창이 HUD 알림을 가리므로 같은 알림을 창 위쪽에 보여 준다
-        invNotice.text = toastText.text;
-        invNoticeGroup.alpha = toastGroup.alpha;
+        SyncNoticeBand(invNoticeBand);
     }
 
     void BuildInventory()
@@ -204,14 +203,8 @@ public partial class UIManager
         invDetail = NewRect("Detail", card);
         Stretch(invDetail, 22, 22);
 
-        // HUD 알림을 대신 보여 주는 칸: 알림이 떠 있는 동안 제목 옆 안내 문구 자리를 덮는다
-        var notice = Box(glass, "Notice", new Color(0.1f, 0.09f, 0.07f, 0.96f), new Color(Accent.r, Accent.g, Accent.b, 0.55f));
-        Place(notice, new Vector2(0, 1), new Vector2(176, -27), new Vector2(920, 48));
-        invNoticeGroup = notice.gameObject.AddComponent<CanvasGroup>();
-        invNoticeGroup.alpha = 0;
-        invNoticeGroup.blocksRaycasts = false;
-        invNotice = NewText(notice, "", 20, TextAnchor.MiddleLeft, Text);
-        Stretch(invNotice.rectTransform, 16, 2);
+        // HUD 알림을 대신 보여 주는 띠: 알림이 떠 있는 동안 제목 옆 안내 문구 자리를 덮는다 ('힌트 :' 머리글 고정, 두 줄까지)
+        invNoticeBand = MakeNoticeBand(glass, new Vector2(0, 1), new Vector2(176, -27), new Vector2(1000, 48), false);
 
         invRoot.SetActive(false);
     }

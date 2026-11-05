@@ -47,8 +47,8 @@ public partial class UIManager
 
         // 제목·날짜
         AddJournalLine($"탐색 결과  —  {r.Turn}번째 날", 40, Ink, FontBold, 6, -1.2f);
-        string back = r.RedNight ? $"붉은 밤 속을 {Mathf.CeilToInt(r.RedNightSeconds)}초나 헤매다 겨우 해치로 돌아왔다."
-            : $"붉은 밤까지 {(int)r.TimeLeft / 60}분 {(int)r.TimeLeft % 60}초를 남기고 해치로 돌아왔다.";
+        string back = r.RedNight ? $"시간을 {Mathf.CeilToInt(r.RedNightSeconds)}초나 넘기고 겨우 해치로 돌아왔다."
+            : $"{(int)r.TimeLeft / 60}분 {(int)r.TimeLeft % 60}초를 남기고 살아 돌아왔다.";
         AddJournalLine(back, 23, r.RedNight ? InkRed : InkFaded, Font, 18, 0.6f);
         AddJournalRule();
 
@@ -85,7 +85,7 @@ public partial class UIManager
 
         // 마무리 한 줄
         string closing;
-        if (r.RedNight) closing = "다시는 이렇게 늦지 말자. 붉은 밤은 사람을 갉아먹는다.";
+        if (r.RedNight) closing = "다시는 이렇게 늦지 말자. 밖은 시간이 갈수록 위험해진다.";
         else if (r.HealthAfter < 30) closing = "죽을 뻔했다. 상처부터 돌보자.";
         else if (r.Gained.Count == 0) closing = "내일은 더 멀리 가 봐야겠다.";
         else if (r.ZombiesKilled + r.DogsKilled >= 5) closing = "놈들이 점점 늘어난다. 무기를 손봐 두자.";
@@ -200,7 +200,7 @@ public partial class UIManager
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.5f, 0.8f, SoundCategory.UI);
     }
 
-    // 매 프레임: 종이가 살짝 떠오르며 나타나고, 한 글자씩 적히며 사각사각 소리
+    // 매 프레임: 종이가 살짝 떠오르며 나타나고, 한 글자씩 적히며 연필 사각사각 소리
     void UpdateJournal()
     {
         if (!IsJournalOpen) return;
@@ -221,14 +221,77 @@ public partial class UIManager
             journalChars -= full.Length;
             journalLine++;
         }
-        // 적는 동안 펜 소리를 짧게 끊어 낸다 (글자 사이 간격이 조금씩 다르게)
+        // 적는 동안 연필 긁는 소리를 한 획씩 끊어 낸다 (획 길이·세기·높낮이가 조금씩 다르게)
         journalScratchTimer -= dt;
         if (journalLine < journalTexts.Count && journalScratchTimer <= 0 && journalFull[journalLine].Length > 0)
         {
-            journalScratchTimer = Random.Range(0.07f, 0.13f);
-            ProceduralAudio.Play2D(ProceduralAudio.PenScratch(), Random.Range(0.32f, 0.5f), Random.Range(0.85f, 1.25f), SoundCategory.UI);
+            journalScratchTimer = Random.Range(0.09f, 0.16f);
+            ProceduralAudio.Play2D(PencilScratch(), Random.Range(0.3f, 0.45f), Random.Range(0.9f, 1.2f), SoundCategory.UI);
         }
         if (journalLine >= journalTexts.Count) FinishJournal();
+    }
+
+    // ---------- 연필 소리 ----------
+    // 연필이 종이를 사각사각 긁는 소리 한 획 (0.17초): 흑연 알갱이가 종이 결에 걸리는 잔 소리(3.4kHz 띠)와 손이 눌러 미는 종이 마찰(800Hz 띠),
+    // 아주 옅은 높은 쉿 소리. 획은 10ms 만에 눌리고 끝 40%에서 들리며 손 떨림(45Hz)으로 세기가 조금씩 흔들린다.
+    // 펜 소리(ProceduralAudio.PenScratch)보다 낮고 부드럽고 거칠다. 한 번 만들어 두고 다시 쓴다
+    static AudioClip pencilClip;
+
+    static AudioClip PencilScratch()
+    {
+        if (pencilClip != null) return pencilClip;
+        const int sr = 44100;
+        const float seconds = 0.17f;
+        int n = (int)(sr * seconds);
+        var data = new float[n];
+        var rng = new System.Random(4242);
+        var grain = new BandPass2(3400f / sr, 0.9f);
+        var paper = new BandPass2(800f / sr, 1.3f);
+        var hiss = new BandPass2(6500f / sr, 1.0f);
+        float g = 0, pressure = 0.7f, max = 0.0001f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)sr;
+            float u = t / seconds;
+            float env = Mathf.Min(1f, t / 0.01f) * (u < 0.6f ? 1f : Mathf.Clamp01((1f - u) / 0.4f));
+            env *= 0.82f + 0.18f * Mathf.Sin(t * 2 * Mathf.PI * 45f);
+            // 종이 결에 걸리는 알갱이: 짧게 터졌다 가라앉는다
+            if (rng.NextDouble() < 0.03) g = 0.4f + (float)rng.NextDouble() * 0.6f;
+            g *= 0.93f;
+            if (rng.NextDouble() < 0.002) pressure = 0.5f + (float)rng.NextDouble() * 0.5f;
+            float w1 = (float)(rng.NextDouble() * 2 - 1), w2 = (float)(rng.NextDouble() * 2 - 1), w3 = (float)(rng.NextDouble() * 2 - 1);
+            float s = grain.Process(w1) * (0.5f + g) * 0.9f + paper.Process(w2) * 0.6f * pressure + hiss.Process(w3) * 0.12f * g;
+            data[i] = s * env;
+            max = Mathf.Max(max, Mathf.Abs(data[i]));
+        }
+        for (int i = 0; i < n; i++) data[i] = data[i] / max * 0.5f;
+        pencilClip = AudioClip.Create("pencilscratch", n, 1, sr, false);
+        pencilClip.SetData(data, 0);
+        return pencilClip;
+    }
+
+    // 2차 띠통과 필터 (RBJ 공식). f는 샘플레이트에 대한 비율
+    class BandPass2
+    {
+        readonly float b0, b2, a1, a2;
+        float x1, x2, y1, y2;
+
+        public BandPass2(float f, float q)
+        {
+            float w = 2 * Mathf.PI * f, cos = Mathf.Cos(w), alpha = Mathf.Sin(w) / (2 * q);
+            float a0 = 1 + alpha;
+            b0 = alpha / a0;
+            b2 = -alpha / a0;
+            a1 = -2 * cos / a0;
+            a2 = (1 - alpha) / a0;
+        }
+
+        public float Process(float x)
+        {
+            float y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
+            x2 = x1; x1 = x; y2 = y1; y1 = y;
+            return y;
+        }
     }
 
     // 낡은 두루마리 양피지 (참고 사진처럼): 누런 바탕에 섬유 결과 구김, 번진 갈색 얼룩과 물 자국 고리,

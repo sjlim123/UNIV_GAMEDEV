@@ -29,6 +29,11 @@ public partial class UIManager : MonoBehaviour
     static readonly Color GoldFrame = new Color(0.72f, 0.48f, 0.2f, 0.28f);
     static readonly Color WindowTint = new Color(0.01f, 0.012f, 0.015f, 0.5f);
     static readonly Color EndTint = new Color(0.03f, 0.02f, 0.02f, 0.55f);
+    // HUD 유리판 (2026-11-05): 뒤 화면을 흐려 비추는 어두운 유리. 가장자리는 투명하고 가운데로 갈수록 진하다 (UIStyle.GlassSoft + BunkerLab/HudGlass)
+    static readonly Color HudGlassTint = new Color(0.035f, 0.038f, 0.045f, 0.86f);
+    // 핫바 알약 유리(리퀴드 글래스): 더 비치고 가장자리가 굴절된다
+    static readonly Color HudPillTint = new Color(0.07f, 0.075f, 0.085f, 0.8f);
+    static Material hudGlassMat, hudPillMat;
     // 창 안의 줄(Row) 카드: 평소 / 마우스를 올렸을 때 (호박색이 살짝 돈다)
     static readonly Color RowFill = new Color(1, 1, 1, 0.035f);
     static readonly Color RowFillHover = new Color(0.86f, 0.57f, 0.2f, 0.1f);
@@ -51,6 +56,9 @@ public partial class UIManager : MonoBehaviour
     CanvasGroup toastGroup;
     GameObject flashBox;
     Image damageOverlay, fadeOverlay, redNightOverlay, hitArc;
+    // 손전등·배터리 줄의 그림 (손전등이 켜져 있으면 밝게)
+    Image flashIcon, batteryIcon;
+    PlayerFlashlight flashlight;
     float hitArcAlpha;
     // 마지막으로 맞은 자리 (적이 Damage 직전에 적는다) → 화면 가장자리에 그 방향으로 붉은 호가 번쩍인다
     public static Vector3? LastHitFrom;
@@ -77,8 +85,7 @@ public partial class UIManager : MonoBehaviour
     RawImage panelBlur;
     Image panelTint;
     ScrollRect panelScroll;
-    UnityEngine.UI.Text panelNotice;
-    CanvasGroup panelNoticeGroup;
+    NoticeBand panelNoticeBand;
     float panelHeight;
     Action<RectTransform> panelBuilder;
     string panelId;
@@ -152,7 +159,7 @@ public partial class UIManager : MonoBehaviour
     float loadingT;
     static readonly string[] LoadingTips =
     {
-        "붉은 밤이 오기 전에 해치로 돌아올 것.",
+        "시간이 다 되기 전에 해치로 돌아올 것.",
         "짐이 들 수 있는 무게의 80%를 넘으면 걸음이 느려진다.",
         "길바닥에는 돌뿐이다. 쓸 만한 건 건물 안에 있다.",
         "달리면 소리가 커진다. 놈들은 소리를 듣는다.",
@@ -266,28 +273,32 @@ public partial class UIManager : MonoBehaviour
         BuildCompass(h);
         BuildKeyHints(h);
 
-        // 오른쪽 아래: 손전등 (바탕판 없이 [손전등 그림] 45%  [배터리 그림] 1 — 그림에는 노란 윤곽선)
+        // 오른쪽 아래: 손전등·배터리 — 세로 두 줄([손전등 그림] 100% / [배터리 그림] 1), 뒤에 먹이 번진 자국(50%)
         var flash = NewRect("Flashlight", h);
-        Place(flash, new Vector2(1, 0), new Vector2(-24, 40), new Vector2(236, 40));
+        Place(flash, new Vector2(1, 0), new Vector2(-28, 48), new Vector2(156, 92));
         flashBox = flash.gameObject;
-        HudItemIcon(flash, "flashlight", 0);
-        flashlightText = HudValueText(flash, 46, 72);
-        HudItemIcon(flash, "battery", 124);
-        batteryText = HudValueText(flash, 170, 60);
+        var ink = NewRect("Ink", flash).gameObject.AddComponent<Image>();
+        Place(ink.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-6, -2), new Vector2(300, 176));
+        ink.rectTransform.localRotation = Quaternion.Euler(0, 0, -3f);
+        ink.sprite = UIStyle.InkWash;
+        ink.material = GlassMaterial(); // 먹 자국도 뒤 화면을 흐려 비추는 유리라 어두운 바닥 위에서도 보인다
+        ink.color = new Color(0.1f, 0.1f, 0.11f, 0.5f);
+        ink.raycastTarget = false;
+        flashIcon = HudItemRow(flash, "flashlight", 0, out flashlightText);
+        batteryIcon = HudItemRow(flash, "battery", 1, out batteryText);
 
-        // 가운데 아래: 핫바 (강철 받침 위에 주머니 칸 8개)
+        // 가운데 아래: 핫바 — 뒤 화면을 흐려 비추는 알약 유리판(리퀴드 글래스) 위에 비치는 칸 8개
         const float slot = 68, gap = 8;
         float barWidth = SlotCount * slot + (SlotCount - 1) * gap;
-        var tray = HudPlate(h, "HotbarTray", HudFrame);
-        Place(tray, new Vector2(0.5f, 0), new Vector2(0, 16), new Vector2(barWidth + 20, slot + 20));
+        var tray = HudPill(h, "HotbarTray");
+        Place(tray, new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(barWidth + 28, slot + 32));
         hotbarTray = tray;
-        // 받침과 칸은 비치지 않게 (불투명)
         var bar = NewRect("Hotbar", h);
-        Place(bar, new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(barWidth, slot));
+        Place(bar, new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(barWidth, slot)); // 고른 칸이 살짝 떠올라도 받침 테두리를 넘지 않게
         hotbarBar = bar;
         for (int i = 0; i < SlotCount; i++)
         {
-            var v = NewItemSlot(bar, "Slot" + i, 7);
+            var v = NewItemSlot(bar, "Slot" + i, 7, true);
             var s = v.Rect;
             s.anchorMin = s.anchorMax = new Vector2(0, 0.5f);
             s.pivot = new Vector2(0.5f, 0.5f); // 고른 칸이 가운데를 기준으로 커지게
@@ -295,7 +306,7 @@ public partial class UIManager : MonoBehaviour
             s.sizeDelta = new Vector2(slot, slot);
             hotbarSlots.Add(v);
 
-            // 고른 칸: 금색 테두리 + 칸 위에 붙인 노란 절연테이프 조각
+            // 고른 칸: 호박색 테두리 + 칸 뒤에서 번지는 호박빛
             var sel = NewRect("Select", s).gameObject.AddComponent<Image>();
             Stretch(sel.rectTransform, -3, -3);
             sel.sprite = UIStyle.Frame;
@@ -304,8 +315,13 @@ public partial class UIManager : MonoBehaviour
             sel.color = Accent;
             sel.raycastTarget = false;
             slotSelects.Add(sel);
-            var tape = TapeStrip(s, new Vector2(0.5f, 1), new Vector2(2, 3), new Vector2(46, 14), -7f, Accent);
-            slotGlows.Add(tape);
+            var halo = NewRect("Halo", s).gameObject.AddComponent<Image>();
+            Place(halo.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(slot + 36, slot + 36));
+            halo.sprite = UIStyle.Glow;
+            halo.color = new Color(Accent.r, Accent.g, Accent.b, 0.45f);
+            halo.raycastTarget = false;
+            halo.transform.SetAsFirstSibling();
+            slotGlows.Add(halo);
 
             var key = NewText(s, (i + 1).ToString(), 14, TextAnchor.UpperLeft, PaleDim, FontMono);
             Stretch(key.rectTransform, 6, 3);
@@ -361,7 +377,7 @@ public partial class UIManager : MonoBehaviour
     }
 
     // HUD에 바탕 없이 띄우는 아이템 그림 (노란 윤곽선, 40px). x = 부모 왼쪽에서의 자리
-    static void HudItemIcon(RectTransform parent, string itemId, float x)
+    static Image HudItemIcon(RectTransform parent, string itemId, float x)
     {
         var rt = NewRect("Icon_" + itemId, parent);
         rt.anchorMin = rt.anchorMax = new Vector2(0, 0.5f);
@@ -372,6 +388,21 @@ public partial class UIManager : MonoBehaviour
         img.sprite = ItemIcons.Outlined(itemId, Accent);
         img.preserveAspect = true;
         img.raycastTarget = false;
+        return img;
+    }
+
+    // 손전등·배터리 줄 하나: 부모 위에서 row번째 줄에 [그림] 숫자. 숫자 글자는 value로 돌려준다
+    static Image HudItemRow(RectTransform parent, string itemId, int row, out UnityEngine.UI.Text value)
+    {
+        var rt = NewRect("Row_" + itemId, parent);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(1, 1);
+        rt.pivot = new Vector2(0.5f, 1);
+        rt.anchoredPosition = new Vector2(0, -row * 46);
+        rt.sizeDelta = new Vector2(0, 44);
+        var icon = HudItemIcon(rt, itemId, 10);
+        value = HudValueText(rt, 58, 90);
+        return icon;
     }
 
     // HUD 숫자 글자 (모노 글꼴, 검은 테두리로 바탕 없이도 읽힌다)
@@ -404,6 +435,91 @@ public partial class UIManager : MonoBehaviour
         shade.SetSiblingIndex(0);
         Screws(rt);
         return rt;
+    }
+
+    // HUD 유리판 (2026-11-05): 뒤 화면을 흐려 비추는 어두운 유리 — 가장자리는 투명하고 가운데로 갈수록 진해 글·막대·그림이 또렷하다.
+    // 판 자체에는 그림이 없고 자식 Glass가 pad만큼 밖으로 넓게 깔린다. Frame은 경고 때만 붉게 켜지는 둥근 테두리 (UpdateTimePanel)
+    static RectTransform HudGlass(Transform parent, string name, float pad = 18f)
+    {
+        var rt = NewRect(name, parent);
+        var glass = NewRect("Glass", rt).gameObject.AddComponent<Image>();
+        Stretch(glass.rectTransform, -pad, -pad);
+        glass.sprite = UIStyle.GlassSoft;
+        glass.type = Image.Type.Sliced;
+        glass.pixelsPerUnitMultiplier = 1.25f; // 페더 32px
+        glass.material = GlassMaterial();
+        glass.color = HudGlassTint;
+        glass.raycastTarget = false;
+        var frame = NewRect("Frame", rt).gameObject.AddComponent<Image>();
+        Stretch(frame.rectTransform, -4, -4);
+        frame.sprite = UIStyle.Frame;
+        frame.type = Image.Type.Sliced;
+        frame.pixelsPerUnitMultiplier = 0.5f;
+        frame.color = Color.clear;
+        frame.raycastTarget = false;
+        return rt;
+    }
+
+    // 알약 유리판 (핫바, 리퀴드 글래스): 부드러운 그림자 → 뒤 화면을 흐려 비추며 가장자리가 굴절되는 유리 → 테두리 반사선·윗면 광택
+    static RectTransform HudPill(Transform parent, string name)
+    {
+        var rt = NewRect(name, parent);
+        var shadow = NewRect("Shadow", rt).gameObject.AddComponent<Image>();
+        Stretch(shadow.rectTransform, -14, -14);
+        shadow.rectTransform.anchoredPosition = new Vector2(0, -8);
+        shadow.sprite = UIStyle.GlassSoft;
+        shadow.type = Image.Type.Sliced;
+        shadow.pixelsPerUnitMultiplier = 1.6f;
+        shadow.color = new Color(0, 0, 0, 0.5f);
+        shadow.raycastTarget = false;
+        var glass = NewRect("Glass", rt).gameObject.AddComponent<Image>();
+        Stretch(glass.rectTransform);
+        glass.sprite = UIStyle.GlassPill;
+        glass.type = Image.Type.Sliced;
+        glass.material = PillMaterial();
+        glass.color = HudPillTint;
+        glass.raycastTarget = false;
+        var light = NewRect("Light", rt).gameObject.AddComponent<Image>();
+        Stretch(light.rectTransform);
+        light.sprite = UIStyle.GlassLight;
+        light.type = Image.Type.Sliced;
+        light.color = new Color(1, 1, 1, 0.45f);
+        light.raycastTarget = false;
+        return rt;
+    }
+
+    // 유리 재질 (Resources/Shaders/HudGlass.shader): _Blur 흐림 간격(텍셀), _Darken 바탕색 비율, _Refract 가장자리 굴절.
+    // 셰이더가 없으면 null을 돌려주고 보통 반투명 그림으로 그린다
+    static Material GlassMaterial() => hudGlassMat != null ? hudGlassMat : hudGlassMat = NewGlassMaterial("HudGlass", 2.2f, 0.55f, 0f);
+    static Material PillMaterial() => hudPillMat != null ? hudPillMat : hudPillMat = NewGlassMaterial("HudPill", 1.6f, 0.3f, 0.06f);
+
+    static Material NewGlassMaterial(string name, float blur, float darken, float refract)
+    {
+        var shader = Shader.Find("BunkerLab/HudGlass");
+        if (shader == null)
+        {
+            Debug.LogWarning("[UIManager] BunkerLab/HudGlass 셰이더를 찾지 못해 HUD 유리판을 보통 그림으로 그린다.");
+            return null;
+        }
+        var m = new Material(shader) { name = name };
+        m.SetFloat("_Blur", blur);
+        m.SetFloat("_Darken", darken);
+        m.SetFloat("_Refract", refract);
+        return m;
+    }
+
+    // 뒤 화면 텍스처(URP 불투명 텍스처)를 만들지 않는 파이프라인 설정이면 유리가 바탕색만 칠하게 한다 (0.5초마다 확인)
+    float glassCheckTimer;
+
+    void UpdateGlassMaterials()
+    {
+        glassCheckTimer -= Time.unscaledDeltaTime;
+        if (glassCheckTimer > 0) return;
+        glassCheckTimer = 0.5f;
+        var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+        float backdrop = urp != null && urp.supportsCameraOpaqueTexture ? 1f : 0f;
+        if (hudGlassMat != null) hudGlassMat.SetFloat("_Backdrop", backdrop);
+        if (hudPillMat != null) hudPillMat.SetFloat("_Backdrop", backdrop);
     }
 
     // 명판 귀퉁이의 나사 네 개 (제각각 조금씩 돌아가 있다)
@@ -496,7 +612,7 @@ public partial class UIManager : MonoBehaviour
         UpdateLoading();
         WatchItemDrag(); // 끌던 그림이 남지 않도록 버튼이 떼어졌는지 매 프레임 본다
         UpdateTipKnob();
-        bool inField = PlayerController.Instance != null && !gm.IsGameOver; // 죽거나 엔딩이면 HUD는 치운다
+        bool inField = PlayerController.Instance != null && !gm.IsGameOver && boxTarget < 0.5f; // 죽거나 엔딩이면, 그리고 출입 연출 동안은 HUD를 치운다
         if (inField && !hud.activeSelf) ShowKeyHints(); // HUD가 켜지는 순간(씬에 들어온 뒤) 조작키를 잠깐 보여 준다
         hud.SetActive(inField);
         if (hud.activeSelf)
@@ -504,6 +620,7 @@ public partial class UIManager : MonoBehaviour
             UpdateHud(gm, s);
             UpdateCrosshair();
             AnimateHud();
+            UpdateGlassMaterials();
         }
 
         if (toastTimer > 0)
@@ -535,6 +652,7 @@ public partial class UIManager : MonoBehaviour
         }
 
         UpdateSleepText();
+        UpdateLetterbox();
         UpdateJournal();
         if (IsPanelOpen) UpdatePanel();
         if (IsWorkbenchOpen) UpdateWorkbench();
@@ -560,6 +678,10 @@ public partial class UIManager : MonoBehaviour
         flashBox.SetActive(hasLight);
         if (hasLight)
         {
+            // 손전등이 켜져 있으면 그림이 밝고, 꺼져 있으면 흐리다
+            if (flashlight == null) flashlight = FindFirstObjectByType<PlayerFlashlight>();
+            bool lit = flashlight != null && flashlight.IsOn;
+            flashIcon.color = lit ? Color.white : new Color(1, 1, 1, 0.55f);
             int key = Mathf.RoundToInt(s.FlashlightCharge) * 10000 + s.Carried.Count("battery");
             if (key != flashKey)
             {
@@ -598,7 +720,7 @@ public partial class UIManager : MonoBehaviour
             var rt = hotbarSlots[i].Rect;
             float sc = Mathf.Lerp(rt.localScale.x, target, Time.unscaledDeltaTime * 14f);
             rt.localScale = Vector3.one * sc;
-            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, Mathf.Lerp(rt.anchoredPosition.y, i == selected ? 6f : 0f, Time.unscaledDeltaTime * 14f));
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, Mathf.Lerp(rt.anchoredPosition.y, i == selected ? 4f : 0f, Time.unscaledDeltaTime * 14f));
         }
         // 새총을 들고 있으면 남은 발 수가 바뀔 때도 다시 쓴다
         if (selected == hotbarSelected && s.SlingShots == hotbarSlingShots && hotbarTipsShown == GameSettings.Tips && SameHotbarItems(hotbarItems)) return;
@@ -783,6 +905,63 @@ public partial class UIManager : MonoBehaviour
         fadeOverlay.color = new Color(0, 0, 0, target);
     }
 
+    // ---------- 창 안 알림 띠 ----------
+    // 창이 HUD 알림을 가리므로 같은 알림(toastText)을 창 안에 비춘다. "힌트" 알림은 머리글 '힌트 :'를 왼쪽에 고정하고
+    // 본문은 줄 간격을 좁혀 두 줄까지 보여 준다 (띠 높이가 본문에 맞춰 늘어난다). 제작대·소지품·일반 창이 같이 쓴다 (2026-11-05)
+    const string HintPrefix = "<color=#d8a523>힌트</color>  ";
+
+    class NoticeBand
+    {
+        public RectTransform Rect;
+        public CanvasGroup Group;
+        public UnityEngine.UI.Text Label, Body;
+        public float BaseHeight, LeftPad;
+        public string Shown;
+    }
+
+    NoticeBand MakeNoticeBand(RectTransform parent, Vector2 anchor, Vector2 pos, Vector2 size, bool accentBar)
+    {
+        var box = Box(parent, "Notice", new Color(0.1f, 0.09f, 0.07f, 0.96f), new Color(Accent.r, Accent.g, Accent.b, 0.55f));
+        Place(box, anchor, pos, size);
+        if (accentBar) AccentBar(box);
+        var band = new NoticeBand { Rect = box, BaseHeight = size.y, LeftPad = accentBar ? 24 : 16 };
+        band.Group = box.gameObject.AddComponent<CanvasGroup>();
+        band.Group.alpha = 0;
+        band.Group.blocksRaycasts = false;
+        band.Label = NewText(box, "힌트 :", 18, TextAnchor.MiddleLeft, Accent, FontTitle);
+        var lr = band.Label.rectTransform;
+        lr.anchorMin = new Vector2(0, 0);
+        lr.anchorMax = new Vector2(0, 1);
+        lr.pivot = new Vector2(0, 0.5f);
+        lr.offsetMin = new Vector2(band.LeftPad, 0);
+        lr.offsetMax = new Vector2(band.LeftPad + 58, 0);
+        band.Label.gameObject.SetActive(false);
+        band.Body = NewText(box, "", 18, TextAnchor.MiddleLeft, Text);
+        Stretch(band.Body.rectTransform, band.LeftPad, 2);
+        band.Body.lineSpacing = 0.9f;
+        return band;
+    }
+
+    // 매 프레임: HUD 알림과 같은 글·투명도. 글이 바뀔 때만 머리글·여백·높이를 다시 맞춘다
+    void SyncNoticeBand(NoticeBand band)
+    {
+        if (band == null) return;
+        band.Group.alpha = toastGroup.alpha;
+        string raw = toastText.text;
+        if (raw == band.Shown) return;
+        band.Shown = raw;
+        bool hint = raw.StartsWith(HintPrefix, StringComparison.Ordinal);
+        band.Label.gameObject.SetActive(hint);
+        band.Body.text = hint ? raw.Substring(HintPrefix.Length) : raw;
+        float left = hint ? band.LeftPad + 62 : band.LeftPad;
+        band.Body.rectTransform.offsetMin = new Vector2(left, 2);
+        band.Body.rectTransform.offsetMax = new Vector2(-16, -2);
+        float width = Mathf.Max(50, band.Rect.sizeDelta.x - left - 16);
+        var settings = band.Body.GetGenerationSettings(new Vector2(width, 0));
+        float h = band.Body.cachedTextGeneratorForLayout.GetPreferredHeight(band.Body.text, settings) / band.Body.pixelsPerUnit;
+        band.Rect.sizeDelta = new Vector2(band.Rect.sizeDelta.x, Mathf.Max(band.BaseHeight, h + 14));
+    }
+
     // ---------- 창(Panel): 흐린 배경 + 가운데 유리판 ----------
 
     void BuildPanel()
@@ -899,14 +1078,7 @@ public partial class UIManager : MonoBehaviour
         panelScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
         // 창이 HUD 알림을 가리므로 같은 알림을 화면 위쪽에 보여 준다
-        var notice = Box(p, "Notice", new Color(0.1f, 0.09f, 0.07f, 0.94f), new Color(Accent.r, Accent.g, Accent.b, 0.55f));
-        Place(notice, new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(900, 52));
-        AccentBar(notice);
-        panelNoticeGroup = notice.gameObject.AddComponent<CanvasGroup>();
-        panelNoticeGroup.alpha = 0;
-        panelNoticeGroup.blocksRaycasts = false;
-        panelNotice = NewText(notice, "", 21, TextAnchor.MiddleCenter, Text);
-        Stretch(panelNotice.rectTransform, 24, 2);
+        panelNoticeBand = MakeNoticeBand(p, new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(900, 52), true);
 
         panel.SetActive(false);
     }
@@ -968,8 +1140,7 @@ public partial class UIManager : MonoBehaviour
     // 창이 열려 있을 때 매 프레임: 알림 따라 보여 주기, 끝 화면 남은 시간
     void UpdatePanel()
     {
-        panelNotice.text = toastText.text;
-        panelNoticeGroup.alpha = toastGroup.alpha;
+        SyncNoticeBand(panelNoticeBand);
 
         if (endCountdown == null) return;
         int left = Mathf.Max(0, Mathf.CeilToInt(endDeadline - Time.unscaledTime));
@@ -1204,26 +1375,31 @@ public partial class UIManager : MonoBehaviour
     // 핫바·가방·창고·거래·제작대가 함께 쓴다. 등급 색과 배경 그림은 ItemRarityInfo에서 가져오므로
     // 등급 디자인을 바꿀 때는 ItemRarityInfo(색)와 Resources/SurvivalInventory/Rarity(그림)만 바꾸면 된다
 
-    // 칸은 비치지 않는 어두운 주머니 (핫바 받침 위에서도, 창 안에서도)
+    // 칸은 비치지 않는 어두운 주머니 (창 안). 핫바(유리판 위)의 칸은 비치는 유리 (glass)
     static readonly Color SlotEmptyFill = new Color(0.05f, 0.048f, 0.045f, 1f);
     static readonly Color SlotItemFill = new Color(0.07f, 0.065f, 0.06f, 1f);
+    static readonly Color SlotEmptyGlass = new Color(1, 1, 1, 0.06f);
+    static readonly Color SlotItemGlass = new Color(1, 1, 1, 0.12f);
+    static readonly Color SlotFrameGlass = new Color(1, 1, 1, 0.18f);
 
     class ItemSlotView
     {
         public RectTransform Rect;
         public Image Fill, Strip, Frame, Icon;
         public RawImage Background;
+        public bool Glass; // 비치는 유리 칸 (핫바)
     }
 
     // 그리는 순서: 바탕 → 등급 배경 그림 → 아래 띠 → 테두리 → 아이콘
-    static ItemSlotView NewItemSlot(Transform parent, string name, float iconPad)
+    static ItemSlotView NewItemSlot(Transform parent, string name, float iconPad, bool glass = false)
     {
-        var v = new ItemSlotView { Rect = NewRect(name, parent) };
+        var v = new ItemSlotView { Rect = NewRect(name, parent), Glass = glass };
         v.Fill = v.Rect.gameObject.AddComponent<Image>();
         v.Fill.sprite = UIStyle.Fill;
         v.Fill.type = Image.Type.Sliced;
         v.Fill.color = SlotEmptyFill;
         v.Fill.raycastTarget = false;
+        if (glass) v.Fill.pixelsPerUnitMultiplier = 0.7f; // 모서리를 조금 더 둥글게
 
         v.Background = NewRect("Rarity", v.Rect).gameObject.AddComponent<RawImage>();
         Stretch(v.Background.rectTransform);
@@ -1243,6 +1419,7 @@ public partial class UIManager : MonoBehaviour
         v.Frame.sprite = UIStyle.Frame;
         v.Frame.type = Image.Type.Sliced;
         v.Frame.raycastTarget = false;
+        if (glass) v.Frame.pixelsPerUnitMultiplier = 0.7f;
 
         v.Icon = NewRect("Icon", v.Rect).gameObject.AddComponent<Image>();
         Stretch(v.Icon.rectTransform, iconPad, iconPad);
@@ -1262,12 +1439,13 @@ public partial class UIManager : MonoBehaviour
         var bg = has ? ItemRarityInfo.Background(rarity) : null;
         bool hasBg = bg != null;
 
-        v.Fill.color = has ? SlotItemFill : SlotEmptyFill;
+        v.Fill.color = v.Glass ? (has ? SlotItemGlass : SlotEmptyGlass) : (has ? SlotItemFill : SlotEmptyFill);
         v.Background.texture = bg;
         v.Background.enabled = hasBg;
+        v.Background.color = new Color(1, 1, 1, v.Glass ? 0.85f : 1f);
         v.Strip.enabled = has && !hasBg;
         v.Strip.color = c;
-        v.Frame.color = has ? new Color(c.r, c.g, c.b, hasBg ? 0.5f : 0.8f) : FrameColor;
+        v.Frame.color = has ? new Color(c.r, c.g, c.b, hasBg ? 0.5f : 0.8f) : v.Glass ? SlotFrameGlass : FrameColor;
         v.Icon.enabled = has;
         v.Icon.sprite = has ? ItemIcons.Get(itemId) : null;
     }
