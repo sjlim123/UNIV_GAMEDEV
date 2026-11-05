@@ -255,29 +255,51 @@ public static class Vfx
     }
 
     // 웅덩이 첨벙 (strength 0~1): 물방울이 튀어 오르고 낮게 물보라가 인다
-    public static void Splash(Vector3 pos, float strength)
+    public static void Splash(Vector3 pos, float strength) => Splash(pos, strength, Vector3.zero);
+
+    // forward가 0이면 낮게 튀는 물방울(좀비·동물의 발). forward를 주면 1인칭 플레이어의 발: 물방울이 손 높이(0.7~1.5m)까지 높이 솟고
+    // 디딘 발 앞쪽으로 퍼져 앞을 보고 걸어도 화면 아래쪽에 물보라가 잡힌다 (전에는 바닥을 내려다봐야 보였다)
+    public static void Splash(Vector3 pos, float strength, Vector3 forward)
     {
         Init();
         var light = LightAt(pos);
-        int n = Count(10 + 22 * strength);
+        bool tall = forward.sqrMagnitude > 0.01f;
+        if (tall) { forward.y = 0; forward.Normalize(); }
+        int n = Count(tall ? 22 + 30 * strength : 10 + 22 * strength);
         for (int i = 0; i < n; i++)
         {
-            var dir = (Vector3.up * Random.Range(0.6f, 1.4f) + Random.insideUnitSphere * 0.5f).normalized;
+            Vector3 dir;
+            float speed;
+            if (tall)
+            {
+                // 위로 (중력 1.3배라 4.6~6.4m/s가 0.8~1.6m: 1인칭 손 높이) + 앞으로 + 옆 퍼짐
+                dir = (Vector3.up * Random.Range(1f, 1.6f) + forward * Random.Range(0.25f, 0.55f) + Random.insideUnitSphere * 0.35f).normalized;
+                speed = Random.Range(4.6f, 6.4f) * (0.9f + 0.15f * strength);
+            }
+            else
+            {
+                dir = (Vector3.up * Random.Range(0.6f, 1.4f) + Random.insideUnitSphere * 0.5f).normalized;
+                speed = Random.Range(0.8f, 2.2f) * (0.5f + strength);
+            }
             var tint = Color.Lerp(new Color(0.5f, 0.56f, 0.62f), new Color(0.7f, 0.74f, 0.8f), Random.value);
             var c = Color.Lerp(tint, tint * light, 0.5f);
             c.a = Random.Range(0.6f, 0.85f);
             var p = new ParticleSystem.EmitParams
             {
-                position = pos + new Vector3(Random.Range(-0.12f, 0.12f), 0.01f, Random.Range(-0.12f, 0.12f)),
-                velocity = dir * Random.Range(0.8f, 2.2f) * (0.5f + strength),
-                startLifetime = Random.Range(0.3f, 0.55f),
-                startSize = Random.Range(0.015f, 0.04f),
+                position = pos + (tall ? forward * 0.25f : Vector3.zero) + new Vector3(Random.Range(-0.14f, 0.14f), 0.01f, Random.Range(-0.14f, 0.14f)),
+                velocity = dir * speed,
+                startLifetime = tall ? Random.Range(0.6f, 1f) : Random.Range(0.3f, 0.55f),
+                startSize = tall ? Random.Range(0.028f, 0.065f) : Random.Range(0.015f, 0.04f),
                 startColor = c
             };
             drops.Emit(p, 1);
         }
-        for (int i = 0; i < 2; i++)
-            Puff(pos + Vector3.up * 0.05f, Vector3.up * 0.25f + Random.insideUnitSphere * 0.3f, Random.Range(0.5f, 0.8f), 0.18f + 0.15f * strength, new Color(0.6f, 0.64f, 0.7f), 0.3f);
+        if (tall)
+            for (int i = 0; i < 3; i++)
+                Puff(pos + forward * 0.2f + Vector3.up * 0.1f, Vector3.up * Random.Range(0.9f, 1.4f) + forward * 0.6f + Random.insideUnitSphere * 0.4f, Random.Range(0.5f, 0.8f), 0.22f + 0.18f * strength, new Color(0.62f, 0.66f, 0.72f), 0.28f);
+        else
+            for (int i = 0; i < 2; i++)
+                Puff(pos + Vector3.up * 0.05f, Vector3.up * 0.25f + Random.insideUnitSphere * 0.3f, Random.Range(0.5f, 0.8f), 0.18f + 0.15f * strength, new Color(0.6f, 0.64f, 0.7f), 0.3f);
     }
 
     // 가산 혼합 섬광 한 장 (size m, life초)

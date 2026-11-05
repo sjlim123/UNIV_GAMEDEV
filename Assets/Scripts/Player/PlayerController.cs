@@ -276,7 +276,7 @@ public class PlayerController : MonoBehaviour
                 stepDistance = 0;
                 stepSource.pitch = Random.Range(0.92f, 1.08f);
                 // 발밑 바닥에 맞는 실제 녹음 발소리 (Footsteps). 웅덩이를 밟으면 물 발소리 (물결과 물방울은 PuddleFx가 낸다)
-                if (PuddleFx.Step(transform.position, IsCrouching ? 0.35f : IsRunning ? 1f : 0.6f, false))
+                if (PuddleFx.Step(transform.position, IsCrouching ? 0.35f : IsRunning ? 1f : 0.6f, false, transform.forward))
                     stepSource.PlayOneShot(Footsteps.Clip(Footsteps.Surface.Water), IsCrouching ? 0.3f : IsRunning ? 0.9f : 0.6f);
                 else
                     stepSource.PlayOneShot(Footsteps.Clip(Footsteps.SurfaceUnder(transform.position, transform)), IsCrouching ? 0.18f : IsRunning ? 0.85f : 0.5f);
