@@ -150,19 +150,19 @@ public partial class UIManager
 
         workbenchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
-        var glass = Box(r, "Glass", GlassFill, GlassFrame);
-        Grime(glass);
+        var glass = PlateWindow(r, "Glass"); // 메인 메뉴와 같은 더러운 강판 (2026-11-05 저녁)
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 
-        workbenchTitle = NewText(glass, "제작대", 38, TextAnchor.MiddleLeft, Text, FontBold);
+        RedTitleBar(glass, new Vector2(30, -28), 48);
+        workbenchTitle = NewText(glass, "제작대", 38, TextAnchor.MiddleLeft, Text, FontTitle);
         Place(workbenchTitle.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(170, 56));
         workbenchSub = NewText(glass, "", 19, TextAnchor.MiddleLeft, Dim);
         Place(workbenchSub.rectTransform, new Vector2(0, 1), new Vector2(184, -34), new Vector2(660, 40));
         workbenchWeight = NewText(glass, "", 20, TextAnchor.MiddleRight, Text, FontSemiBold);
         Place(workbenchWeight.rectTransform, new Vector2(1, 1), new Vector2(-230, -28), new Vector2(360, 46));
-        var close = MakeButton(glass, "닫기 (Esc)", CloseWorkbench, true);
-        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(170, 46));
+        var close = PlateButton(glass, "닫기", "ESC", CloseWorkbench);
+        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(150, 44));
         var line = NewRect("Line", glass);
         line.anchorMin = new Vector2(0, 1);
         line.anchorMax = new Vector2(1, 1);

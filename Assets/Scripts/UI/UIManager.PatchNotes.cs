@@ -21,7 +21,8 @@ public class PatchVersion
     public string[] patched;
 }
 
-// 메인 메뉴 '패치노트' 화면: 뒤의 3D 배경을 흐리게(블러) 깔고, 반투명 유리판 위에 버전별 내용을 보여 준다
+// 메인 메뉴 '패치노트' 화면: 뒤의 3D 배경을 흐리게(블러) 깔고, 메인 메뉴와 같은 더러운 강판 위에 버전별 내용을 보여 준다 (2026-11-05 저녁).
+// 왼쪽 버전 목록과 오른쪽 내용 모두 넘치면 휠로 스크롤한다
 public partial class UIManager
 {
     static readonly Color AddedColor = new Color(0.45f, 0.84f, 0.52f);
@@ -33,7 +34,7 @@ public partial class UIManager
     GameObject patchRoot;
     RawImage patchBlur;
     RectTransform patchVersionList, patchContent;
-    ScrollRect patchScroll;
+    ScrollRect patchScroll, patchVersionScroll;
     int patchSelected;
     RenderTexture blurCapture, blurResult;
 
@@ -64,6 +65,7 @@ public partial class UIManager
         fadeOverlay.transform.SetAsLastSibling();
         RefreshGlass(); // 뒤 배경을 바로 찍는다. 열려 있는 동안은 UpdateGlass가 0.1초마다 다시 찍는다
         RefreshPatchNotes();
+        patchVersionScroll.verticalNormalizedPosition = 1;
     }
 
     public void ClosePatchNotes()
@@ -79,17 +81,17 @@ public partial class UIManager
 
         patchBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.28f));
 
-        var glass = Box(r, "Glass", GlassFill, GlassFrame);
-        Grime(glass);
+        var glass = PlateWindow(r, "Glass");
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1480, 840));
 
-        var title = NewText(glass, "패치노트", 38, TextAnchor.MiddleLeft, Text, FontBold);
+        RedTitleBar(glass, new Vector2(30, -28), 48);
+        var title = NewText(glass, "패치노트", 38, TextAnchor.MiddleLeft, Text, FontTitle);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(200, 56));
         var sub = NewText(glass, "버전별 추가사항 · 수정사항 · 패치사항", 19, TextAnchor.MiddleLeft, Dim);
         Place(sub.rectTransform, new Vector2(0, 1), new Vector2(214, -34), new Vector2(600, 40));
-        var close = MakeButton(glass, "닫기 (Esc)", ClosePatchNotes, true);
-        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(170, 46));
+        var close = PlateButton(glass, "닫기", "ESC", ClosePatchNotes);
+        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(150, 44));
         var line = NewRect("Line", glass);
         line.anchorMin = new Vector2(0, 1);
         line.anchorMax = new Vector2(1, 1);
@@ -98,19 +100,34 @@ public partial class UIManager
         line.sizeDelta = new Vector2(-72, 2);
         line.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.12f);
 
-        // 왼쪽: 버전 목록
-        patchVersionList = NewRect("Versions", glass);
-        patchVersionList.anchorMin = new Vector2(0, 0);
-        patchVersionList.anchorMax = new Vector2(0, 1);
-        patchVersionList.pivot = new Vector2(0, 1);
-        patchVersionList.offsetMin = new Vector2(36, 36);
-        patchVersionList.offsetMax = new Vector2(336, -122);
+        // 왼쪽: 버전 목록 (버전이 많아 창을 넘치면 휠로 스크롤한다 — 2026-11-05 저녁, 창 밖으로 뚫고 나가던 것을 고침)
+        var vview = NewRect("VersionView", glass);
+        vview.anchorMin = new Vector2(0, 0);
+        vview.anchorMax = new Vector2(0, 1);
+        vview.pivot = new Vector2(0, 1);
+        vview.offsetMin = new Vector2(36, 36);
+        vview.offsetMax = new Vector2(336, -122);
+        vview.gameObject.AddComponent<RectMask2D>();
+        vview.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+        patchVersionList = NewRect("Versions", vview);
+        patchVersionList.anchorMin = new Vector2(0, 1);
+        patchVersionList.anchorMax = new Vector2(1, 1);
+        patchVersionList.pivot = new Vector2(0.5f, 1);
+        patchVersionList.sizeDelta = Vector2.zero;
         var vl = patchVersionList.gameObject.AddComponent<VerticalLayoutGroup>();
         vl.spacing = 8;
+        vl.padding = new RectOffset(0, 0, 2, 8);
         vl.childControlHeight = true;
         vl.childControlWidth = true;
         vl.childForceExpandHeight = false;
         vl.childForceExpandWidth = true;
+        patchVersionList.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        patchVersionScroll = vview.gameObject.AddComponent<ScrollRect>();
+        patchVersionScroll.content = patchVersionList;
+        patchVersionScroll.viewport = vview;
+        patchVersionScroll.horizontal = false;
+        patchVersionScroll.movementType = ScrollRect.MovementType.Clamped;
+        patchVersionScroll.scrollSensitivity = 40;
 
         var vline = NewRect("VLine", glass);
         vline.anchorMin = new Vector2(0, 0);
@@ -146,6 +163,7 @@ public partial class UIManager
         patchScroll.horizontal = false;
         patchScroll.movementType = ScrollRect.MovementType.Clamped;
         patchScroll.scrollSensitivity = 40;
+        MakeScrollbar(glass, patchScroll, new Vector2(-30, 36), new Vector2(-24, -118));
 
         patchRoot.SetActive(false);
     }
@@ -186,29 +204,39 @@ public partial class UIManager
         patchScroll.verticalNormalizedPosition = 1;
     }
 
+    // 버전 탭: 더러운 강판. 고른 탭은 흙색 판에 오른쪽 끝 붉은 막대가 켜진다 (메인 메뉴 버튼과 같은 꼴)
     void VersionTab(PatchVersion v, bool selected, Action onClick)
     {
-        var rt = Box(patchVersionList, "Version", Color.white, selected ? new Color(Accent.r, Accent.g, Accent.b, 0.7f) : new Color(1, 1, 1, 0.08f));
-        var img = rt.GetComponent<Image>();
+        var rt = NewRect("Version", patchVersionList);
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = UIStyle.Fill;
+        img.type = Image.Type.Sliced;
+        img.color = Color.white;
+        var frame = DirtyPlate(rt, 0.7f);
         var b = rt.gameObject.AddComponent<Button>();
         UIPress.Attach(b, 1.01f);
         b.targetGraphic = img;
         var colors = b.colors;
-        colors.normalColor = selected ? new Color(0.36f, 0.27f, 0.1f, 0.75f) : new Color(1, 1, 1, 0.04f);
-        colors.highlightedColor = selected ? colors.normalColor : new Color(1, 1, 1, 0.1f);
-        colors.pressedColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
+        colors.normalColor = selected ? InfoFill : PlateFill;
+        colors.highlightedColor = selected ? new Color(0.38f, 0.36f, 0.24f, 0.9f) : PlateHover;
+        colors.pressedColor = new Color(0.24f, 0.23f, 0.22f, 1f);
         colors.selectedColor = colors.normalColor;
         colors.fadeDuration = 0.08f;
         b.colors = colors;
         b.navigation = new Navigation { mode = Navigation.Mode.None };
         b.onClick.AddListener(() => onClick());
         var le = rt.gameObject.AddComponent<LayoutElement>();
-        le.minHeight = le.preferredHeight = 76;
+        le.minHeight = le.preferredHeight = 64;
+        RedBar(rt, 12, new Vector2(4, 26), 40, selected ? 0.3f : 0f);
+        if (!selected) rt.Find("RedBar").GetComponent<Image>().color = Color.clear;
+        var hover = rt.gameObject.AddComponent<UIHover>();
+        hover.Gate = b;
+        hover.Add(frame, new Color(1, 1, 1, selected ? 0.5f : 0.3f), new Color(1, 1, 1, 0.75f));
 
-        var ver = NewText(rt, v.version, 24, TextAnchor.UpperLeft, selected ? Text : new Color(Text.r, Text.g, Text.b, 0.85f), FontBold);
-        Place(ver.rectTransform, new Vector2(0, 1), new Vector2(18, -10), new Vector2(170, 32));
-        var date = NewText(rt, v.date, 16, TextAnchor.UpperLeft, Dim);
-        Place(date.rectTransform, new Vector2(0, 1), new Vector2(18, -44), new Vector2(170, 24));
+        var ver = NewText(rt, v.version, 22, TextAnchor.UpperLeft, selected ? Text : new Color(Text.r, Text.g, Text.b, 0.85f), FontTitle);
+        Place(ver.rectTransform, new Vector2(0, 1), new Vector2(18, -9), new Vector2(170, 30));
+        var date = NewText(rt, v.date, 14, TextAnchor.UpperLeft, PaleDim);
+        Place(date.rectTransform, new Vector2(0, 1), new Vector2(18, -38), new Vector2(170, 22));
 
         string badge = v.version == Application.version ? "현재" : v.date == "개발 중" ? "예정" : "";
         if (badge != "")

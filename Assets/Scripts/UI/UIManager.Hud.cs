@@ -1,31 +1,32 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// HUD 왼쪽 아래 상태 유리판(체력·갈증·배고픔·스테미너, 90% 크기)과 오른쪽 위 남은 시간 유리판, HUD 움직임.
-// 판은 뒤 화면을 흐려 비추는 어두운 유리(UIManager.HudGlass): 가장자리는 투명하고 가운데로 갈수록 진해 글·막대가 또렷하다 (2026-11-05).
-// 상태 계기: 아이콘 칸 + 눈금이 있는 홈 안의 색 막대 + 숫자(모노 글꼴) + 줄 끝의 전구.
-// 값이 줄면 깎인 만큼 밝은 자국이 남았다가 따라 줄고, 오르면 반짝이며, 25 아래면 막대와 전구가 붉게 깜빡인다. 맞으면 판이 흔들린다.
+// HUD 왼쪽 아래 상태 판(체력·갈증·배고픔·스테미너, 90% 크기)과 오른쪽 위 남은 시간 유리판, HUD 움직임.
+// 시간 판은 뒤 화면을 흐려 비추는 어두운 유리(UIManager.HudGlass). 상태 판은 손전등 줄처럼 먹이 번진 자국 위에 놓인다 (2026-11-05 저녁).
+// 상태 계기: 아이콘 + 크레파스로 그은 색 선(옛 막대의 1/4쯤 굵기, UIStyle.Crayon) + 숫자(모노 글꼴). 빈 자리에는 옅은 밑선.
+// 값이 줄면 깎인 만큼 종이색 선이 남았다가 따라 줄고, 오르면 반짝이며, 25 아래면 선·숫자가 붉어지고 아이콘 뒤가 붉게 고동친다. 맞으면 판이 흔들린다.
 // 남은 시간: 모래시계 + 큰 숫자 + 20칸 눈금 + 위험도. 1분 아래면 붉게 고동치고, 붉은 밤이면 경과 시간을 센다
 public partial class UIManager
 {
     class StatBar
     {
         public RectTransform Fill, Chip;
-        public Image FillImage, Tile, Icon, Bulb;
+        public Image FillImage, ChipImage, Icon, Halo;
         public UnityEngine.UI.Text Value;
         public Color Color;
         public float Shown = -1, ChipValue, ChipDelay, Glow;
         public int Number = int.MinValue;
     }
 
-    // 계기 색: 체력은 어두운 붉은색, 갈증은 바랜 파랑, 배고픔은 구운 고기 같은 갈색, 스테미너는 어두운 노랑
-    static readonly Color StatHealth = new Color(0.6f, 0.12f, 0.1f);
-    static readonly Color StatThirst = new Color(0.36f, 0.54f, 0.74f);
-    static readonly Color StatHunger = new Color(0.52f, 0.3f, 0.16f);
-    static readonly Color StatStamina = new Color(0.7f, 0.54f, 0.12f);
+    // 계기 색 (크레파스): 체력은 붉은색, 갈증은 바랜 파랑, 배고픔은 구운 고기 같은 갈색, 스테미너는 노란색
+    static readonly Color StatHealth = new Color(0.82f, 0.17f, 0.13f);
+    static readonly Color StatThirst = new Color(0.42f, 0.62f, 0.86f);
+    static readonly Color StatHunger = new Color(0.74f, 0.44f, 0.2f);
+    static readonly Color StatStamina = new Color(0.88f, 0.7f, 0.2f);
     static readonly Color TileFill = new Color(0.07f, 0.065f, 0.06f, 0.9f);
-    static readonly Color BulbOff = new Color(0.5f, 0.36f, 0.18f, 0.55f);
-    const float StatBarWidth = 288, StatusScale = 0.9f;
+    // 크레파스 선: 길이(값 100%), 선 그림의 높이(실제 선은 그 안의 6~7px, 사용자 요청으로 처음의 1.5배), 빈 자리의 옅은 밑선
+    const float StatBarWidth = 250, StatStrokeH = 24, StatusScale = 0.9f;
+    static readonly Color StatGuide = new Color(0.9f, 0.86f, 0.78f, 0.13f);
 
     readonly StatBar[] statBars = new StatBar[4];
     RectTransform statusPanel, timePanel, hotbarTray, hotbarBar, toastRect;
@@ -37,9 +38,17 @@ public partial class UIManager
 
     void BuildStatusPanel(Transform h)
     {
-        statusPanel = HudGlass(h, "Status", 20f);
+        // 뒤에는 손전등·배터리 줄과 같은 먹 번진 자국 (뒤 화면을 흐려 비추는 유리) — 2026-11-05 저녁, 유리판에서 바꿈
+        statusPanel = NewRect("Status", h);
         Place(statusPanel, new Vector2(0, 0), new Vector2(24, 24), new Vector2(376, 168));
         statusPanel.localScale = Vector3.one * StatusScale;
+        var ink = NewRect("Ink", statusPanel).gameObject.AddComponent<Image>();
+        Place(ink.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-4, -2), new Vector2(690, 340));
+        ink.rectTransform.localRotation = Quaternion.Euler(0, 0, 2.5f);
+        ink.sprite = UIStyle.InkWash;
+        ink.material = GlassMaterial();
+        ink.color = new Color(0.1f, 0.1f, 0.11f, 0.5f);
+        ink.raycastTarget = false;
         // 짐 경고: 판 바로 위에 작게
         statusTag = NewText(statusPanel, "", 16, TextAnchor.LowerLeft, Alert, FontTitle);
         Place(statusTag.rectTransform, new Vector2(0, 1), new Vector2(6, 4), new Vector2(370, 24));
@@ -53,94 +62,59 @@ public partial class UIManager
         statBars[3] = MakeStatBar(statusPanel, "bolt", "스테미너", 3, StatStamina);
     }
 
+    // 줄 하나: [아이콘] 크레파스 선 (빈 자리엔 옅은 밑선, 깎인 자국은 종이색 선) 숫자. 아이콘 뒤의 붉은 빛은 25 아래일 때만 켜진다
     StatBar MakeStatBar(RectTransform parent, string icon, string label, int index, Color color)
     {
         var b = new StatBar { Color = color };
-        float y = -24 - index * 38; // 줄 가운데 (판 위에서부터)
-        // 왼쪽 아이콘 칸 (어두운 사각형 + 흰 아이콘)
-        var tile = NewRect(label + "Tile", parent);
-        Place(tile, new Vector2(0, 1), new Vector2(12, y + 15), new Vector2(30, 30));
-        tile.pivot = new Vector2(0, 1);
-        tile.anchoredPosition = new Vector2(12, y + 15);
-        b.Tile = tile.gameObject.AddComponent<Image>();
-        b.Tile.sprite = UIStyle.Fill;
-        b.Tile.type = Image.Type.Sliced;
-        b.Tile.pixelsPerUnitMultiplier = 3;
-        b.Tile.color = TileFill;
-        b.Tile.raycastTarget = false;
+        float y = -26 - index * 36; // 줄 가운데 (판 위에서부터)
+        var halo = NewRect(label + "Halo", parent);
+        Place(halo, new Vector2(0, 1), new Vector2(23, y), new Vector2(48, 48));
+        halo.pivot = new Vector2(0.5f, 0.5f);
+        halo.anchoredPosition = new Vector2(23, y);
+        b.Halo = halo.gameObject.AddComponent<Image>();
+        b.Halo.sprite = UIStyle.Glow;
+        b.Halo.color = Color.clear;
+        b.Halo.raycastTarget = false;
         // 아이콘은 입체감 있게 그린 색 그림 (HudIcons.Shaded)이라 색을 입히지 않는다
-        var ic = NewRect("Icon", tile);
-        Stretch(ic, 3, 3);
+        var ic = NewRect("Icon", parent);
+        Place(ic, new Vector2(0, 1), new Vector2(23, y), new Vector2(26, 26));
+        ic.pivot = new Vector2(0.5f, 0.5f);
+        ic.anchoredPosition = new Vector2(23, y);
         b.Icon = ic.gameObject.AddComponent<Image>();
         b.Icon.sprite = HudIcons.Shaded(icon);
         b.Icon.color = Color.white;
         b.Icon.raycastTarget = false;
 
-        // 계기: 어두운 홈 → 깎인 자국(Chip) → 색 막대(Fill) → 눈금 → 숫자·이름, 줄 끝에 전구
-        var track = NewRect(label + "Track", parent);
-        track.anchorMin = track.anchorMax = new Vector2(0, 1);
-        track.pivot = new Vector2(0, 0.5f);
-        track.anchoredPosition = new Vector2(50, y);
-        track.sizeDelta = new Vector2(StatBarWidth, 26);
-        var trackImg = track.gameObject.AddComponent<Image>();
-        trackImg.sprite = UIStyle.Fill;
-        trackImg.type = Image.Type.Sliced;
-        trackImg.pixelsPerUnitMultiplier = 4;
-        trackImg.color = new Color(0.02f, 0.02f, 0.02f, 0.72f);
-        trackImg.raycastTarget = false;
+        // 선: 옅은 밑선(전체 길이) → 깎인 자국(Chip, 종이색) → 색 선(Fill). 셋 다 같은 크레파스 그림이고 길이만 다르다
+        CrayonStroke(parent, label + "Guide", y, StatBarWidth, StatGuide);
+        b.ChipImage = CrayonStroke(parent, label + "Chip", y, StatBarWidth, new Color(Pale.r, Pale.g, Pale.b, 0.6f));
+        b.Chip = b.ChipImage.rectTransform;
+        b.FillImage = CrayonStroke(parent, label + "Fill", y, StatBarWidth, color);
+        b.Fill = b.FillImage.rectTransform;
 
-        b.Chip = NewRect("Chip", track);
-        b.Chip.anchorMin = Vector2.zero;
-        b.Chip.anchorMax = new Vector2(1, 1);
-        b.Chip.offsetMin = new Vector2(2, 2);
-        b.Chip.offsetMax = new Vector2(-2, -2);
-        var chipImg = b.Chip.gameObject.AddComponent<Image>();
-        chipImg.sprite = UIStyle.Fill;
-        chipImg.type = Image.Type.Sliced;
-        chipImg.pixelsPerUnitMultiplier = 4;
-        chipImg.color = new Color(Pale.r, Pale.g, Pale.b, 0.7f);
-        chipImg.raycastTarget = false;
-
-        b.Fill = NewRect("Fill", track);
-        b.Fill.anchorMin = Vector2.zero;
-        b.Fill.anchorMax = new Vector2(1, 1);
-        b.Fill.offsetMin = new Vector2(2, 2);
-        b.Fill.offsetMax = new Vector2(-2, -2);
-        b.FillImage = b.Fill.gameObject.AddComponent<Image>();
-        b.FillImage.sprite = UIStyle.Fill;
-        b.FillImage.type = Image.Type.Sliced;
-        b.FillImage.pixelsPerUnitMultiplier = 4;
-        b.FillImage.color = color;
-        b.FillImage.raycastTarget = false;
-        // 10칸 눈금 (막대 위에 어두운 선)
-        for (int i = 1; i < 10; i++)
-        {
-            var tick = NewRect("Tick", track);
-            tick.anchorMin = new Vector2(i / 10f, 0);
-            tick.anchorMax = new Vector2(i / 10f, 1);
-            tick.pivot = new Vector2(0.5f, 0.5f);
-            tick.anchoredPosition = Vector2.zero;
-            tick.sizeDelta = new Vector2(1, i % 5 == 0 ? -4 : -14);
-            var tickImg = tick.gameObject.AddComponent<Image>();
-            tickImg.color = new Color(0, 0, 0, 0.45f);
-            tickImg.raycastTarget = false;
-        }
-
-        // 숫자만 적는다 (이름 글씨는 아이콘이 대신한다)
-        b.Value = NewText(track, "", 19, TextAnchor.MiddleLeft, Pale, FontMono);
-        Stretch(b.Value.rectTransform, 10, 0);
+        // 숫자 (모노 글꼴, 줄 끝에 오른쪽 정렬)
+        b.Value = NewText(parent, "", 18, TextAnchor.MiddleRight, Pale, FontMono);
+        Place(b.Value.rectTransform, new Vector2(0, 1), new Vector2(304, y), new Vector2(62, 26));
+        b.Value.rectTransform.pivot = new Vector2(0, 0.5f);
+        b.Value.rectTransform.anchoredPosition = new Vector2(304, y);
         b.Value.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.75f);
-
-        // 줄 끝의 전구: 평소엔 꺼진 호박색, 25 아래면 붉게 깜빡인다
-        var bulb = NewRect("Bulb", parent);
-        Place(bulb, new Vector2(0, 1), new Vector2(StatBarWidth + 54, y), new Vector2(16, 16));
-        bulb.pivot = new Vector2(0, 0.5f);
-        bulb.anchoredPosition = new Vector2(StatBarWidth + 54, y);
-        b.Bulb = bulb.gameObject.AddComponent<Image>();
-        b.Bulb.sprite = UIStyle.Glow;
-        b.Bulb.color = BulbOff;
-        b.Bulb.raycastTarget = false;
         return b;
+    }
+
+    // 크레파스로 그은 선 하나 (왼쪽 x=46에서 시작, 길이 width). Tiled라 길이가 줄어도 결이 늘어나지 않고 끝이 뭉툭하게 남는다
+    static Image CrayonStroke(RectTransform parent, string name, float y, float width, Color color)
+    {
+        var rt = NewRect(name, parent);
+        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 0.5f);
+        rt.anchoredPosition = new Vector2(46, y);
+        rt.sizeDelta = new Vector2(width, StatStrokeH);
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = UIStyle.Crayon;
+        img.type = Image.Type.Tiled;
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
     }
 
     // 막대 하나: 부드럽게 따라가고, 줄면 흰 자국을 남기고, 오르면 반짝이고, 낮으면 깜빡인다
@@ -159,8 +133,10 @@ public partial class UIManager
         if (b.ChipDelay > 0) b.ChipDelay -= dt;
         else b.ChipValue = Mathf.MoveTowards(b.ChipValue, b.Shown, dt * 0.7f);
         b.ChipValue = Mathf.Max(b.ChipValue, b.Shown);
-        b.Fill.anchorMax = new Vector2(Mathf.Max(0.0001f, b.Shown), 1);
-        b.Chip.anchorMax = new Vector2(Mathf.Max(0.0001f, b.ChipValue), 1);
+        // 선 길이 = 값. 아주 짧아도 크레파스 끝이 남게 최소 8px. 깎인 자국은 색 선보다 길 때만 보인다
+        b.Fill.sizeDelta = new Vector2(Mathf.Max(8f, b.Shown * StatBarWidth), StatStrokeH);
+        b.Chip.sizeDelta = new Vector2(Mathf.Max(8f, b.ChipValue * StatBarWidth), StatStrokeH);
+        b.ChipImage.enabled = b.ChipValue > b.Shown + 0.002f;
 
         bool low = target < 0.25f;
         float pulse = low ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f) : 0;
@@ -168,10 +144,9 @@ public partial class UIManager
         var c = Color.Lerp(b.Color, Pale, b.Glow * 0.45f);
         if (low) c = Color.Lerp(c, Alert, 0.35f + 0.3f * pulse);
         b.FillImage.color = c;
-        b.Tile.color = low ? Color.Lerp(TileFill, new Color(0.45f, 0.06f, 0.04f, 0.9f), pulse) : TileFill;
-        b.Icon.rectTransform.localScale = Vector3.one * (1 + b.Glow * 0.25f + pulse * 0.08f);
-        b.Bulb.color = low ? Color.Lerp(new Color(0.5f, 0.08f, 0.04f, 0.7f), new Color(1f, 0.35f, 0.2f, 1f), pulse) : BulbOff;
-        b.Bulb.rectTransform.localScale = Vector3.one * (low ? 1.2f + 0.5f * pulse : 1f);
+        b.Halo.color = low ? new Color(0.9f, 0.12f, 0.06f, 0.25f + 0.45f * pulse) : Color.clear;
+        b.Icon.rectTransform.localScale = Vector3.one * (1 + b.Glow * 0.25f + pulse * 0.1f);
+        b.Value.color = low ? Color.Lerp(Alert, Pale, 0.3f * pulse) : Pale;
 
         int n = Mathf.CeilToInt(value);
         if (n != b.Number)

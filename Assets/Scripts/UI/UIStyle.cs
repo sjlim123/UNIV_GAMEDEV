@@ -474,6 +474,93 @@ public static class UIStyle
         return Finish(tex, px, new Vector4(border, 0, border, 0));
     }
 
+    // ---------- 크레파스 선 · 핏자국 (2026-11-05 저녁) ----------
+    static Sprite crayon, bloodWash;
+
+    // 크레파스로 한 번 그은 선 (512×24, 선 굵기 5~8px, 가로 9-slice 12px). Tiled로 쓰면 가운데 결이 늘어나지 않고 양 끝은 뭉툭한 크레파스 끝으로 남는다. 색은 Image.color
+    // (세로로 늘리면 선이 두 줄로 되풀이되므로 굵기는 여기서 바꾼다. 11-05 저녁 사용자 요청으로 1.5배)
+    public static Sprite Crayon => crayon != null ? crayon : crayon = MakeCrayon();
+    // 붉은 물감이 번진 핏자국 (사망 화면 뒷배경): 큰 자국 + 둘레에 튄 방울 + 아래로 흐른 줄기. 색은 Image.color
+    public static Sprite BloodWash => bloodWash != null ? bloodWash : bloodWash = MakeBloodWash();
+
+    static Sprite MakeCrayon()
+    {
+        const int w = 512, h = 24, border = 12;
+        var tex = NewTex("UICrayon", w, h, TextureWrapMode.Clamp);
+        var px = new Color32[w * h];
+        float mid = h / 2f;
+        for (int x = 0; x < w; x++)
+        {
+            // 손이 흔들려 선의 가운데와 굵기가 조금씩 오르내린다 (가로로 되풀이되는 노이즈라 타일로 이어도 끊기지 않는다)
+            float center = mid + (Noise(x * 12f / w, 0.37f, 211, 12) - 0.5f) * 3.0f;
+            float half = 3.2f + (Noise(x * 20f / w, 0.61f, 212, 20) - 0.5f) * 2.0f;
+            // 양 끝은 뭉툭하게 가늘어진다
+            float end = Mathf.Min(x + 1, w - x) / (float)border;
+            if (end < 1f) half *= Mathf.Sqrt(Mathf.Clamp01(end));
+            for (int y = 0; y < h; y++)
+            {
+                float d = Mathf.Abs(y + 0.5f - center) - half + (Hash(x, y, 213) - 0.5f) * 1.2f; // 가장자리가 우둘투둘
+                float edge = Mathf.Clamp01(0.5f - d);
+                // 왁스 알갱이: 종이 결을 따라 군데군데 옅고, 드문드문 빈 자리가 난다
+                float grain = 0.55f + 0.45f * Noise(x * 64f / w, y * 0.7f, 214, 64);
+                grain *= 0.8f + 0.2f * Hash(x, y, 215);
+                if (Noise(x * 40f / w, y * 0.5f, 216, 40) > 0.82f) grain *= 0.35f;
+                float a = edge * grain;
+                if (d > 0) a = Mathf.Max(a, Mathf.Clamp01(1 - d / 2.5f) * 0.16f * grain); // 선 바깥으로 살짝 번진 왁스
+                px[y * w + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        }
+        return Finish(tex, px, new Vector4(border, 0, border, 0));
+    }
+
+    static Sprite MakeBloodWash()
+    {
+        const int size = 256, drops = 16, drips = 3;
+        var tex = NewTex("UIBloodWash", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (x + 0.5f) / size * 2 - 1, v = (y + 0.5f) / size * 2 - 1;
+                float ang = Mathf.Atan2(v, u);
+                // 큰 자국: 각도에 따라 울퉁불퉁한 반지름 (물감이 튄 가장자리)
+                float wob = 0.58f + 0.1f * Mathf.Sin(ang * 4 + 1.3f) + 0.07f * Mathf.Sin(ang * 9 + 0.4f) + 0.05f * Mathf.Sin(ang * 15 + 2.2f) + 0.035f * Mathf.Sin(ang * 23 + 5.1f);
+                float r = Mathf.Sqrt(u * u + v * v) / wob;
+                float fiber = Noise(x * 0.22f, y * 0.22f, 221) * 0.6f + Noise(x * 0.75f, y * 0.75f, 222) * 0.4f;
+                float edge = r + (fiber - 0.5f) * 0.3f;
+                float a = Mathf.Clamp01((1f - edge) / 0.1f); // 물감이라 먹보다 가장자리가 또렷하다
+                // 둘레에 튄 방울들 (자리·크기는 고정 난수)
+                for (int k = 0; k < drops; k++)
+                {
+                    float da = k / (float)drops * 6.2832f + Hash(k, 1, 224) * 0.4f;
+                    float dr = 0.5f + 0.42f * Hash(k, 2, 224);
+                    float ds = 0.018f + 0.05f * Hash(k, 3, 224) * Hash(k, 4, 224);
+                    float dx = u - Mathf.Cos(da) * dr, dy = v - Mathf.Sin(da) * dr;
+                    a = Mathf.Max(a, Mathf.Clamp01((ds - Mathf.Sqrt(dx * dx + dy * dy)) / 0.012f));
+                }
+                // 아래로 흐른 줄기 (자국 아래쪽에서 시작해 가늘어지며 내려가고 끝에 방울이 맺힌다)
+                for (int k = 0; k < drips; k++)
+                {
+                    float sx = -0.32f + 0.62f * Hash(k, 5, 225), len = 0.25f + 0.4f * Hash(k, 6, 225), wd = 0.028f + 0.022f * Hash(k, 7, 225);
+                    float top = -0.45f * wob, bottom = top - len;
+                    if (v < top && v > bottom)
+                    {
+                        float t = (top - v) / len;
+                        float width = wd * (1f - 0.55f * t) + (Noise(y * 0.3f, k * 7f, 226) - 0.5f) * 0.012f;
+                        a = Mathf.Max(a, Mathf.Clamp01((width - Mathf.Abs(u - sx)) / 0.012f));
+                    }
+                    float ex = u - sx, ey = v - bottom;
+                    a = Mathf.Max(a, Mathf.Clamp01((wd * 1.4f - Mathf.Sqrt(ex * ex + ey * ey)) / 0.012f));
+                }
+                // 농담: 가운데가 진하고 군데군데 옅은 얼룩, 가장자리 안쪽에 조금 더 진한 테
+                float pool = 0.78f + 0.22f * Noise(x * 0.05f, y * 0.05f, 223);
+                float ring = Mathf.Clamp01(1 - Mathf.Abs(edge - 0.9f) / 0.1f) * 0.22f;
+                a *= Mathf.Clamp01(pool + ring);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
     // ---------- 기본 사각형 ----------
 
     static Sprite fill, frame;

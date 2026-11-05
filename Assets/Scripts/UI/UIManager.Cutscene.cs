@@ -191,7 +191,7 @@ public partial class UIManager
         Place(caption, new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(1600, 110));
         cutCaptionGroup = caption.gameObject.AddComponent<CanvasGroup>();
         cutCaptionGroup.interactable = cutCaptionGroup.blocksRaycasts = false;
-        cutStamp = NewText(caption, "", 19, TextAnchor.UpperCenter, new Color(Accent.r, Accent.g, Accent.b, 0.85f), FontTitle);
+        cutStamp = NewText(caption, "", 19, TextAnchor.UpperCenter, new Color(PaleDim.r, PaleDim.g, PaleDim.b, 0.9f), FontTitle); // 메인 메뉴 부제와 같은 바랜 종이색 (2026-11-05 저녁)
         Place(cutStamp.rectTransform, new Vector2(0.5f, 1), Vector2.zero, new Vector2(1600, 28));
         cutStamp.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
         cutCaption = NewText(caption, "", 30, TextAnchor.UpperCenter, Text);
@@ -206,11 +206,12 @@ public partial class UIManager
         Stretch(chrome);
         cutChrome = chrome.gameObject.AddComponent<CanvasGroup>();
 
-        var next = MakeButton(chrome, "다음", () => { ClearCutSelection(); CutsceneNext(); }, true, 22);
-        Place((RectTransform)next.transform, new Vector2(1, 0), new Vector2(-56, 36), new Vector2(180, 50));
-        cutNextFrame = next.transform.GetChild(0).GetComponent<Image>();
-        var hint = NewText(chrome, "Space / Enter", 15, TextAnchor.MiddleRight, new Color(1, 1, 1, 0.4f));
-        Place(hint.rectTransform, new Vector2(1, 0), new Vector2(-250, 36), new Vector2(220, 50));
+        // '다음'은 메인 메뉴와 같은 더러운 강판 버튼 (2026-11-05 저녁). 오른쪽 끝 붉은 빛(RedGlow)은 자막이 끝나면 UpdateCutscene이 깜빡인다
+        var next = PlateButton(chrome, "다음", "SPACE", () => { ClearCutSelection(); CutsceneNext(); }, 22, 24f);
+        Place((RectTransform)next.transform, new Vector2(1, 0), new Vector2(-56, 36), new Vector2(190, 50));
+        cutNextFrame = next.transform.Find("RedGlow").GetComponent<Image>();
+        var hint = NewText(chrome, "SPACE / ENTER", 13, TextAnchor.MiddleRight, new Color(PaleDim.r, PaleDim.g, PaleDim.b, 0.6f), FontMono);
+        Place(hint.rectTransform, new Vector2(1, 0), new Vector2(-260, 36), new Vector2(220, 50));
 
         for (int i = 0; i < cutDots.Length; i++)
         {
@@ -241,7 +242,7 @@ public partial class UIManager
         skipButton.colors = colors;
         skipButton.navigation = new Navigation { mode = Navigation.Mode.None };
         skipButton.onClick.AddListener(() => { ClearCutSelection(); FinishCutscene(); });
-        var skipText = NewText(skip, "건너뛰기 (Esc)", 17, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.62f));
+        var skipText = NewText(skip, "건너뛰기  ·  ESC", 17, TextAnchor.MiddleCenter, PaleDim, FontTitle);
         Stretch(skipText.rectTransform);
         skipText.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
 
@@ -290,15 +291,15 @@ public partial class UIManager
         // 쪽 표시: 지금 장은 크고 밝게
         for (int i = 0; i < cutDots.Length; i++)
         {
-            var target = i == cutShot ? Accent : i < cutShot ? new Color(1, 1, 1, 0.55f) : new Color(1, 1, 1, 0.22f);
+            var target = i == cutShot ? new Color(0.95f, 0.22f, 0.14f) : i < cutShot ? new Color(1, 1, 1, 0.55f) : new Color(1, 1, 1, 0.22f);
             cutDots[i].color = Color.Lerp(cutDots[i].color, target, Mathf.Clamp01(dt * 8));
             float sc = Mathf.Lerp(cutDots[i].rectTransform.localScale.x, i == cutShot ? 1.35f : 1f, Mathf.Clamp01(dt * 8));
             cutDots[i].rectTransform.localScale = new Vector3(sc, sc, 1);
         }
 
-        // 자막을 다 보여 주면 '다음' 버튼 테두리가 숨 쉬듯 빛난다
+        // 자막을 다 보여 주면 '다음' 버튼의 붉은 막대 빛이 숨 쉬듯 빛난다
         float pulse = CutCaptionDone ? 0.5f + 0.5f * Mathf.Sin(cutTime * 4f) : 0;
-        cutNextFrame.color = Color.Lerp(new Color(0.9f, 0.8f, 0.55f, 0.4f), new Color(Accent.r, Accent.g, Accent.b, 0.95f), pulse);
+        cutNextFrame.color = Color.Lerp(new Color(MenuRed.r, MenuRed.g, MenuRed.b, 0.3f), new Color(1f, 0.3f, 0.18f, 0.95f), pulse);
 
         if (cutEnded) cutChrome.alpha = Mathf.MoveTowards(cutChrome.alpha, 0, dt * 4);
     }
@@ -348,7 +349,7 @@ public partial class UIManager
         cutCaptionGroup.alpha = 1 - Mathf.Clamp01(cutDirector.Dark * 1.5f - 0.3f);
         cutStamp.text = shot.Stamp;
         float stampAlpha = cutTypeForced ? 1 : Mathf.Clamp01((cutShotTime - start) / 0.5f);
-        cutStamp.color = new Color(Accent.r, Accent.g, Accent.b, 0.85f * stampAlpha);
+        cutStamp.color = new Color(PaleDim.r, PaleDim.g, PaleDim.b, 0.9f * stampAlpha);
 
         if (CutCaptionDone)
         {
