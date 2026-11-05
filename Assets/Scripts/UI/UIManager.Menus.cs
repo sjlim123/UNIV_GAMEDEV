@@ -72,10 +72,11 @@ public partial class UIManager
         pauseBlur.enabled = false;
         MenuBackdrop(p, 0.5f);
         TitleBlock(p, "일시정지", "PAUSED", 64, -120);
+        // 턴·장소 줄은 제목 묶음의 가로선 아래에 (부제·선과 겹치지 않게)
         pauseInfo = NewText(p, "", 18, TextAnchor.UpperLeft, Dim);
-        Place(pauseInfo.rectTransform, new Vector2(0, 1), new Vector2(MenuLeft + 4, -232), new Vector2(480, 30));
+        Place(pauseInfo.rectTransform, new Vector2(0, 1), new Vector2(MenuLeft + 4, -256), new Vector2(480, 30));
 
-        float y = -300, step = SlabH + 10;
+        float y = -308, step = SlabH + 10;
         MenuButton(p, "설정", "SETTINGS", new Vector2(MenuLeft, y), () => OpenSettings());
         MenuButton(p, "조작법", "CONTROLS", new Vector2(MenuLeft, y -= step), OpenControls);
         MenuButton(p, "메인 메뉴로", "MAIN MENU", new Vector2(MenuLeft, y -= step), () => ConfirmLeaveExpedition("메인 메뉴로", () => GameManager.Instance.GoToMainMenu()));
@@ -130,7 +131,7 @@ public partial class UIManager
     RectTransform tipKnob;
     Image tipTrack, tipKnobImg;
     UnityEngine.UI.Text tipState;
-    const float TipSwitchW = 58, TipSwitchH = 28, TipKnob = 22;
+    const float TipSwitchW = 62, TipSwitchH = 30, TipKnob = 24;
 
     void BuildTipSwitch(Transform parent, Vector2 pos)
     {
@@ -145,15 +146,15 @@ public partial class UIManager
         var sw = NewRect("Switch", row);
         Place(sw, new Vector2(0, 0.5f), new Vector2(56, 0), new Vector2(TipSwitchW, TipSwitchH));
         tipTrack = sw.gameObject.AddComponent<Image>();
-        tipTrack.sprite = UIStyle.Fill;
+        tipTrack.sprite = UIStyle.Capsule;
         tipTrack.type = Image.Type.Sliced;
-        tipTrack.pixelsPerUnitMultiplier = 0.3f;
+        tipTrack.pixelsPerUnitMultiplier = 32f / TipSwitchH; // 알약 양 끝이 정확한 반원 (작은 사각형 그림을 늘리면 흐리고 끝이 잘려 보였다)
         var frame = NewRect("Frame", sw).gameObject.AddComponent<Image>();
         Stretch(frame.rectTransform);
-        frame.sprite = UIStyle.Frame;
+        frame.sprite = UIStyle.CapsuleFrame;
         frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 0.3f;
-        frame.color = new Color(1, 1, 1, 0.16f);
+        frame.pixelsPerUnitMultiplier = 32f / TipSwitchH;
+        frame.color = new Color(1, 1, 1, 0.22f);
         frame.raycastTarget = false;
         tipKnob = NewRect("Knob", sw);
         tipKnob.anchorMin = tipKnob.anchorMax = new Vector2(0, 0.5f);
@@ -162,6 +163,11 @@ public partial class UIManager
         tipKnobImg = tipKnob.gameObject.AddComponent<Image>();
         tipKnobImg.sprite = UIStyle.Dot;
         tipKnobImg.raycastTarget = false;
+        var knobRing = NewRect("Ring", tipKnob).gameObject.AddComponent<Image>(); // 손잡이 가장자리를 또렷하게
+        Stretch(knobRing.rectTransform);
+        knobRing.sprite = UIStyle.Ring;
+        knobRing.color = new Color(0, 0, 0, 0.35f);
+        knobRing.raycastTarget = false;
         tipKnob.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.5f);
 
         var b = sw.gameObject.AddComponent<Button>();
@@ -591,7 +597,7 @@ public partial class UIManager
                 Line(c, "", 4);
                 Selector(c, "환경음 (바람·비·기계·라디오)", $"{GameSettings.VolumeAmbient * 100:0}%", d => GameSettings.VolumeAmbient = Step(GameSettings.VolumeAmbient, d * 0.1f, 0f, 1f));
                 Selector(c, "효과음 (발소리·타격·아이템·문)", $"{GameSettings.VolumeEffects * 100:0}%", d => GameSettings.VolumeEffects = Step(GameSettings.VolumeEffects, d * 0.1f, 0f, 1f));
-                Selector(c, "적·동물 소리 (좀비·들개·약탈자)", $"{GameSettings.VolumeEnemy * 100:0}%", d => GameSettings.VolumeEnemy = Step(GameSettings.VolumeEnemy, d * 0.1f, 0f, 1f));
+                Selector(c, "적·동물 소리 (좀비·좀비개·약탈자)", $"{GameSettings.VolumeEnemy * 100:0}%", d => GameSettings.VolumeEnemy = Step(GameSettings.VolumeEnemy, d * 0.1f, 0f, 1f));
                 Selector(c, "인터페이스 (버튼·창)", $"{GameSettings.VolumeUI * 100:0}%", d => GameSettings.VolumeUI = Step(GameSettings.VolumeUI, d * 0.1f, 0f, 1f));
                 Line(c, "전체 음량은 모든 소리에, 나머지는 그 종류에만 곱해집니다.", 17, Dim);
             }

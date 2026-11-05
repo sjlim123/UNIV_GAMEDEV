@@ -32,7 +32,7 @@ public partial class UIManager : MonoBehaviour
     // HUD 유리판 (2026-11-05): 뒤 화면을 흐려 비추는 어두운 유리. 가장자리는 투명하고 가운데로 갈수록 진하다 (UIStyle.GlassSoft + BunkerLab/HudGlass)
     static readonly Color HudGlassTint = new Color(0.035f, 0.038f, 0.045f, 0.86f);
     // 핫바 알약 유리(리퀴드 글래스): 더 비치고 가장자리가 굴절된다
-    static readonly Color HudPillTint = new Color(0.07f, 0.075f, 0.085f, 0.8f);
+    static readonly Color HudPillTint = new Color(0.56f, 0.56f, 0.54f, 0.7f); // 회백색 프로스트 유리 (흰색은 너무 밝고 검정은 다른 판과 같다는 의견 → 중간 회백색)
     static Material hudGlassMat, hudPillMat;
     // 창 안의 줄(Row) 카드: 평소 / 마우스를 올렸을 때 (호박색이 살짝 돈다)
     static readonly Color RowFill = new Color(1, 1, 1, 0.035f);
@@ -272,6 +272,7 @@ public partial class UIManager : MonoBehaviour
         BuildObjectivePanel(h);
         BuildCompass(h);
         BuildKeyHints(h);
+        BuildEnemyBars(h); // 적 이름·체력바 (UIManager.EnemyBars)
 
         // 오른쪽 아래: 손전등·배터리 — 세로 두 줄([손전등 그림] 100% / [배터리 그림] 1), 뒤에 먹이 번진 자국(50%)
         var flash = NewRect("Flashlight", h);
@@ -483,7 +484,7 @@ public partial class UIManager : MonoBehaviour
         Stretch(light.rectTransform);
         light.sprite = UIStyle.GlassLight;
         light.type = Image.Type.Sliced;
-        light.color = new Color(1, 1, 1, 0.45f);
+        light.color = new Color(1, 1, 1, 0.35f);
         light.raycastTarget = false;
         return rt;
     }
@@ -491,7 +492,7 @@ public partial class UIManager : MonoBehaviour
     // 유리 재질 (Resources/Shaders/HudGlass.shader): _Blur 흐림 간격(텍셀), _Darken 바탕색 비율, _Refract 가장자리 굴절.
     // 셰이더가 없으면 null을 돌려주고 보통 반투명 그림으로 그린다
     static Material GlassMaterial() => hudGlassMat != null ? hudGlassMat : hudGlassMat = NewGlassMaterial("HudGlass", 2.2f, 0.55f, 0f);
-    static Material PillMaterial() => hudPillMat != null ? hudPillMat : hudPillMat = NewGlassMaterial("HudPill", 1.6f, 0.3f, 0.06f);
+    static Material PillMaterial() => hudPillMat != null ? hudPillMat : hudPillMat = NewGlassMaterial("HudPill", 1.6f, 0.5f, 0.06f);
 
     static Material NewGlassMaterial(string name, float blur, float darken, float refract)
     {
@@ -621,6 +622,7 @@ public partial class UIManager : MonoBehaviour
             UpdateCrosshair();
             AnimateHud();
             UpdateGlassMaterials();
+            UpdateEnemyBars();
         }
 
         if (toastTimer > 0)
@@ -1378,9 +1380,9 @@ public partial class UIManager : MonoBehaviour
     // 칸은 비치지 않는 어두운 주머니 (창 안). 핫바(유리판 위)의 칸은 비치는 유리 (glass)
     static readonly Color SlotEmptyFill = new Color(0.05f, 0.048f, 0.045f, 1f);
     static readonly Color SlotItemFill = new Color(0.07f, 0.065f, 0.06f, 1f);
-    static readonly Color SlotEmptyGlass = new Color(1, 1, 1, 0.06f);
-    static readonly Color SlotItemGlass = new Color(1, 1, 1, 0.12f);
-    static readonly Color SlotFrameGlass = new Color(1, 1, 1, 0.18f);
+    static readonly Color SlotEmptyGlass = new Color(1, 1, 1, 0.045f);
+    static readonly Color SlotItemGlass = new Color(1, 1, 1, 0.08f);
+    static readonly Color SlotFrameGlass = new Color(1, 1, 1, 0.14f);
 
     class ItemSlotView
     {
