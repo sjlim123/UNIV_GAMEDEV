@@ -477,36 +477,36 @@ public static class UIStyle
     // ---------- 크레파스 선 · 핏자국 (2026-11-05 저녁) ----------
     static Sprite crayon, bloodWash;
 
-    // 크레파스로 한 번 그은 선 (512×24, 선 굵기 5~8px, 가로 9-slice 12px). Tiled로 쓰면 가운데 결이 늘어나지 않고 양 끝은 뭉툭한 크레파스 끝으로 남는다. 색은 Image.color
-    // (세로로 늘리면 선이 두 줄로 되풀이되므로 굵기는 여기서 바꾼다. 11-05 저녁 사용자 요청으로 1.5배)
+    // 크레파스로 한 번 그은 선 (512×28, 선 굵기 7~11px, 가로 9-slice 12px). Tiled로 쓰면 가운데 결이 늘어나지 않고 양 끝은 뭉툭한 크레파스 끝으로 남는다. 색은 Image.color
+    // (세로로 늘리면 선이 두 줄로 되풀이되므로 굵기는 여기서 바꾼다. 11-05 저녁 사용자 요청으로 처음의 2배)
     public static Sprite Crayon => crayon != null ? crayon : crayon = MakeCrayon();
     // 붉은 물감이 번진 핏자국 (사망 화면 뒷배경): 큰 자국 + 둘레에 튄 방울 + 아래로 흐른 줄기. 색은 Image.color
     public static Sprite BloodWash => bloodWash != null ? bloodWash : bloodWash = MakeBloodWash();
 
     static Sprite MakeCrayon()
     {
-        const int w = 512, h = 24, border = 12;
+        const int w = 512, h = 28, border = 12;
         var tex = NewTex("UICrayon", w, h, TextureWrapMode.Clamp);
         var px = new Color32[w * h];
         float mid = h / 2f;
         for (int x = 0; x < w; x++)
         {
             // 손이 흔들려 선의 가운데와 굵기가 조금씩 오르내린다 (가로로 되풀이되는 노이즈라 타일로 이어도 끊기지 않는다)
-            float center = mid + (Noise(x * 12f / w, 0.37f, 211, 12) - 0.5f) * 3.0f;
-            float half = 3.2f + (Noise(x * 20f / w, 0.61f, 212, 20) - 0.5f) * 2.0f;
+            float center = mid + (Noise(x * 12f / w, 0.37f, 211, 12) - 0.5f) * 3.5f;
+            float half = 4.2f + (Noise(x * 20f / w, 0.61f, 212, 20) - 0.5f) * 2.4f;
             // 양 끝은 뭉툭하게 가늘어진다
             float end = Mathf.Min(x + 1, w - x) / (float)border;
             if (end < 1f) half *= Mathf.Sqrt(Mathf.Clamp01(end));
             for (int y = 0; y < h; y++)
             {
-                float d = Mathf.Abs(y + 0.5f - center) - half + (Hash(x, y, 213) - 0.5f) * 1.2f; // 가장자리가 우둘투둘
+                float d = Mathf.Abs(y + 0.5f - center) - half + (Hash(x, y, 213) - 0.5f) * 1.4f; // 가장자리가 우둘투둘
                 float edge = Mathf.Clamp01(0.5f - d);
                 // 왁스 알갱이: 종이 결을 따라 군데군데 옅고, 드문드문 빈 자리가 난다
                 float grain = 0.55f + 0.45f * Noise(x * 64f / w, y * 0.7f, 214, 64);
                 grain *= 0.8f + 0.2f * Hash(x, y, 215);
                 if (Noise(x * 40f / w, y * 0.5f, 216, 40) > 0.82f) grain *= 0.35f;
                 float a = edge * grain;
-                if (d > 0) a = Mathf.Max(a, Mathf.Clamp01(1 - d / 2.5f) * 0.16f * grain); // 선 바깥으로 살짝 번진 왁스
+                if (d > 0) a = Mathf.Max(a, Mathf.Clamp01(1 - d / 3f) * 0.16f * grain); // 선 바깥으로 살짝 번진 왁스
                 px[y * w + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
             }
         }
@@ -557,6 +557,30 @@ public static class UIStyle
                 float ring = Mathf.Clamp01(1 - Mathf.Abs(edge - 0.9f) / 0.1f) * 0.22f;
                 a *= Mathf.Clamp01(pool + ring);
                 px[y * size + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    // ---------- 할 일 판 마름모 표식 (2026-11-05 저녁) ----------
+    static Sprite diamond, diamondFilled;
+
+    // 속이 빈 마름모 (할 일) / 테두리 안에 작은 마름모가 찬 것 (끝낸 일). 32×32, 색은 Image.color
+    public static Sprite Diamond => diamond != null ? diamond : diamond = MakeDiamond(false);
+    public static Sprite DiamondFilled => diamondFilled != null ? diamondFilled : diamondFilled = MakeDiamond(true);
+
+    static Sprite MakeDiamond(bool filled)
+    {
+        const int size = 32;
+        var tex = NewTex(filled ? "UIDiamondFilled" : "UIDiamond", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        float half = size / 2f, radius = half - 2.5f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = Mathf.Abs(x + 0.5f - half) + Mathf.Abs(y + 0.5f - half) - radius; // 마름모 가장자리까지 (안쪽 음수)
+                float a = Mathf.Clamp01(1.6f - Mathf.Abs(d));          // 테두리 선 (약 2px)
+                if (filled) a = Mathf.Max(a, Mathf.Clamp01(-d - 4.5f)); // 안쪽 작은 마름모
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
             }
         return Finish(tex, px, Vector4.zero);
     }

@@ -1,9 +1,10 @@
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
 // HUD 왼쪽 아래 상태 판(체력·갈증·배고픔·스테미너, 90% 크기)과 오른쪽 위 남은 시간 유리판, HUD 움직임.
 // 시간 판은 뒤 화면을 흐려 비추는 어두운 유리(UIManager.HudGlass). 상태 판은 손전등 줄처럼 먹이 번진 자국 위에 놓인다 (2026-11-05 저녁).
-// 상태 계기: 아이콘 + 크레파스로 그은 색 선(옛 막대의 1/4쯤 굵기, UIStyle.Crayon) + 숫자(모노 글꼴). 빈 자리에는 옅은 밑선.
+// 상태 계기: 아이콘 + 크레파스로 그은 색 선(옛 막대의 1/3쯤 굵기, UIStyle.Crayon) + 옛 막대처럼 선을 나누는 10칸 눈금 자국 + 숫자(모노 글꼴). 빈 자리에는 옅은 밑선.
 // 값이 줄면 깎인 만큼 종이색 선이 남았다가 따라 줄고, 오르면 반짝이며, 25 아래면 선·숫자가 붉어지고 아이콘 뒤가 붉게 고동친다. 맞으면 판이 흔들린다.
 // 남은 시간: 모래시계 + 큰 숫자 + 20칸 눈금 + 위험도. 1분 아래면 붉게 고동치고, 붉은 밤이면 경과 시간을 센다
 public partial class UIManager
@@ -24,8 +25,8 @@ public partial class UIManager
     static readonly Color StatHunger = new Color(0.74f, 0.44f, 0.2f);
     static readonly Color StatStamina = new Color(0.88f, 0.7f, 0.2f);
     static readonly Color TileFill = new Color(0.07f, 0.065f, 0.06f, 0.9f);
-    // 크레파스 선: 길이(값 100%), 선 그림의 높이(실제 선은 그 안의 6~7px, 사용자 요청으로 처음의 1.5배), 빈 자리의 옅은 밑선
-    const float StatBarWidth = 250, StatStrokeH = 24, StatusScale = 0.9f;
+    // 크레파스 선: 길이(값 100%), 선 그림의 높이(실제 선은 그 안의 8~10px, 사용자 요청으로 처음의 2배), 빈 자리의 옅은 밑선
+    const float StatBarWidth = 250, StatStrokeH = 28, StatusScale = 0.9f;
     static readonly Color StatGuide = new Color(0.9f, 0.86f, 0.78f, 0.13f);
 
     readonly StatBar[] statBars = new StatBar[4];
@@ -60,6 +61,18 @@ public partial class UIManager
         statBars[1] = MakeStatBar(statusPanel, "bottle", "갈증", 1, StatThirst);
         statBars[2] = MakeStatBar(statusPanel, "meat", "배고픔", 2, StatHunger);
         statBars[3] = MakeStatBar(statusPanel, "bolt", "스테미너", 3, StatStamina);
+        // 줄 사이의 얇은 가로 괘선: 세로로 훑을 때 어느 줄이 어느 계기인지 헷갈리지 않게 (종이 괘선처럼 옅게, 아이콘부터 숫자까지)
+        for (int i = 1; i < 4; i++)
+        {
+            var rule = NewRect("Rule", statusPanel);
+            rule.anchorMin = rule.anchorMax = new Vector2(0, 1);
+            rule.pivot = new Vector2(0, 0.5f);
+            rule.anchoredPosition = new Vector2(8, -26 - i * 36 + 18);
+            rule.sizeDelta = new Vector2(358, 1);
+            var ri = rule.gameObject.AddComponent<Image>();
+            ri.color = new Color(Pale.r, Pale.g, Pale.b, 0.14f);
+            ri.raycastTarget = false;
+        }
     }
 
     // 줄 하나: [아이콘] 크레파스 선 (빈 자리엔 옅은 밑선, 깎인 자국은 종이색 선) 숫자. 아이콘 뒤의 붉은 빛은 25 아래일 때만 켜진다
@@ -91,9 +104,25 @@ public partial class UIManager
         b.Chip = b.ChipImage.rectTransform;
         b.FillImage = CrayonStroke(parent, label + "Fill", y, StatBarWidth, color);
         b.Fill = b.FillImage.rectTransform;
+        // 10칸 눈금: 옛 막대의 눈금처럼 선을 나누는 어두운 짧은 크레파스 자국 (세로로 세운 짧은 선, 5칸째는 조금 길다). 선 위에 겹친다.
+        // 자국의 굵기(세로 크기)는 색 선의 절반
+        for (int i = 1; i < 10; i++)
+        {
+            var tick = NewRect("Tick", parent);
+            tick.anchorMin = tick.anchorMax = new Vector2(0, 1);
+            tick.pivot = new Vector2(0.5f, 0.5f);
+            tick.anchoredPosition = new Vector2(46 + StatBarWidth * i / 10f, y);
+            tick.sizeDelta = new Vector2(i == 5 ? 28 : 20, StatStrokeH * 0.5f);
+            tick.localRotation = Quaternion.Euler(0, 0, 90f);
+            var ti = tick.gameObject.AddComponent<Image>();
+            ti.sprite = UIStyle.Crayon;
+            ti.type = Image.Type.Sliced;
+            ti.color = new Color(0.04f, 0.03f, 0.03f, i == 5 ? 0.85f : 0.65f);
+            ti.raycastTarget = false;
+        }
 
-        // 숫자 (모노 글꼴, 줄 끝에 오른쪽 정렬)
-        b.Value = NewText(parent, "", 18, TextAnchor.MiddleRight, Pale, FontMono);
+        // 숫자 (모노 글꼴, 막대 끝 바로 옆에 왼쪽 정렬 — 막대 쪽으로 붙여 달라는 의견)
+        b.Value = NewText(parent, "", 18, TextAnchor.MiddleLeft, Pale, FontMono);
         Place(b.Value.rectTransform, new Vector2(0, 1), new Vector2(304, y), new Vector2(62, 26));
         b.Value.rectTransform.pivot = new Vector2(0, 0.5f);
         b.Value.rectTransform.anchoredPosition = new Vector2(304, y);
@@ -257,23 +286,94 @@ public partial class UIManager
         weatherLabel.text = Weather.Name(k);
     }
 
-    // ---------- 지금 할 일 명판 (왼쪽 위, 날씨 명판이 있으면 그 아래) ----------
-    // 게임의 목적 한 줄 + 지금 할 일 + 왜 해야 하는지. 내용은 Tutorial이 정한다
+    // ---------- 할 일 판 (왼쪽 위, 날씨 명판이 있으면 그 아래) ----------
+    // 참고 이미지(2026-11-05 저녁, 사용자 제공) 꼴: 어두운 반투명 판 → 핏빛 띠에 목적 → 붉은 점이 찍힌 어두운 띠에 지금 있는 곳 →
+    // 마름모 표식 + 할 일 + 오른쪽 진행 수치 세 줄(끝낸 일은 속이 찬 마름모와 바랜 글, 지금 할 일은 밝게, 다음 일은 옅게) → 지금 할 일 바로 아래 이유 한 줄.
+    // 내용은 Tutorial이 정한다 (안내가 끝나면 트럭 부품 진행도와 남은 턴). Tip 스위치가 꺼지면 판 전체가 사라진다
 
+    const int ObjRows = 3;
+    const float ObjW = 400f;
     RectTransform objectivePanel;
-    UnityEngine.UI.Text objectiveLine, objectiveWhy;
+    UnityEngine.UI.Text objArea, objWhy;
+    readonly Image[] objMarks = new Image[ObjRows];
+    readonly UnityEngine.UI.Text[] objTitles = new UnityEngine.UI.Text[ObjRows], objProgress = new UnityEngine.UI.Text[ObjRows];
     string objectiveShown;
 
     void BuildObjectivePanel(Transform h)
     {
-        objectivePanel = HudGlass(h, "Objective", 16f);
-        Place(objectivePanel, new Vector2(0, 1), new Vector2(24, -24), new Vector2(364, 98));
-        var purpose = NewText(objectivePanel, "목적 · " + Tutorial.Purpose, 14, TextAnchor.UpperLeft, PaleDim, FontTitle);
-        Place(purpose.rectTransform, new Vector2(0, 1), new Vector2(14, -10), new Vector2(340, 20));
-        objectiveLine = NewText(objectivePanel, "", 20, TextAnchor.UpperLeft, Pale, FontTitle);
-        Place(objectiveLine.rectTransform, new Vector2(0, 1), new Vector2(14, -32), new Vector2(340, 28));
-        objectiveWhy = NewText(objectivePanel, "", 13, TextAnchor.UpperLeft, PaleDim);
-        Place(objectiveWhy.rectTransform, new Vector2(0, 1), new Vector2(14, -60), new Vector2(340, 34));
+        objectivePanel = NewRect("Objective", h);
+        Place(objectivePanel, new Vector2(0, 1), new Vector2(24, -24), new Vector2(ObjW, 170));
+        // 어두운 반투명 판 (뒤 화면을 흐려 비치는 유리) + 가장자리 그늘
+        var back = NewRect("Back", objectivePanel).gameObject.AddComponent<Image>();
+        Stretch(back.rectTransform);
+        back.sprite = UIStyle.Fill;
+        back.type = Image.Type.Sliced;
+        back.pixelsPerUnitMultiplier = 2f;
+        back.material = GlassMaterial();
+        back.color = new Color(0.03f, 0.03f, 0.035f, 0.72f);
+        back.raycastTarget = false;
+        var shade = NewRect("Shade", objectivePanel).gameObject.AddComponent<Image>();
+        Stretch(shade.rectTransform);
+        shade.sprite = UIStyle.Vignette;
+        shade.color = new Color(0, 0, 0, 0.35f);
+        shade.raycastTarget = false;
+
+        // 핏빛 띠 + 목적
+        var band = NewRect("Band", objectivePanel);
+        band.anchorMin = new Vector2(0, 1);
+        band.anchorMax = new Vector2(1, 1);
+        band.pivot = new Vector2(0.5f, 1);
+        band.anchoredPosition = new Vector2(0, -8);
+        band.sizeDelta = new Vector2(-16, 30);
+        var bandImg = band.gameObject.AddComponent<Image>();
+        bandImg.color = new Color(0.4f, 0.06f, 0.07f, 0.92f);
+        bandImg.raycastTarget = false;
+        var purpose = NewText(band, Tutorial.Purpose, 17, TextAnchor.MiddleLeft, Pale, FontTitle);
+        Stretch(purpose.rectTransform, 12, 0);
+        purpose.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+
+        // 어두운 띠 + 붉은 점 + 지금 있는 곳
+        var area = NewRect("Area", objectivePanel);
+        area.anchorMin = new Vector2(0, 1);
+        area.anchorMax = new Vector2(1, 1);
+        area.pivot = new Vector2(0.5f, 1);
+        area.anchoredPosition = new Vector2(0, -44);
+        area.sizeDelta = new Vector2(-16, 22);
+        var areaImg = area.gameObject.AddComponent<Image>();
+        areaImg.color = new Color(0, 0, 0, 0.45f);
+        areaImg.raycastTarget = false;
+        var dot = NewRect("Dot", area).gameObject.AddComponent<Image>();
+        Place(dot.rectTransform, new Vector2(0, 0.5f), new Vector2(-2, 0), new Vector2(10, 10));
+        dot.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        dot.sprite = UIStyle.Dot;
+        dot.color = new Color(0.85f, 0.12f, 0.1f);
+        dot.raycastTarget = false;
+        objArea = NewText(area, "", 14, TextAnchor.MiddleLeft, Pale, FontTitle);
+        Stretch(objArea.rectTransform, 14, 0);
+
+        // 할 일 줄 세 개: 마름모 + 제목 + 진행 수치 (자리는 UpdateObjectivePanel이 정한다)
+        for (int i = 0; i < ObjRows; i++)
+        {
+            var mark = NewRect("Mark" + i, objectivePanel).gameObject.AddComponent<Image>();
+            Place(mark.rectTransform, new Vector2(0, 1), new Vector2(22, -78), new Vector2(15, 15));
+            mark.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            mark.sprite = UIStyle.Diamond;
+            mark.raycastTarget = false;
+            objMarks[i] = mark;
+            var t = NewText(objectivePanel, "", 15, TextAnchor.MiddleLeft, Pale);
+            Place(t.rectTransform, new Vector2(0, 1), new Vector2(40, -78), new Vector2(290, 22));
+            t.rectTransform.pivot = new Vector2(0, 0.5f);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+            objTitles[i] = t;
+            var p = NewText(objectivePanel, "", 14, TextAnchor.MiddleRight, PaleDim, FontMono);
+            Place(p.rectTransform, new Vector2(1, 1), new Vector2(-16, -78), new Vector2(80, 22));
+            p.rectTransform.pivot = new Vector2(1, 0.5f);
+            objProgress[i] = p;
+        }
+        // 지금 할 일의 이유 (그 줄 바로 아래, 옅게)
+        objWhy = NewText(objectivePanel, "", 12, TextAnchor.UpperLeft, new Color(PaleDim.r, PaleDim.g, PaleDim.b, 0.85f));
+        Place(objWhy.rectTransform, new Vector2(0, 1), new Vector2(40, -100), new Vector2(344, 30));
     }
 
     void UpdateObjectivePanel()
@@ -281,11 +381,68 @@ public partial class UIManager
         if (objectivePanel.gameObject.activeSelf != GameSettings.Tips) objectivePanel.gameObject.SetActive(GameSettings.Tips);
         if (!GameSettings.Tips) return;
         objectivePanel.anchoredPosition = new Vector2(24, weatherPanel != null && weatherPanel.gameObject.activeSelf ? -92f : -24f);
-        string line = (Tutorial.Done ? "" : "○ ") + Tutorial.Line;
-        if (line == objectiveShown) return;
-        objectiveShown = line;
-        objectiveLine.text = line;
-        objectiveWhy.text = Tutorial.Why;
+        bool shelter = GameManager.Instance != null && GameManager.Instance.InShelter;
+        string key = Tutorial.StepIndex + "|" + Tutorial.Line + "|" + shelter;
+        if (key == objectiveShown) return;
+        objectiveShown = key;
+
+        objArea.text = shelter ? "방공호" : "도시 탐색";
+        int idx = Tutorial.StepIndex, n = Tutorial.Steps.Length;
+        string line = Tutorial.Line;
+        float y = -78f;
+        for (int i = 0; i < ObjRows; i++)
+        {
+            string title = "", progress = "";
+            int state = 2; // 0 끝낸 일, 1 지금 할 일, 2 다음 일
+            bool show = true;
+            if (Tutorial.Done)
+            {
+                // 안내가 끝나면: 트럭 부품 진행도 + 남은 턴
+                var parts = Regex.Match(line, @"(\d+) / (\d+)");
+                var turns = Regex.Match(line, @"남은 턴 (\d+)");
+                if (i == 0) { title = "트럭 부품을 만들어 정비소에 넣는다"; progress = parts.Success ? parts.Groups[1].Value + "/" + parts.Groups[2].Value : ""; state = 1; }
+                else if (i == 1) { title = "남은 턴"; progress = turns.Success ? turns.Groups[1].Value : ""; }
+                else show = false;
+            }
+            else
+            {
+                // 끝낸 일 하나 · 지금 할 일 · 다음 일 하나 (처음엔 지금 할 일부터 셋)
+                int k = Mathf.Clamp(idx - 1, 0, Mathf.Max(0, n - ObjRows)) + i;
+                show = k < n;
+                if (show)
+                {
+                    title = Tutorial.Steps[k].Title;
+                    state = k < idx ? 0 : k == idx ? 1 : 2;
+                    if (state == 1)
+                    {
+                        var m = Regex.Match(line, @"\((\d+) / (\d+)\)");
+                        progress = m.Success ? m.Groups[1].Value + "/" + m.Groups[2].Value : "";
+                    }
+                }
+            }
+            objMarks[i].gameObject.SetActive(show);
+            objTitles[i].gameObject.SetActive(show);
+            objProgress[i].gameObject.SetActive(show);
+            if (!show) continue;
+            float a = state == 1 ? 1f : state == 0 ? 0.8f : 0.5f;
+            var c = state == 1 ? Pale : new Color(PaleDim.r, PaleDim.g, PaleDim.b, a);
+            objMarks[i].sprite = state == 0 ? UIStyle.DiamondFilled : UIStyle.Diamond;
+            objMarks[i].color = c;
+            objTitles[i].text = title;
+            objTitles[i].color = c;
+            objProgress[i].text = progress;
+            objMarks[i].rectTransform.anchoredPosition = new Vector2(22, y);
+            objTitles[i].rectTransform.anchoredPosition = new Vector2(40, y);
+            objProgress[i].rectTransform.anchoredPosition = new Vector2(-16, y);
+            if (state == 1)
+            {
+                objWhy.text = Tutorial.Why;
+                objWhy.rectTransform.anchoredPosition = new Vector2(40, y - 13);
+                y -= 24 + Mathf.Max(14f, objWhy.preferredHeight) + 4;
+            }
+            else y -= 24;
+        }
+        objectivePanel.sizeDelta = new Vector2(ObjW, -y + 2);
     }
 
     // ---------- 해치 나침반 (도시에서만, 화면 위 가운데) ----------
