@@ -34,6 +34,49 @@ public partial class UIManager
     static Texture2D cutDotTex;
     static Sprite cutDot;
 
+    // 가벼운 레터박스 (방공호 출입 연출): 위아래 검은 띠가 닫혀 들어왔다 열린다. 컷씬 화면과 따로 논다
+    RectTransform boxTop, boxBottom;
+    float boxTarget, boxAmount;
+
+    public void SetLetterbox(bool on)
+    {
+        if (boxTop == null)
+        {
+            boxTop = NewRect("LetterboxTop", root);
+            var it = boxTop.gameObject.AddComponent<Image>();
+            it.color = Color.black;
+            it.raycastTarget = false;
+            boxTop.anchorMin = new Vector2(0, 1);
+            boxTop.anchorMax = Vector2.one;
+            boxTop.pivot = new Vector2(0.5f, 1);
+            boxTop.anchoredPosition = Vector2.zero;
+            boxBottom = NewRect("LetterboxBottom", root);
+            var ib = boxBottom.gameObject.AddComponent<Image>();
+            ib.color = Color.black;
+            ib.raycastTarget = false;
+            boxBottom.anchorMin = Vector2.zero;
+            boxBottom.anchorMax = new Vector2(1, 0);
+            boxBottom.pivot = new Vector2(0.5f, 0);
+            boxBottom.anchoredPosition = Vector2.zero;
+            boxTop.sizeDelta = boxBottom.sizeDelta = new Vector2(0, 0);
+        }
+        boxTarget = on ? 1f : 0f;
+        boxTop.SetAsLastSibling();
+        boxBottom.SetAsLastSibling();
+        if (fadeOverlay != null) fadeOverlay.transform.SetAsLastSibling();
+    }
+
+    void UpdateLetterbox()
+    {
+        if (boxTop == null) return;
+        boxAmount = Mathf.MoveTowards(boxAmount, boxTarget, Time.unscaledDeltaTime / 0.7f);
+        float h = ((RectTransform)root.transform).rect.height * CutBarRatio * Mathf.SmoothStep(0, 1, boxAmount);
+        boxTop.sizeDelta = new Vector2(0, h);
+        boxBottom.sizeDelta = new Vector2(0, h);
+        bool show = h > 0.5f;
+        if (boxTop.gameObject.activeSelf != show) { boxTop.gameObject.SetActive(show); boxBottom.gameObject.SetActive(show); }
+    }
+
     Action cutsceneFinished;
     CutsceneDirector cutDirector;
     RectTransform cutRoot, cutBarTop, cutBarBottom;

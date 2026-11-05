@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 1인칭 이동: 이동키(기본 WASD), 마우스 시점, 달리기(스테미너 소모), 앉기, 점프. 조작키는 설정 → 컨트롤에서 바꾼다 (KeyBindings).
 // 소지 무게가 들 수 있는 무게의 80%를 넘으면 100%까지 걸음이 서서히 느려지고 (GameBalance.slowLoadRatio·fullLoadSpeedMultiplier),
-// 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio).
+// 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio). 방공호 안에서는 둘 다 적용하지 않는다.
 // 발소리와 소음 수치, 카메라 움직임(걸음 흔들림·옆걸음 기울기·달릴 때 시야 넓어짐·점프 착지 출렁임·지친 숨)도 여기서 만든다.
 // 침대에서 잘 때는 SetSleep으로 카메라를 침대에 눕힌다
 [RequireComponent(typeof(CharacterController))]
@@ -27,6 +27,9 @@ public class PlayerController : MonoBehaviour
     // 잠자기: 0 = 서 있음, 1 = 침대에 누움
     float sleepBlend;
     Transform sleepAnchor;
+    // 연출(방공호 문 열고 나가기): 카메라를 anchor 자리·방향으로 옮긴다. 손은 그대로 보인다
+    float cineBlend;
+    Transform cineAnchor;
 
     public bool IsCrouching { get; private set; }
     public bool IsRunning { get; private set; }
@@ -44,7 +47,9 @@ public class PlayerController : MonoBehaviour
     {
         get
         {
-            var s = GameManager.Instance.State;
+            var gm = GameManager.Instance;
+            if (gm.InShelter) return false; // 방공호 안에서는 짐 무게로 불이익이 없다
+            var s = gm.State;
             float cap = s.CarryCapacity;
             return cap > 0 && s.Carried.Weight >= cap * GameBalance.Data.heavyLoadRatio;
         }
@@ -68,7 +73,8 @@ public class PlayerController : MonoBehaviour
     void UpdateLoadSpeed(float dt)
     {
         var s = GameManager.Instance.State;
-        float target = LoadSpeedFor(s.Carried.Weight, s.CarryCapacity);
+        // 방공호 안에서는 짐이 아무리 무거워도 느려지지 않는다 (창고·제작대 사이를 오가며 정리하는 데 불편하지 않게)
+        float target = GameManager.Instance.InShelter ? 1f : LoadSpeedFor(s.Carried.Weight, s.CarryCapacity);
         bool slowed = target < 0.999f;
         if (!loadChecked)
         {
@@ -122,6 +128,15 @@ public class PlayerController : MonoBehaviour
         sleepAnchor = anchor;
         sleepBlend = Mathf.Clamp01(blend);
     }
+
+    // 연출용 카메라: anchor(월드 자리·방향)로 옮긴다. blend 0 = 평소, 1 = anchor 그대로
+    public void SetCinematic(Transform anchor, float blend)
+    {
+        cineAnchor = anchor;
+        cineBlend = Mathf.Clamp01(blend);
+    }
+
+    public float CinematicBlend => cineBlend;
 
     // 죽음 연출: seconds초에 걸쳐 무릎이 꺾이듯 가라앉으며 옆으로 쓰러진다 (GameManager.DeathRoutine이 부른다)
     float deathBlend = -1f, deathSeconds = 1.7f; // 0 이상이면 쓰러지는 중/쓰러짐
@@ -260,7 +275,11 @@ public class PlayerController : MonoBehaviour
             {
                 stepDistance = 0;
                 stepSource.pitch = Random.Range(0.85f, 1.1f);
-                stepSource.PlayOneShot(ProceduralAudio.Footstep(), IsCrouching ? 0.12f : IsRunning ? 0.7f : 0.38f);
+                // 웅덩이를 밟으면 첨벙 (물결과 물방울은 PuddleFx가 낸다)
+                if (PuddleFx.Step(transform.position, IsCrouching ? 0.35f : IsRunning ? 1f : 0.6f, false))
+                    stepSource.PlayOneShot(ProceduralAudio.Splash(), IsCrouching ? 0.25f : IsRunning ? 0.8f : 0.5f);
+                else
+                    stepSource.PlayOneShot(ProceduralAudio.Footstep(), IsCrouching ? 0.12f : IsRunning ? 0.7f : 0.38f);
             }
         }
         else bobTimer = Mathf.Lerp(bobTimer, Mathf.Round(bobTimer / Mathf.PI) * Mathf.PI, dt * 5);
@@ -287,6 +306,14 @@ public class PlayerController : MonoBehaviour
             float k = Mathf.SmoothStep(0, 1, sleepBlend);
             cameraRoot.position = Vector3.Lerp(cameraRoot.position, sleepAnchor.position, k);
             cameraRoot.rotation = Quaternion.Slerp(cameraRoot.rotation, sleepAnchor.rotation, k);
+        }
+
+        // 연출: 카메라를 정해진 자리로
+        if (cineBlend > 0 && cineAnchor != null)
+        {
+            float k = Mathf.SmoothStep(0, 1, cineBlend);
+            cameraRoot.position = Vector3.Lerp(cameraRoot.position, cineAnchor.position, k);
+            cameraRoot.rotation = Quaternion.Slerp(cameraRoot.rotation, cineAnchor.rotation, k);
         }
 
         // 죽음: 점점 빠르게 가라앉으며 옆으로 쓰러진다. 바닥에 닿는 순간 한 번 덜컹

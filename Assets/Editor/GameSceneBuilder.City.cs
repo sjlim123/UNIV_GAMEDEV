@@ -22,6 +22,7 @@ public static partial class GameSceneBuilder
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         BeginMeshes(GenDir + "/CityMeshes.asset");
         rng = new System.Random(31);
+        RuinMaterials(); // 황금 문·철근·그을음 재질, 벽 재질의 금 디테일 맵 (GameSceneBuilder.Ruins.cs)
 
         var root = new GameObject("City").transform;
         var geo = Group("Geometry", root, Vector3.zero);
@@ -40,6 +41,7 @@ public static partial class GameSceneBuilder
         AddStreetsideItemPoints(points);
         BuildHatch(geo, CityHatchPos);
         BuildBoundary(geo);
+        PlaceDeadBodies(root); // 건물 벽에 기대 앉아 죽은 사람들 (GameSceneBuilder.Streets.cs)
 
         // 도로 위 좀비 등장 지점
         for (int i = 0; i < 18; i++)
@@ -142,6 +144,13 @@ public static partial class GameSceneBuilder
                     RemoveChildrenFrom(points, pointKids);
                     BuildTruckYard(b, points);
                 }
+                // 폭격 맞은 건물 세 곳: 같은 방식으로 바꿔 짓는다 (GameSceneBuilder.Ruins.cs)
+                else if (IsBombedLot(c, ix, iz))
+                {
+                    RemoveChildrenFrom(b, blockKids);
+                    RemoveChildrenFrom(points, pointKids);
+                    BombedBuilding(b, points, ix, iz);
+                }
             }
 
         // 모퉁이 가로등
@@ -220,6 +229,7 @@ public static partial class GameSceneBuilder
             Box("Upper", g, new Vector3(x0 + w / 2, roofY + 0.3f + upperH / 2, z0 + d / 2), new Vector3(w + t, upperH, d + t), mat, 3f);
         }
         FacadeWindows(g, x0 - t / 2, z0 - t / 2, w + t, d + t, roofY + 0.3f, floors - 1);
+        FacadeWeathering(g, x0 - t / 2, z0 - t / 2, w + t, d + t, roofY + 0.3f + (floors > 1 ? (floors - 1) * 3.2f : 0f), block.localPosition + new Vector3(x0, 0, z0));
 
         // 출입구: 문을 달거나(70%), 그중 일부는 판자로 막아 앉아서만 기어 들어가게 한다 (도시 배치 난수와 따로 둔 난수)
         bool door = !trader && Chance(0.7);
@@ -227,6 +237,7 @@ public static partial class GameSceneBuilder
         bool crawl = !trader && crawlRng.NextDouble() < 0.3;
         if (crawl) BoardedDoorway(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, CrawlGap, crawlRng);
         else if (door) AddDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, Pick(M["wood"], M["metal"]));
+        else if (trader) AddGoldenDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f); // 잡상인 집의 황금 문 (GameSceneBuilder.Streets.cs)
 
         // 내부: 선반, 탁자/계산대, 상자, 잔해. 계단 벽 쪽 띠(계단 + 지나갈 길)는 비워 둔다
         Vector3 center = new Vector3(x0 + w / 2, 0, z0 + d / 2);
@@ -291,7 +302,11 @@ public static partial class GameSceneBuilder
             Flicker(l, 0.4f, 12f, true);
             Box("Tube", g, center + Vector3.up * (h - 0.1f), new Vector3(1.2f, 0.05f, 0.1f), M["bulb"], 1f, false);
         }
-        if (trader) BuildTrader(g, Inside(0.5f, 0.5f));
+        if (trader)
+        {
+            BuildTrader(g, Inside(0.5f, 0.5f));
+            TraderGlow(g, walls[doorSide], doorC + ShiftFor(doorSide, t), doorSide); // 반딧불과 은은한 금빛
+        }
 
         // 계단과 2층 안 (따로 둔 난수)
         rng = upRng;
@@ -659,6 +674,7 @@ public static partial class GameSceneBuilder
         Box("Mass", g, new Vector3(x0 + w / 2, h / 2, z0 + d / 2), new Vector3(w, h, d), mat, 3f);
         int floors = Mathf.FloorToInt((h - 3.5f) / 3.2f);
         FacadeWindows(g, x0, z0, w, d, 3.5f, floors);
+        FacadeWeathering(g, x0, z0, w, d, h, block.localPosition + new Vector3(x0, 0, z0));
         // 1층 녹슨 셔터
         int xSide = ix == 0 ? 2 : 3, zSide = iz == 0 ? 0 : 1;
         float sz = zSide == 0 ? z0 - 0.06f : z0 + d + 0.06f;
@@ -798,6 +814,18 @@ public static partial class GameSceneBuilder
 
     static void WreckedCar(Transform parent, Vector3 pos, float yaw, bool flipped)
     {
+        // 진짜 차처럼 다시 지은 모델 (GameSceneBuilder.Streets.cs).
+        // 도시 난수는 예전 모델(WreckedCarOld)과 똑같이 5번(도색 1 + 바퀴 4) 쓴다: 그래야 그 뒤에 오는 건물 종류·소품·좀비 자리가 예전 도시와 똑같이 나온다
+        // (26.0.1.0 첫 빌드에서는 2번만 써서 블록 안 건물 종류가 전부 밀렸고, 들어갈 수 있던 건물이 탑으로 바뀌었다)
+        int paint = rng.Next(3);
+        int wheelsGone = 0;
+        for (int i = 0; i < 4; i++) if (Chance(0.15)) wheelsGone |= 1 << i;
+        var local = new System.Random(Mathf.RoundToInt(pos.x * 7f + pos.z * 131f) + paint * 7919 + wheelsGone * 104729);
+        WreckedCarV2(parent, pos, yaw, flipped, local.NextDouble() < 0.18, local);
+    }
+
+    static void WreckedCarOld(Transform parent, Vector3 pos, float yaw, bool flipped)
+    {
         // 바로 선 차를 만든 뒤, 뒤집힌 차는 통째로 180° 굴려 지붕(높이 1.675m)이 바닥에 닿게 내려놓는다
         // (예전에는 높이를 거꾸로 적은 채 또 뒤집어서 1m쯤 떠 있었다)
         var g = Group("WreckedCar", parent, pos, yaw);
@@ -899,12 +927,14 @@ public static partial class GameSceneBuilder
             if (id == "old_tyre") PolyProp(id, props, p + Vector3.up * 0.085f, yaw, 0.35f, 0, true, new Vector3(90, 0, 0)); // 바닥에 눕힌다
             else PolyProp(id, props, p, yaw, id == "trashbag" ? 0.55f : 0.35f, id == "metal_jerrycan" ? 0.3f : 0f);
         }
+        ScatterDebris(props, points); // 잔해를 더 (GameSceneBuilder.Streets.cs)
+        CheckGrounded(geo);           // 차가 떠 있거나 묻히지 않았는지
     }
 
     static void BuildHatch(Transform geo, Vector3 pos)
     {
         var g = Group("ShelterHatch", geo, pos);
-        Box("Bunker", g, new Vector3(0, 1.3f, 0), new Vector3(3.2f, 2.6f, 3f), M["dirty"], 2f);
+        HatchShell(g); // 겉은 예전 3.2×2.6×3 상자 그대로, 문 크기만큼 속이 빈 어두운 통로 (GameSceneBuilder.Ruins.cs)
         Box("Roof", g, new Vector3(0, 2.7f, 0), new Vector3(3.5f, 0.2f, 3.3f), M["cracked"], 2f);
         Prim(PrimitiveType.Cylinder, "Vent", g, new Vector3(0.9f, 3.2f, -0.6f), new Vector3(0.25f, 0.5f, 0.25f), M["metal"], null, true);
         var door = Box("HatchDoor", g, new Vector3(0, 1.05f, 1.53f), new Vector3(1.1f, 2.1f, 0.08f), M["metal"], 1.2f);
@@ -916,6 +946,7 @@ public static partial class GameSceneBuilder
         RubblePile(g, new Vector3(-2.3f, 0, 0.3f), 5, 0.8f);
         Box("Sandbag1", g, new Vector3(1.9f, 0.25f, 1.2f), new Vector3(0.9f, 0.5f, 0.45f), M["cloth"], 1f, true, new Vector3(0, 15, 0));
         Box("Sandbag2", g, new Vector3(1.85f, 0.7f, 1.15f), new Vector3(0.8f, 0.4f, 0.42f), M["cloth"], 1f, true, new Vector3(0, -10, 0));
+        HatchSurroundings(g); // 물웅덩이·젖은 아스팔트·잔해·탄 차 (GameSceneBuilder.Ruins.cs)
     }
 
     static void BuildTrader(Transform parent, Vector3 pos)

@@ -164,7 +164,7 @@ public static partial class GameSceneBuilder
         M["rain"] = ParticleMat("M_RainParticle", new Color(0.72f, 0.78f, 0.9f, 0.6f), true);
         M["wetAsphalt"] = TexMat("M_WetAsphalt", "asphalt_02", new Color(0.42f, 0.44f, 0.48f), 0.62f);
         M["wetConcrete"] = TexMat("M_WetConcrete", "concrete_floor_worn_001", new Color(0.46f, 0.47f, 0.5f), 0.55f);
-        M["puddle"] = TexMat("M_Puddle", null, new Color(0.1f, 0.11f, 0.13f), 0.95f);
+        M["puddle"] = PuddleMat(); // 물결·발자국·빗방울·달빛 반사가 있는 웅덩이 셰이더 (GameSceneBuilder.Ruins.cs)
         M["crossPaint"] = TexMat("M_CrossPaint", "concrete_floor_worn_001", new Color(0.72f, 0.72f, 0.7f), 0.35f);
     }
 

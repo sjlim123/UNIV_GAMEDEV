@@ -46,8 +46,8 @@ public static class KeyBindings
             case GameAction.Jump: return "점프";
             case GameAction.Attack: return "공격";
             case GameAction.UseItem: return "아이템 사용";
-            case GameAction.Interact: return "상호작용";
-            case GameAction.Flashlight: return "손전등";
+            case GameAction.Interact: return "상호작용 · 손전등 꺼내기";
+            case GameAction.Flashlight: return "손전등 켜기/끄기";
             case GameAction.Inventory: return "소지품 열기";
             case GameAction.DropItem: return "아이템 버리기";
             default: return $"핫바 {(int)a - (int)GameAction.Slot1 + 1}번";

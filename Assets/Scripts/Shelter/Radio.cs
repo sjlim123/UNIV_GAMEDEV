@@ -3,6 +3,7 @@ using UnityEngine;
 
 // 배터리 라디오. 전력이 없어도 켜진다 (정전 중 유일한 위안).
 // 켜면 잡음 속에서 끊어진 구조 방송이 한 줄씩 들리고, 다시 누르면 꺼진다. 방송이 끝나면 저절로 꺼진다.
+// 소리가 날 때 스피커 그릴이 소리 크기에 맞춰 떨리고 앞으로 옅은 음파 고리가 퍼진다 (고장난 라디오가 아니므로 전기 불꽃은 없다).
 public class Radio : Interactable
 {
     public AudioSource speaker;   // 반복 잡음
@@ -31,15 +32,33 @@ public class Radio : Interactable
     Vector3 GrillePos => transform.TransformPoint(new Vector3(-0.085f, 0.09f, -0.1f));
     Vector3 Front => -transform.forward;
 
-    // 낡은 라디오의 치지직: 스피커 그릴에서 전기가 튄다
+    // 낡은 라디오의 치지직: 스피커 그릴에서 전기가 튄다.
+    // 지금은 부르지 않는다 (고장난 라디오가 아니라는 피드백). 스토리에 따라 '고장난 라디오' 연출이 필요해지면 다시 쓸 수 있게 남겨 둔다
     void Spark(float scale, int bursts, float volume, int variant)
     {
         Vfx.Zap(GrillePos, Front, scale, bursts);
         ProceduralAudio.PlayAt(EffectAudio.Zap(variant), GrillePos, volume, Random.Range(0.9f, 1.15f), 1f, 12f, SoundCategory.Ambient);
     }
 
+    // 스피커 떨림·음파: 그릴 조각들과 그 뒤의 어두운 콘, 소리 크기(출력 샘플)로 움직인다
+    readonly List<Transform> grille = new List<Transform>();
+    readonly List<Vector3> grilleHome = new List<Vector3>();
+    Transform cone;
+    Vector3 coneHome;
+    readonly float[] samples = new float[256];
+    float level, waveTimer;
+
     void Awake()
     {
+        foreach (Transform c in transform)
+            if (c.name == "Grille") { grille.Add(c); grilleHome.Add(c.localPosition); }
+        // 그릴 뒤의 스피커 콘 (얇은 어두운 원판, 그릴 틈으로 보인다)
+        var disc = RuntimeVisuals.Part(PrimitiveType.Cylinder, transform, new Vector3(-0.085f, 0.097f, -0.0915f), new Vector3(0.12f, 0.0004f, 0.12f), new Color(0.06f, 0.055f, 0.05f), 0.35f, new Vector3(90, 0, 0));
+        disc.name = "SpeakerCone";
+        disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        cone = disc.transform;
+        coneHome = cone.localPosition;
+
         voice = gameObject.AddComponent<AudioSource>();
         AudioCategory.Tag(voice, SoundCategory.Ambient);
         voice.playOnAwake = false;
@@ -88,7 +107,8 @@ public class Radio : Interactable
         voice.pitch = 1f;
         voice.Play();
         if (glow != null) glow.enabled = true;
-        Spark(0.08f, 3, 0.45f, 0);
+        // 켜질 때 음파 고리 셋이 연달아 퍼진다
+        for (int i = 0; i < 3; i++) Vfx.SoundWave(GrillePos + Front * (0.01f + i * 0.03f), Front, 0.16f + i * 0.04f, 0.8f - i * 0.2f);
     }
 
     void TurnOff()
@@ -98,7 +118,8 @@ public class Radio : Interactable
         voice.Stop();
         if (glow != null) glow.enabled = false;
         if (needle != null) needle.localPosition = needleHome;
-        Spark(0.06f, 1, 0.25f, 2);
+        level = 0;
+        SetSpeaker(0);
     }
 
     // 켤 때마다 두 방송이 번갈아 잡힌다 (○○ 지명은 나중에 정한다):
@@ -138,10 +159,52 @@ public class Radio : Interactable
         durations.Add(seconds);
     }
 
+    // 스피커 그릴·콘을 소리 크기만큼 앞뒤로 떨게 한다 (0~1)
+    void SetSpeaker(float amount)
+    {
+        for (int i = 0; i < grille.Count; i++)
+        {
+            float jitter = (Mathf.PerlinNoise(Time.time * 40f, i * 1.7f) - 0.5f) * 0.0012f * amount;
+            grille[i].localPosition = grilleHome[i] + new Vector3(0, 0, jitter);
+        }
+        if (cone != null) cone.localPosition = coneHome + new Vector3(0, 0, -0.0025f * amount * (0.6f + 0.4f * Mathf.Sin(Time.time * 70f)));
+    }
+
+    // 지금 나는 소리의 크기 (잡음 + 목소리의 출력 샘플 RMS)
+    float OutputLevel()
+    {
+        float sum = 0;
+        int n = 0;
+        if (speaker != null && speaker.isPlaying)
+        {
+            speaker.GetOutputData(samples, 0);
+            for (int i = 0; i < samples.Length; i++) sum += samples[i] * samples[i];
+            n += samples.Length;
+        }
+        if (voice.isPlaying)
+        {
+            voice.GetOutputData(samples, 0);
+            for (int i = 0; i < samples.Length; i++) sum += samples[i] * samples[i] * 2.5f; // 목소리가 더 또렷하게 울린다
+            n += samples.Length;
+        }
+        return n > 0 ? Mathf.Sqrt(sum / n) : 0f;
+    }
+
     void Update()
     {
         if (!playing) return;
         float dt = Time.deltaTime;
+
+        // 스피커 떨림과 음파 고리: 소리가 클수록 세게 떨고 고리가 자주 퍼진다
+        float target = Mathf.Clamp01(OutputLevel() * 6f);
+        level = Mathf.Lerp(level, target, 1 - Mathf.Exp(-dt * 18f));
+        SetSpeaker(level);
+        waveTimer -= dt;
+        if (level > 0.08f && waveTimer <= 0)
+        {
+            waveTimer = Mathf.Lerp(0.26f, 0.1f, level);
+            Vfx.SoundWave(GrillePos + Front * 0.012f, Front, 0.13f + 0.14f * level, 0.35f + 0.65f * level);
+        }
 
         // 신호가 들쭉날쭉하게 세졌다 약해진다
         if (speaker != null) speaker.volume = staticVolume * (0.65f + 0.35f * Mathf.PerlinNoise(Time.time * 1.7f, 3.1f));
@@ -169,7 +232,12 @@ public class Radio : Interactable
         timer = durations[i];
         string line = lines[i];
         // 잡음만 있는 줄이면 전기가 튀고, 아니면 뭉개진 목소리를 섞는다
-        if (line.StartsWith("치지직", System.StringComparison.Ordinal)) Spark(0.06f, 2, 0.3f, 1);
+        if (line.StartsWith("치지직", System.StringComparison.Ordinal))
+        {
+            // 잡음만 있는 줄: 음파 고리가 작게 두어 번 퍼진다
+            Vfx.SoundWave(GrillePos + Front * 0.012f, Front, 0.12f, 0.5f);
+            Vfx.SoundWave(GrillePos + Front * 0.03f, Front, 0.16f, 0.3f);
+        }
         else
         {
             voice.clip = RadioAudio.Garble();

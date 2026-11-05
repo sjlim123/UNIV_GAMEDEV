@@ -12,6 +12,8 @@ public class GameState
     public float Thirst;
     public float Power;   // 방공호 발전기 전력 (%)
     public float FlashlightCharge = 100f;
+    // 손전등을 왼손에 꺼내 들고 있는가 (F로 꺼내고 넣는다. 씬을 옮기거나 저장해도 그대로)
+    public bool FlashlightOut;
     // 탐험에 나가 있는 동안 저장되면 true (이어하기 때 탐험을 포기한 것으로 친다)
     public bool InExpedition;
     // 저장할 때 방공호 안에 살아 있던 침입 좀비 수 (이어하기 때 다시 들어온다)
@@ -211,6 +213,7 @@ public class GameState
             thirst = Thirst,
             power = Power,
             flashlightCharge = FlashlightCharge,
+            flashlightOut = FlashlightOut,
             inExpedition = InExpedition,
             shelterInvaders = ShelterInvaders,
             equippedBackpack = EquippedBackpack ?? "",
@@ -240,6 +243,7 @@ public class GameState
             Thirst = d.thirst,
             Power = d.power,
             FlashlightCharge = d.flashlightCharge,
+            FlashlightOut = d.flashlightOut,
             InExpedition = d.inExpedition,
             ShelterInvaders = d.shelterInvaders,
             FurnaceBuilt = d.furnaceBuilt,
@@ -267,6 +271,7 @@ public class GameState
             }
         if (d.hotbar != null && d.hotbar.Count > 0)
             foreach (var kv in s.Carried.Sorted()) s.hotbarKnown.Add(kv.Key);
+        if (s.Carried.Count("flashlight") == 0) s.FlashlightOut = false;
         s.SyncHotbar();
         return s;
     }
@@ -305,6 +310,7 @@ public class SaveData
     public string savedAt;
     public int turn;
     public float health, hunger, thirst, power, flashlightCharge;
+    public bool flashlightOut;
     public bool inExpedition;
     public int shelterInvaders;
     public string equippedBackpack, equippedArmor;

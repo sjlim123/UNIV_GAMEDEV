@@ -5,6 +5,8 @@ using UnityEngine.AI;
 
 // 들개: 떠돌다가 플레이어를 보거나 들으면 으르렁거리며 경고한 뒤 달려들어 문다.
 // 수치(피·데미지·속도·공격 간격)는 GameBalance.dog. 죽이면 가죽 1개와 고기 1개를 떨어뜨린다.
+// 소리(짖기·으르렁·깨갱·낑낑·킁킁·무는 으르렁)는 DogAudio가 코드로 합성한다.
+// 죽으면 관절이 풀려 옆으로 힘없이 쓰러지고(Ragdoll), 핏자국이 번지며, 잠시 뒤 어두워지면서 가라앉아 사라진다(Gore)
 [RequireComponent(typeof(NavMeshAgent))]
 public class Animal : MonoBehaviour, IDamageable
 {
@@ -14,6 +16,7 @@ public class Animal : MonoBehaviour, IDamageable
     public Transform[] legs;
     Transform[] knees;
     Transform head, jaw, neck, tail, body;
+    CharacterRig rig;
     // 눈이 빛나는 재질의 원본 (빌드에 발광 셰이더가 들어가게 프리팹이 들고 있는다)
     public Material eyeTemplate;
     public float walkSpeed = 1.2f;
@@ -38,6 +41,7 @@ public class Animal : MonoBehaviour, IDamageable
     float health, wanderTimer, warnTimer, biteTimer, barkTimer, repathTimer, staggerTimer, lostTimer, animPhase, lunge, hitReact;
     float hitStun, hitSlow; // 맞고 굳은 시간, 그 뒤 느려지는 시간 (GameBalance.enemyHit*)
     float provokeCooldown; // 경고하다 물러난 뒤 다시 으르렁거리기까지 쉬는 시간
+    float snuffleTimer;    // 배회하며 킁킁거리는 사이
 
     public bool IsDead => state == State.Dead;
     public bool IsChasing => state == State.Chase;
@@ -56,7 +60,7 @@ public class Animal : MonoBehaviour, IDamageable
             var c = transform.GetChild(i);
             if (c.name != "Model" && c.GetComponent<Renderer>() != null || c.name.StartsWith("Leg")) Destroy(c.gameObject);
         }
-        var rig = CharacterModels.Build(transform, FigureKind.Dog);
+        rig = CharacterModels.Build(transform, FigureKind.Dog);
         legs = rig.Legs;
         knees = rig.Knees;
         head = rig.Head;
@@ -133,6 +137,14 @@ public class Animal : MonoBehaviour, IDamageable
     void Roam(float dt)
     {
         agent.speed = walkSpeed;
+        // 가끔 코를 킁킁거린다 (가까이 있을 때만 들린다)
+        snuffleTimer -= dt;
+        if (snuffleTimer <= 0)
+        {
+            snuffleTimer = Random.Range(7f, 16f);
+            voice.pitch = Random.Range(0.9f, 1.1f);
+            voice.PlayOneShot(DogAudio.Snuffle(), 0.55f);
+        }
         wanderTimer -= dt;
         if (wanderTimer > 0) return;
         wanderTimer = Random.Range(4f, 9f);
@@ -176,7 +188,7 @@ public class Animal : MonoBehaviour, IDamageable
         warnTimer = delay;
         if (agent.isOnNavMesh && agent.hasPath) agent.ResetPath();
         voice.pitch = Random.Range(0.9f, 1.1f);
-        voice.PlayOneShot(ProceduralAudio.Growl(), 1f);
+        voice.PlayOneShot(DogAudio.Growl(Random.Range(0, 2)), 1f);
     }
 
     void StartChase()
@@ -197,6 +209,7 @@ public class Animal : MonoBehaviour, IDamageable
         biteTimer = stats.attackDelay;
         lunge = 1;
         voice.pitch = Random.Range(0.9f, 1.1f);
+        voice.PlayOneShot(DogAudio.Snarl(), 0.9f);
         voice.PlayOneShot(ProceduralAudio.Snap(), 1f);
         ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.6f, 1.1f);
         UIManager.LastHitFrom = transform.position;
@@ -206,7 +219,7 @@ public class Animal : MonoBehaviour, IDamageable
     void Bark(float volume, float pitch)
     {
         voice.pitch = pitch;
-        voice.PlayOneShot(ProceduralAudio.Bark(), volume);
+        voice.PlayOneShot(DogAudio.Bark(Random.Range(0, 3)), volume);
     }
 
     void FaceTowards(Vector3 pos)
@@ -233,7 +246,11 @@ public class Animal : MonoBehaviour, IDamageable
             if (agent.isOnNavMesh) agent.Move(new Vector3(direction.x, 0, direction.z).normalized * 0.4f);
             if (flash != null) flash.Flash(HitFlash.HitColor);
         }
-        if (!dot || Random.value < 0.4f) Bark(dot ? 0.7f : 1f, Random.Range(1.3f, 1.5f)); // 깨갱
+        if (!dot || Random.value < 0.4f) // 깨갱
+        {
+            voice.pitch = Random.Range(0.9f, 1.1f);
+            voice.PlayOneShot(DogAudio.Yelp(), dot ? 0.7f : 1f);
+        }
         if (health <= 0)
         {
             StartCoroutine(Die());
@@ -249,31 +266,36 @@ public class Animal : MonoBehaviour, IDamageable
         agent.enabled = false;
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
+        if (flash != null) flash.enabled = false;
         voice.Stop();
-        Bark(0.8f, 1.2f);
+        voice.pitch = Random.Range(0.85f, 1f);
+        voice.PlayOneShot(DogAudio.Yelp(), 0.9f);
+        if (jaw != null) jaw.localRotation = Quaternion.Euler(18, 0, 0);
 
-        var start = transform.rotation;
-        var side = Vector3.Cross(Vector3.up, start * Vector3.forward).normalized * 0.35f;
-        var end = start * Quaternion.Euler(0, 0, 85);
-        for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
+        // 관절이 풀려 옆으로 힘없이 쓰러진다 (사람이 아니니 옆으로 넘어간다)
+        var side = Vector3.Cross(Vector3.up, transform.forward).normalized * (Random.value < 0.5f ? 1f : -1f);
+        var parts = Ragdoll.Dog(rig, side * 22f + Vector3.up * 3f);
+        var dropSide = Vector3.Cross(Vector3.up, transform.forward).normalized * 0.35f;
+        // 가죽 1개, 고기 1개
+        PickupItem.Spawn("leather", 2, transform.position + Vector3.up * 0.5f + dropSide);
+        PickupItem.Spawn("raw_meat", 1, transform.position + Vector3.up * 0.5f - dropSide);
+
+        float settle = 0;
+        bool whined = false;
+        while (settle < 3.5f && !(settle > 0.7f && Ragdoll.Settled(parts)))
         {
-            transform.rotation = Quaternion.Slerp(start, end, t * t);
-            // 다리가 힘없이 접히고 머리가 떨어진다
-            if (legs != null)
-                for (int i = 0; i < legs.Length; i++)
-                {
-                    if (legs[i] != null) legs[i].localRotation = Quaternion.Euler((i < 2 ? -25 : 30) * t, 0, 0);
-                    if (knees != null && knees[i] != null) knees[i].localRotation = Quaternion.Euler((i < 2 ? 40 : -35) * t, 0, 0);
-                }
-            if (neck != null) neck.localRotation = Quaternion.Euler(30 * t, 0, 0);
-            if (jaw != null) jaw.localRotation = Quaternion.Euler(10 + 25 * t, 0, 0);
+            settle += Time.deltaTime;
+            if (!whined && settle > 0.45f) // 쓰러져 낑낑거리다 잠잠해진다
+            {
+                whined = true;
+                voice.pitch = Random.Range(0.9f, 1.05f);
+                voice.PlayOneShot(DogAudio.Whine(), 0.75f);
+            }
             yield return null;
         }
-        transform.rotation = end;
-        // 가죽 1개, 고기 1개
-        PickupItem.Spawn("leather", 2, transform.position + Vector3.up * 0.5f + side);
-        PickupItem.Spawn("raw_meat", 1, transform.position + Vector3.up * 0.5f - side);
-        Destroy(gameObject, 30f);
+        var torso = body != null ? body.position : transform.position;
+        Gore.BloodPool(torso, Random.Range(0.4f, 0.55f));
+        yield return Gore.FadeAway(gameObject, rig != null ? rig.Model : transform, rig != null ? rig.Renderers : new Renderer[0], parts, 6f, 4.5f, 3f);
     }
 
     // 걷기·달리기(다리 4개를 엇갈려 딛고 무릎을 굽힌다), 꼬리 흔들기, 경고할 땐 머리를 낮추고 이를 드러내며, 물 때 머리를 내밀고 턱을 벌린다

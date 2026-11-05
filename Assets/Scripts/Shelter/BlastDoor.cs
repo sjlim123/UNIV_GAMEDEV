@@ -17,7 +17,7 @@ public class BlastDoor : Interactable
     public Bounds outsideArea;
 
     Vector3 closedPos;
-    float amount, target, warnBase;
+    float amount, target, warnBase, debrisTimer;
 
     public bool IsOpen => target > 0.5f;            // 열렸거나 열리는 중
     public bool IsMoving => amount != target;
@@ -55,9 +55,19 @@ public class BlastDoor : Interactable
     {
         if (target == value) return;
         target = value;
-        // 잠금장치가 풀리는 철컥 소리 + 모터
+        // 잠금장치가 풀리는 철컥 소리 + 모터 + 문틀에서 쏟아지는 먼지·녹
         if (leaf != null) ProceduralAudio.PlayAt(ProceduralAudio.Clang(), leaf.position, 0.7f, 0.45f, 1f, 40f);
         if (motor != null && !motor.isPlaying) motor.Play();
+        Debris(1.6f);
+    }
+
+    // 문 위 틀 모서리(문짝이 지나가는 길)에서 콘크리트 먼지와 녹 조각이 떨어진다
+    void Debris(float strength)
+    {
+        if (leaf == null) return;
+        var a = transform.TransformPoint(new Vector3(-width / 2, 2.25f, 0));
+        var b = transform.TransformPoint(new Vector3(width / 2 + slideDistance * amount, 2.25f, 0));
+        Vfx.DoorDebris(Vfx.DoorKind.Blast, a, b, transform.forward, strength);
     }
 
     void Update()
@@ -69,6 +79,12 @@ public class BlastDoor : Interactable
             if (amount == target) Arrive();
         }
 
+        // 움직이는 동안 조금씩 먼지가 흩날린다
+        if (IsMoving)
+        {
+            debrisTimer -= Time.deltaTime;
+            if (debrisTimer <= 0) { debrisTimer = 0.22f; Debris(0.3f); }
+        }
         // 무거운 문이 덜컹거리며 미끄러진다
         float wobble = IsMoving ? (Mathf.PerlinNoise(Time.time * 18f, 0) - 0.5f) * 0.012f : 0;
         leaf.localPosition = closedPos + new Vector3(Mathf.SmoothStep(0, 1, amount) * slideDistance, wobble, 0);

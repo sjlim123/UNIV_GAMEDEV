@@ -3,7 +3,8 @@ using UnityEngine;
 
 // 적·NPC 겉모습 (Character_Design 디자인 시트를 따른다: 일반·가죽갑옷·새총·거대 좀비, 약탈자, 들개, 잡상인)
 // Civilian: 컷씬의 주인공 (평범한 옷차림의 시민)
-public enum FigureKind { Zombie, Leather, Slingshot, Giant, Raider, Dog, Merchant, Civilian }
+// Corpse: 도시 건물 벽에 기대 앉아 죽은 사람 (DeadBody)
+public enum FigureKind { Zombie, Leather, Slingshot, Giant, Raider, Dog, Merchant, Civilian, Corpse }
 
 // 만든 몸의 관절. 사람은 몸통·머리·턱·어깨·팔꿈치·손목·엉덩이·무릎, 들개는 목·머리·턱·다리 4개(위·아래)·꼬리
 public class CharacterRig
@@ -45,6 +46,7 @@ public static partial class CharacterModels
             case FigureKind.Dog: Dog(b); break;
             case FigureKind.Merchant: Merchant(b); break;
             case FigureKind.Civilian: Civilian(b, variant); break;
+            case FigureKind.Corpse: Corpse(b, variant); break;
             default: CommonZombie(b, variant); break;
         }
         b.Finish();
@@ -136,6 +138,22 @@ public static partial class CharacterModels
 
     static Color Hex(string hex) => ColorUtility.TryParseHtmlString("#" + hex, out var c) ? c : Color.magenta;
 
+    // 기본 체격 몸통의 겉면: 높이 y(몸통 관절 기준 0~0.55), 가로 x에서 앞(front) 또는 뒤 표면의 z. 배낭끈처럼 몸에 붙는 부품을 놓을 때 쓴다
+    public static float TorsoSurfaceZ(float y, float x, bool front)
+    {
+        var r = TorsoRings;
+        int n = r.Length / 4, i = 0;
+        while (i < n - 2 && r[(i + 1) * 4] < y) i++;
+        float y0 = r[i * 4], y1 = r[(i + 1) * 4];
+        float t = Mathf.Clamp01((y - y0) / Mathf.Max(1e-4f, y1 - y0));
+        float rx = Mathf.Lerp(r[i * 4 + 1], r[(i + 1) * 4 + 1], t);
+        float rz = Mathf.Lerp(r[i * 4 + 2], r[(i + 1) * 4 + 2], t);
+        float zo = Mathf.Lerp(r[i * 4 + 3], r[(i + 1) * 4 + 3], t);
+        float q = Mathf.Clamp01(Mathf.Abs(x) / Mathf.Max(1e-4f, rx));
+        float h = rz * Mathf.Sqrt(1 - q * q);
+        return zo + (front ? h : -h);
+    }
+
     // ================= 사람 기본 몸 =================
 
     // 몸 모양과 재질. 재질이 null인 부위는 맨살
@@ -145,7 +163,9 @@ public static partial class CharacterModels
         public float Bulk = 1f, Limb = 1f, HeadSize = 1f, SleeveTo = -0.18f; // SleeveTo: 소매 끝 (위팔 기준 y, 아래팔까지면 -0.6)
         public bool Zombie = true, LongHair, Boots, Belt = true, PantsBaggy = true;
         public bool SmoothFace;  // 한 덩어리로 이어진 매끄러운 얼굴 (CharacterModels.Face)
+        public FaceStyle Face;   // 매끄러운 얼굴의 생김새·표정 변주 (시체). null이면 주인공 얼굴
         public float Hunch;     // 몸통이 앞으로 굽은 정도 (m)
+        public float NeckDrop;  // 머리를 어깨 쪽으로 내려 목을 짧게 보이게 하는 정도 (m)
         public float Shoulders = 1f;
     }
 
@@ -266,7 +286,7 @@ public static partial class CharacterModels
         for (int i = 0; i < torso.Length; i += 4) torso[i + 3] += h.Hunch * Mathf.Pow(torso[i] / 0.55f, 2) * 0.5f;
         b.Part(rig.Body, Tube(k + "torso", torso), h.Shirt, Vector3.zero);
         // 목 (등이 굽을수록 머리가 어깨 사이로 내려앉고 앞으로 나온다)
-        float neckZ = h.Hunch * 0.5f, headY = 0.60f - h.Hunch * 0.6f, neckW = Mathf.Lerp(1f, bulk, 0.6f);
+        float neckZ = h.Hunch * 0.5f, headY = 0.60f - h.Hunch * 0.6f - h.NeckDrop, neckW = Mathf.Lerp(1f, bulk, 0.6f);
         b.Part(rig.Body, Tube(k + "neck", headY - 0.10f, 0.052f * neckW, 0.054f * neckW, neckZ, headY - 0.02f, 0.046f * neckW, 0.049f * neckW, neckZ + 0.008f, headY + 0.04f, 0.048f * neckW, 0.05f * neckW, neckZ + 0.014f), h.Skin, Vector3.zero);
         // 옷깃
         b.Part(rig.Body, Tube(k + "collar", 0.50f, 0.075f * bulk, 0.07f, neckZ - 0.004f, 0.53f, 0.068f * bulk, 0.064f, neckZ), h.Shirt, Vector3.zero);
@@ -305,6 +325,7 @@ public static partial class CharacterModels
         string k = b.Key;
         // 발 앞쪽(+z)으로 긴 관: 부품을 x축으로 90도 돌려 세운다 (고리 z치우침 = 아래쪽)
         var shoe = ProcMesh.Tube(k + "shoe", 3f, 14,
+            -0.073f, 0.014f, 0.013f, 0.038f, // 뒤꿈치를 둥글게 닫는다 (납작한 마감면이 다리 사이로 보이지 않게)
             -0.065f, 0.032f, 0.030f, 0.036f,
             -0.05f, 0.042f, 0.042f, 0.036f,
             0.00f, 0.046f, 0.045f, 0.032f,
@@ -827,6 +848,7 @@ public static partial class CharacterModels
 
     static void Civilian(Builder b, int variant)
     {
+        if (variant == 1) { Expedition(b); return; }
         int seed = 90 + variant;
         var shirt = ProcTex.Get(ProcTex.Kind.Cloth, Hex("d9d4c9"), seed, 0, 0.06f, Hex("aaa497"));
         var h = new Human
@@ -842,6 +864,7 @@ public static partial class CharacterModels
             PantsBaggy = false,
             Belt = true,
             SmoothFace = true,
+            NeckDrop = 0.035f, // 목이 길어 보인다는 피드백: 머리를 3.5cm 내린다
         };
         h.Skin.SetFloat("_BumpScale", 0.12f);   // 가까이 찍히는 얼굴이라 모공 요철을 약하게
         Humanoid(b, h);
@@ -852,6 +875,70 @@ public static partial class CharacterModels
         // 손목시계 (눈썹은 얼굴 조각으로 붙는다)
         b.Part(rig.ForeL, Tube(b.Key + "watchband", -0.255f, 0.028f, 0.023f, 0f, -0.235f, 0.029f, 0.024f, 0f), ProcTex.Plain(Hex("2a2522"), 0.3f), Vector3.zero);
         b.Part(rig.ForeL, ProcMesh.Box("watchface", 0.024f, 0.02f, 0.006f), ProcTex.Plain(Hex("8c8f93"), 0.8f, 0.7f), new Vector3(-0.028f, -0.245f, 0f), new Vector3(0, 90, 0), null, false);
+    }
+
+    // 같은 사람의 탐험 차림 (방공호로 돌아오는 연출): 1인칭 팔(HandRig)과 똑같은 재질 호출로 만든 어두운 국방색 야상(세운 깃·지퍼·가슴·허리 주머니·접어 올린 소맷단),
+    // 낡은 검은 가죽 반장갑(손목 끈·버클·너클 패드, 손가락은 맨살), 짙은 올리브 작업 바지(카고 주머니), 검은 군화
+    static void Expedition(Builder b)
+    {
+        int seed = 90;
+        var jacket = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.16f, 0.19f, 0.14f), 402, 0, 0.5f, new Color(0.1f, 0.12f, 0.09f));
+        var cuff = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.12f, 0.14f, 0.11f), 403, 0, 0.55f);
+        var glove = ProcTex.Get(ProcTex.Kind.Leather, new Color(0.17f, 0.14f, 0.12f), 404, 0, 0.6f, new Color(0.09f, 0.075f, 0.065f));
+        var pad = ProcTex.Get(ProcTex.Kind.Rubber, new Color(0.2f, 0.19f, 0.18f), 405, 0, 0.5f);
+        var strap = ProcTex.Plain(new Color(0.08f, 0.075f, 0.07f), 0.25f);
+        var pants = ProcTex.Get(ProcTex.Kind.Cloth, Hex("3b3e35"), seed + 2, 0, 0.55f, Hex("262821"));
+        var h = new Human
+        {
+            Skin = ProcTex.Get(ProcTex.Kind.Skin, Hex("C9A27E"), seed, 0, 0.04f, Hex("a67e5d")),
+            Shirt = jacket,
+            Sleeve = jacket,
+            SleeveTo = -0.6f,
+            Pants = pants,
+            Shoes = ProcTex.Get(ProcTex.Kind.Leather, Hex("231f1b"), seed + 3, 0, 0.35f, Hex("15120f")),
+            Hair = ProcTex.Get(ProcTex.Kind.Hair, Hex("1e1816"), seed),
+            Zombie = false,
+            PantsBaggy = true,
+            Belt = true,
+            Boots = true,
+            SmoothFace = true,
+            NeckDrop = 0.035f,
+        };
+        h.Skin.SetFloat("_BumpScale", 0.12f);
+        Humanoid(b, h);
+        var rig = b.Rig;
+        string k = b.Key;
+        // 야상: 세운 깃, 허리 밑단, 앞 지퍼 선(몸통 겉면을 따라), 가슴 주머니 둘(덮개)과 허리 주머니 둘
+        b.Part(rig.Body, Tube(k + "jcollar", 0.49f, 0.082f, 0.074f, -0.002f, 0.545f, 0.078f, 0.07f, 0.004f), jacket, Vector3.zero);
+        b.Part(rig.Body, Tube(k + "jhem", -0.035f, 0.16f, 0.106f, 0.004f, 0.03f, 0.155f, 0.103f, 0.002f), jacket, Vector3.zero);
+        var zip = new System.Collections.Generic.List<float>();
+        foreach (var y in new[] { 0.0f, 0.12f, 0.24f, 0.36f, 0.44f, 0.5f })
+        {
+            zip.Add(y); zip.Add(0.007f); zip.Add(0.004f); zip.Add(TorsoSurfaceZ(y, 0f, true) + 0.004f);
+        }
+        b.Part(rig.Body, Tube(k + "jzip", zip.ToArray()), strap, Vector3.zero);
+        foreach (int s in new[] { -1, 1 })
+        {
+            b.Part(rig.Body, ProcMesh.Box("jpocket", 0.1f, 0.11f, 0.012f), jacket, new Vector3(s * 0.078f, 0.335f, TorsoSurfaceZ(0.335f, 0.078f, true) + 0.005f), new Vector3(0, s * -6, 0));
+            b.Part(rig.Body, ProcMesh.Box("jflap", 0.104f, 0.03f, 0.016f), jacket, new Vector3(s * 0.078f, 0.395f, TorsoSurfaceZ(0.395f, 0.078f, true) + 0.007f), new Vector3(0, s * -6, 0));
+            b.Part(rig.Body, ProcMesh.Box("jpocketlow", 0.12f, 0.12f, 0.012f), jacket, new Vector3(s * 0.1f, 0.12f, TorsoSurfaceZ(0.12f, 0.1f, true) + 0.005f), new Vector3(0, s * -10, 0));
+        }
+        // 접어 올린 소맷단 (1인칭 소매와 같은 어두운 색)
+        foreach (var fore in new[] { rig.ForeL, rig.ForeR })
+            b.Part(fore, Tube(k + "rcuff", -0.275f, 0.037f, 0.035f, 0f, -0.262f, 0.039f, 0.037f, 0f, -0.235f, 0.038f, 0.036f, 0f, -0.222f, 0.035f, 0.033f, 0f), cuff, Vector3.zero);
+        // 반장갑: 손바닥·손등을 덮는 가죽, 손가락 쪽 꿰맨 단, 손목 끈과 버클, 손등 너클 패드. 손가락은 맨살
+        foreach (int s in new[] { -1, 1 })
+        {
+            var hand = s < 0 ? rig.HandL : rig.HandR;
+            b.Part(hand, Tube(k + "glove", 0.012f, 0.02f, 0.028f, 0f, -0.03f, 0.019f, 0.04f, 0f, -0.08f, 0.018f, 0.043f, 0f, -0.098f, 0.016f, 0.04f, 0f), glove, Vector3.zero);
+            b.Part(hand, Tube(k + "ghem", -0.1f, 0.0172f, 0.0412f, 0f, -0.093f, 0.0172f, 0.0412f, 0f), strap, Vector3.zero);
+            b.Part(hand, Tube(k + "gstrap", 0.004f, 0.0215f, 0.0305f, 0f, -0.014f, 0.0215f, 0.0305f, 0f), strap, Vector3.zero);
+            b.Part(hand, ProcMesh.Box("gbuckle", 0.006f, 0.012f, 0.014f), pad, new Vector3(s * 0.023f, -0.005f, -0.004f));
+            b.Part(hand, ProcMesh.Box("gpad", 0.008f, 0.018f, 0.05f), pad, new Vector3(s * 0.02f, -0.078f, 0f));
+        }
+        // 카고 주머니 (허벅지 바깥)
+        b.Part(rig.LegL, ProcMesh.Box("cargo", 0.02f, 0.12f, 0.1f), pants, new Vector3(-0.088f, -0.22f, 0.0f));
+        b.Part(rig.LegR, ProcMesh.Box("cargo", 0.02f, 0.12f, 0.1f), pants, new Vector3(0.088f, -0.22f, 0.0f));
     }
 
     // ================= 05 들개 =================

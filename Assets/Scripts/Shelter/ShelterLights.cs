@@ -14,6 +14,7 @@ public class ShelterLights : MonoBehaviour
 
     void Start()
     {
+        EmissionFix.Ensure(transform); // 방공호 전체(전구·라디오·비상등·발전기·화로)의 발광 키워드 보강
         baseIntensity = new float[lights.Length];
         glass = new Renderer[lights.Length];
         glassOn = new bool[lights.Length];
