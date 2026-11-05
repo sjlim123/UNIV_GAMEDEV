@@ -34,7 +34,7 @@ public static partial class GameSceneBuilder
         M["genHot"] = Emissive("M_GeneratorHot", new Color(0.2f, 0.12f, 0.1f), new Color(1.5f, 0.22f, 0.04f));
         M["gaugeFace"] = Emissive("M_GaugeFace", new Color(0.85f, 0.8f, 0.65f), new Color(0.35f, 0.32f, 0.22f));
         M["oilStain"] = TexMat("M_OilStain", null, new Color(0.05f, 0.05f, 0.045f), 0.75f, 0.1f);
-        M["chimneyGlass"] = TransparentMat("M_ChimneyGlass", new Color(0.62f, 0.68f, 0.7f, 0.22f), 0.7f); // 굴뚝 내열 유리 구간 (광택을 낮춰 안이 보인다)
+        M["chimneyGlass"] = TransparentMat("M_ChimneyGlass", new Color(0.62f, 0.68f, 0.7f, 0.10f), 0.7f); // 굴뚝 내열 유리 구간 (광택을 낮춰 안이 보인다; 알파는 셰이더에서 한 번만 곱하므로 0.10)
         M["doorRust"] = TexMat("M_DarkRustDoor", "rusty_metal_02", new Color(0.36f, 0.33f, 0.3f), 0.28f, 0.45f);
 
         // 바닥·천장
@@ -624,18 +624,29 @@ public static partial class GameSceneBuilder
         door.insideDirection = -wall.forward;
     }
 
-    // 반투명 유리 (URP Lit 투명): 굴뚝 내열 유리 구간. 파티클(3000)보다 뒤(3050)에 그려 안의 연기가 비친다
+    // 반투명 유리 (URP Lit 투명): 굴뚝 내열 유리 구간. 파티클(3000)보다 뒤(3050)에 그려 안의 연기가 비친다.
+    // URP 재질 검증(인스펙터·재임포트)은 큐를 3000 + _QueueOffset 으로, 블렌드를 '보존 스펙큘러' 상태로 다시 계산한다.
+    // 검증이 만들어 내는 값과 같은 상태로 저장해야 다시 뒤집히지 않는다: _QueueOffset 50, SrcBlend One + _ALPHAPREMULTIPLY_ON
+    // (알파는 셰이더에서 한 번만 곱한다 — 예전 SrcAlpha + 프리멀티 조합은 알파가 두 번 곱해졌다)
     static Material TransparentMat(string name, Color color, float smoothness)
     {
         var m = TexMat(name, null, color, smoothness);
         m.SetFloat("_Surface", 1);
         m.SetFloat("_Blend", 0);
-        m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        m.SetFloat("_BlendModePreserveSpecular", 1);
+        m.SetFloat("_SrcBlend", (float)BlendMode.One);
         m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        m.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
         m.SetFloat("_ZWrite", 0);
         m.SetFloat("_AlphaClip", 0);
+        m.SetFloat("_QueueOffset", 50);
         m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
         m.SetOverrideTag("RenderType", "Transparent");
+        m.SetShaderPassEnabled("DepthOnly", false);
+        m.SetShaderPassEnabled("SHADOWCASTER", false);
+        m.SetShaderPassEnabled("MOTIONVECTORS", false);
         m.renderQueue = (int)RenderQueue.Transparent + 50;
         EditorUtility.SetDirty(m);
         return m;
