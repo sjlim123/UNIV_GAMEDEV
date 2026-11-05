@@ -65,7 +65,7 @@ public partial class UIManager
         {
             hp = z.Health;
             max = z.MaxHealth > 0 ? z.MaxHealth : 100f;
-            name = string.IsNullOrEmpty(z.DisplayName) ? "좀비" : z.DisplayName;
+            name = string.IsNullOrEmpty(z.DisplayName) ? "감염자" : z.DisplayName;
             dead = z.IsDead;
             return true;
         }
@@ -74,7 +74,7 @@ public partial class UIManager
         {
             hp = a.Health;
             max = a.MaxHealth > 0 ? a.MaxHealth : 80f;
-            name = string.IsNullOrEmpty(a.DisplayName) ? "좀비개" : a.DisplayName;
+            name = string.IsNullOrEmpty(a.DisplayName) ? "들개" : a.DisplayName;
             dead = a.IsDead;
             return true;
         }

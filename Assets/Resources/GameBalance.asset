@@ -50,28 +50,28 @@ MonoBehaviour:
   traderChance: 0.1
   raiderChance: 0.3
   zombie:
-    displayName: "\uC880\uBE44"
+    displayName: "\uAC10\uC5FC\uC790"
     health: 100
     damage: 12
     speed: 8
     attackDelay: 1.6
     fromTurn: 1
   leatherZombie:
-    displayName: "\uAC00\uC8FD \uC880\uBE44"
+    displayName: "\uAC00\uC8FD \uAC10\uC5FC\uC790"
     health: 200
     damage: 20
     speed: 10
     attackDelay: 1.6
     fromTurn: 10
   rangedZombie:
-    displayName: "\uC6D0\uAC70\uB9AC \uC880\uBE44"
+    displayName: "\uC6D0\uAC70\uB9AC \uAC10\uC5FC\uC790"
     health: 150
     damage: 10
     speed: 8
     attackDelay: 3
     fromTurn: 15
   heavyZombie:
-    displayName: "\uAC70\uB300 \uC880\uBE44"
+    displayName: "\uAC70\uB300 \uAC10\uC5FC\uC790"
     health: 300
     damage: 30
     speed: 8

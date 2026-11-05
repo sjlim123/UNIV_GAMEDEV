@@ -46,7 +46,7 @@ public class Animal : MonoBehaviour, IDamageable
     public bool IsDead => state == State.Dead;
     public float Health => health;                                    // 남은 체력 (HUD 체력바)
     public float MaxHealth => stats != null ? stats.health : 1f;
-    public string DisplayName => stats != null ? stats.displayName : "좀비개";
+    public string DisplayName => stats != null ? stats.displayName : "들개";
     public bool IsChasing => state == State.Chase;
 
     void Awake()
@@ -117,7 +117,7 @@ public class Animal : MonoBehaviour, IDamageable
                 break;
 
             case State.Chase:
-                agent.speed = GameBalance.Data.ToMetersPerSecond(stats.speed) * (1 + 0.2f * danger);
+                agent.speed = GameBalance.Data.ToMetersPerSecond(stats.speed) * EnemyPace.DogMultiplier() * (1 + 0.2f * danger); // 턴이 지날수록 원래 속도에 가까워진다
                 if (repathTimer <= 0) { agent.SetDestination(playerPos); repathTimer = 0.2f; }
                 if (dist < biteRange + 0.5f) FaceTowards(playerPos);
                 if (dist < biteRange && biteTimer <= 0 && staggerTimer <= 0 && Mathf.Abs(playerPos.y - transform.position.y) < 1.2f) Bite(playerPos, danger);
@@ -216,7 +216,7 @@ public class Animal : MonoBehaviour, IDamageable
         voice.PlayOneShot(ProceduralAudio.Snap(), 1f);
         ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.6f, 1.1f);
         UIManager.LastHitFrom = transform.position;
-        GameManager.Instance.Damage(stats.damage * (1 + 0.2f * danger), "좀비개에게 물어뜯겼다.");
+        GameManager.Instance.Damage(stats.damage * (1 + 0.2f * danger), "들개에게 물어뜯겼다.");
     }
 
     void Bark(float volume, float pitch)

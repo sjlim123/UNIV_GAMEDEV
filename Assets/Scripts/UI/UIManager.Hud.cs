@@ -47,8 +47,8 @@ public partial class UIManager
         Place(ink.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-4, -2), new Vector2(690, 340));
         ink.rectTransform.localRotation = Quaternion.Euler(0, 0, 2.5f);
         ink.sprite = UIStyle.InkWash;
-        ink.material = GlassMaterial();
-        ink.color = new Color(0.1f, 0.1f, 0.11f, 0.5f);
+        ink.material = GlassMaterial(); // (2026-11-06부터 null: 비추지 않는 보통 반투명 먹 자국)
+        ink.color = new Color(0.08f, 0.08f, 0.09f, 0.62f);
         ink.raycastTarget = false;
         // 짐 경고: 판 바로 위에 작게
         statusTag = NewText(statusPanel, "", 16, TextAnchor.LowerLeft, Alert, FontTitle);
@@ -524,7 +524,7 @@ public partial class UIManager
     {
         if (keyHints == null || !GameSettings.Tips) return;
         string K(GameAction a) => KeyBindings.Label(a);
-        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용·손전등 꺼내기        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
+        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
         keyHintTimer = 9f;
     }
 

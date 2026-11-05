@@ -246,8 +246,8 @@ public static partial class GameSceneBuilder
         LotRect(ix, iz, out float x0, out float z0, out float w, out float d);
         w = Mathf.Max(w, 11f);
         d = Mathf.Max(d, 11f);
-        x0 = ix == 0 ? -14.5f : 14.5f - w;
-        z0 = iz == 0 ? -14.5f : 14.5f - d;
+        x0 = ix == 0 ? -KLotHalf : KLotHalf - w;
+        z0 = iz == 0 ? -KLotHalf : KLotHalf - d;
         var g = Group("Bombed", block, new Vector3(0, 0.15f, 0));
         const float h = 3.6f, t = 0.3f;
         var mat = Pick(M["wall"], M["cracked"], M["brick"]);
@@ -266,6 +266,9 @@ public static partial class GameSceneBuilder
         var walls = RoomWalls(g, x0, z0, w, d, h, t, mat, ops[0], ops[1], ops[2], ops[3]);
         Box("Floor", g, new Vector3(x0 + w / 2, 0.02f, z0 + d / 2), new Vector3(w - t, 0.04f, d - t), M["floor"], 2.5f);
         AddDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, Pick(M["wood"], M["metal"]));
+        // 폭발에 떨어진 가로 간판 (자리에서 뽑은 난수)
+        var signRng = KRandom(block.localPosition + new Vector3(x0, 0, z0), 21);
+        KSignBand(g, doorSide, x0 - t / 2, z0 - t / 2, w + t, d + t, h - 0.55f, h + 0.4f, signRng.Next(KTraderShop), 2, false, signRng);
 
         // 계단은 문 맞은편 벽을 따라 (PlanUpstairs가 난수를 쓴다)
         var plan = PlanUpstairs(x0, z0, w, d, t, doorSide ^ 1);
@@ -535,7 +538,7 @@ public static partial class GameSceneBuilder
             wetSpots.Add(p);
             float rx = F(0.7f, 1.7f), rz = F(0.6f, 1.4f);
             Box("WetPatch", g, p + new Vector3(0, 0.003f, 0), new Vector3(rx * 2.6f, 0.005f, rz * 2.4f), M["wetAsphalt"], 2f, false, new Vector3(0, F(0, 360), 0));
-            Stain("Puddle", g, p + new Vector3(0, 0.009f, 0), rx, rz, M["puddle"], 600 + i * 7);
+            Stain("Puddle", g, p + new Vector3(0, 0.012f, 0), rx, rz, M["puddle"], 600 + i * 7); // 차선 페인트보다 위 (z-fighting)
         }
         // 쓰러진 가로등 (받침이 뽑힌 채 길에 누워 있다)
         var pole = Group("FallenLamp", g, new Vector3(-4.6f, 0, 3.4f), F(0, 360));
@@ -555,14 +558,14 @@ public static partial class GameSceneBuilder
             if (Mathf.Abs(p.x) < 2.5f && Mathf.Abs(p.z) < 2.4f) continue;
             if (Mathf.Abs(p.x) < 1.7f && p.z > 1.4f && p.z < 4.5f) continue;
             Prim(PrimitiveType.Sphere, "AshPile", g, p + new Vector3(0, 0.04f, 0), new Vector3(F(0.8f, 1.4f), F(0.18f, 0.3f), F(0.7f, 1.2f)), M["ashPile"], new Vector3(0, F(0, 360), 0));
-            if (i < 2) Stain("Scorch", g, p + new Vector3(F(-0.5f, 0.5f), 0.008f, F(-0.5f, 0.5f)), F(1f, 1.8f), F(0.9f, 1.5f), M["scorch"], 700 + i);
+            if (i < 2) Stain("Scorch", g, p + new Vector3(F(-0.5f, 0.5f), 0.011f, F(-0.5f, 0.5f)), F(1f, 1.8f), F(0.9f, 1.5f), M["scorch"], 700 + i);
         }
         RubblePile(g, new Vector3(2.6f, 0, 3.6f), 6, 1.1f);
         RubblePile(g, new Vector3(-3.4f, 0, -3.4f), 5, 0.9f);
         // 흩어진 종이와 벽돌
         for (int i = 0; i < 8; i++)
         {
-            var p = new Vector3(F(-6.5f, 6.5f), 0.004f, F(-5.5f, 7f));
+            var p = new Vector3(F(-6.5f, 6.5f), 0.0095f, F(-5.5f, 7f)); // 종이는 차선 페인트보다 위 (z-fighting)
             if (Mathf.Abs(p.x) < 2.3f && Mathf.Abs(p.z) < 2.2f) continue;
             Box("Paper", g, p, new Vector3(F(0.2f, 0.3f), 0.004f, F(0.25f, 0.4f)), M["cloth"], 1f, false, new Vector3(0, F(0, 360), 0));
         }

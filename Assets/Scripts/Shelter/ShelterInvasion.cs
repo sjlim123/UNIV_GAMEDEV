@@ -16,7 +16,7 @@ public class ShelterInvasion : MonoBehaviour
     [Tooltip("정전 후 첫 좀비가 들어오기까지(초). 그다음부터는 GameBalance.outageZombieInterval")]
     public float firstDelay = 5f;
 
-    const string ZombieWarning = "방공호 안에 좀비가 있다. 먼저 처치해야 출발할 수 있다.";
+    const string ZombieWarning = "방공호 안에 감염자가 있다. 먼저 처치해야 출발할 수 있다.";
 
     readonly List<Zombie> invaders = new List<Zombie>();
     float spawnTimer, alertTimer, groanTimer, lockoutTimer;
@@ -118,7 +118,7 @@ public class ShelterInvasion : MonoBehaviour
         outage = false;
         int n = AliveCount;
         GameManager.Instance.UI.ShowMessage(n > 0
-            ? $"전력이 돌아왔다. 방폭문이 닫힌다… 안에 들어온 좀비 {n}마리를 처치해야 한다."
+            ? $"전력이 돌아왔다. 방폭문이 닫힌다… 안에 들어온 감염자 {n}마리를 처치해야 한다."
             : "전력이 돌아왔다. 방폭문이 닫힌다.", 4f);
     }
 

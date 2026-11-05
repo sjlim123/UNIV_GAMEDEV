@@ -83,13 +83,16 @@ public static partial class GameSceneBuilder
         // 물통
         Prim(PrimitiveType.Cylinder, "WaterBarrel1", root, new Vector3(-4.4f, 0.45f, -1.3f), new Vector3(0.55f, 0.45f, 0.55f), M["paintBlue"], null, true);
         Prim(PrimitiveType.Cylinder, "WaterBarrel2", root, new Vector3(-4.35f, 0.45f, -0.6f), new Vector3(0.55f, 0.45f, 0.55f), M["paintBlue"], null, true);
-        // 소품 (Poly Haven CC0 모델): 군용 상자 위 구급함, 제작대 옆 공구함, 발전기실 연료통, 침대 옆 벽의 방독면
+        // 소품 (Poly Haven CC0 모델): 군용 상자 위 구급함, 제작대 옆 공구함, 발전기실 연료통, 침대 머리맡 벽의 방독면
         PolyProp("old_military_crate", root, new Vector3(4.25f, 0, -1.65f), 88, 0.3f);
         PolyProp("medical_box", root, new Vector3(4.2f, 0.3f, -1.95f), 75, 0.35f, 0.2f, false);
         PolyProp("metal_tool_chest", root, new Vector3(1.65f, 0, 3.6f), 180, 0.35f, 0.4f);
         PolyProp("metal_jerrycan", root, new Vector3(6.0f, 0, -1.95f), 25, 0.45f, 0.3f);
         PolyProp("metal_jerrycan", root, new Vector3(6.45f, 0, -2.05f), -10, 0.45f, 0.3f);
-        PolyProp("old_gas_mask", root, new Vector3(-4.78f, 1.9f, 0.55f), 90, 0.35f, 0, false);
+        PolyProp("old_gas_mask", root, new Vector3(-4.78f, 1.95f, 3.05f), 90, 0.35f, 0, false); // 침대 머리맡 (서쪽 벽 북쪽 끝, 베개 위)
+        // 방독면이 걸려 있던 자리: 3시 31분에 멈춘 벽시계(위)와 삼일은행 달력(아래) (GameSceneBuilder.ShelterWall.cs)
+        BuildWallClock(root, new Vector3(-4.85f, 2.1f, 0.55f), 90f);
+        BuildCalendar(root, new Vector3(-4.85f, 1.42f, 0.55f), 90f);
 
         // 출입구 (복도 끝 철문)
         var exit = Group("Exit", root, new Vector3(0, 0, 11.82f));

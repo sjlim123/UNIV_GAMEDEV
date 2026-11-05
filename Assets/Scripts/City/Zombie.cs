@@ -61,7 +61,7 @@ public class Zombie : MonoBehaviour, IDamageable
     public bool IsDead => state == State.Dead;
     public float Health => health;                                    // 남은 체력 (HUD 체력바)
     public float MaxHealth => stats != null ? stats.health : 1f;
-    public string DisplayName => stats != null ? stats.displayName : "좀비";
+    public string DisplayName => stats != null ? stats.displayName : "감염자";
     public bool IsChasing => state == State.Chase;
     bool IsRaider => Kind == ZombieKind.Raider;
 
@@ -214,7 +214,7 @@ public class Zombie : MonoBehaviour, IDamageable
         switch (state)
         {
             case State.Chase:
-                agent.speed = balance.ToMetersPerSecond(stats.speed) * (1 + 0.3f * danger);
+                agent.speed = balance.ToMetersPerSecond(stats.speed) * EnemyPace.Multiplier(Kind) * (1 + 0.3f * danger); // 턴이 지날수록 원래 속도에 가까워진다
                 if (!sees)
                 {
                     lostSightTimer += dt;
@@ -428,11 +428,11 @@ public class Zombie : MonoBehaviour, IDamageable
     {
         switch (Kind)
         {
-            case ZombieKind.Leather: return "가죽 좀비에게 물어뜯겼다.";
-            case ZombieKind.Ranged: return "원거리 좀비에게 할퀴어졌다.";
-            case ZombieKind.Heavy: return "거대 좀비의 주먹에 짓눌렸다.";
+            case ZombieKind.Leather: return "가죽 감염자에게 물어뜯겼다.";
+            case ZombieKind.Ranged: return "원거리 감염자에게 할퀴어졌다.";
+            case ZombieKind.Heavy: return "거대 감염자의 주먹에 짓눌렸다.";
             case ZombieKind.Raider: return "약탈자의 야구방망이에 맞았다.";
-            default: return "좀비에게 물어뜯겼다.";
+            default: return "감염자에게 물어뜯겼다.";
         }
     }
 

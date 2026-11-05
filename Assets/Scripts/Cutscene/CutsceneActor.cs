@@ -317,7 +317,8 @@ public class CutsceneActor : MonoBehaviour
     static readonly Gait RunGait = new Gait
     {
         Stance = 0.34f, HalfStride = 0.42f, Lift = 0.30f, Lean = 1f, BobDepth = 0.09f, BobAmp = 0.03f,
-        ArmFwd = 40f, ArmBack = 34f, ElbowBase = 90f, ElbowExtra = 14f, ArmOut = 0.14f, HandIn = 0.22f,
+        // 팔은 낮게·부드럽게: 어깨 앞뒤 27/24°, 팔꿈치 68~86° (예전 40/34°·90~104°는 손이 가슴까지 올라와 증기기관차 피스톤처럼 보였다)
+        ArmFwd = 27f, ArmBack = 24f, ElbowBase = 68f, ElbowExtra = 18f, ArmOut = 0.13f, HandIn = 0.17f,
     };
 
     static readonly Gait WalkGait = new Gait

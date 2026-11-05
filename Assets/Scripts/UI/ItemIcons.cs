@@ -144,6 +144,15 @@ public static class ItemIcons
         var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = "Icon_" + id };
         tex.ReadPixels(new Rect(0, 0, Size, Size), 0, 0);
         tex.Apply();
+#if UNITY_EDITOR
+        // 처음 쓰는 셰이더 변형이 둘 이상이면(법선 그림 재질 등) 두 번째 렌더도 빈 채 나올 수 있다 — 비어 있으면 몇 번 더 찍는다
+        for (int retry = 0; retry < 3 && IsBlank(tex); retry++)
+        {
+            cam.Render();
+            tex.ReadPixels(new Rect(0, 0, Size, Size), 0, 0);
+            tex.Apply();
+        }
+#endif
         RenderTexture.active = prev;
         cam.targetTexture = null;
         RenderTexture.ReleaseTemporary(rt);
@@ -156,5 +165,13 @@ public static class ItemIcons
         Object.DestroyImmediate(fill.gameObject);
 
         return Sprite.Create(tex, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f));
+    }
+
+    // 아무것도 찍히지 않았는가 (모든 픽셀이 거의 투명)
+    static bool IsBlank(Texture2D tex)
+    {
+        foreach (var p in tex.GetPixels32())
+            if (p.a > 8) return false;
+        return true;
     }
 }

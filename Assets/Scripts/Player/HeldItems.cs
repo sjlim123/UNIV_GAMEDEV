@@ -76,10 +76,9 @@ public static class HeldItems
         specs["water"].Use = UseGesture.Drink;
         specs["canned_food"] = Power(HoldPose.Hold, new Vector3(0, 0.06f, 0), Vector3.up, Vector3.forward, 0.0465f);
         specs["canned_food"].Use = UseGesture.Eat;
-        // 고기: 뼈다귀를 쥐고 살코기가 위로
-        specs["raw_meat"] = Power(HoldPose.Hold, new Vector3(-0.17f, 0.04f, 0), Vector3.right, Vector3.up, 0.0175f, 0.85f);
-        specs["raw_meat"].Use = UseGesture.Eat;
-        specs["cooked_meat"] = Power(HoldPose.Hold, new Vector3(-0.17f, 0.04f, 0), Vector3.right, Vector3.up, 0.0175f, 0.85f);
+        // 고기(닭다리): 뼈 자루를 쥐고 살이 엄지 쪽(위)으로. 자루 자리·축은 ItemVisuals.Meat.cs가 정한다. 생고기는 먹는 몸짓이 없다 (화로에서 구워야 한다)
+        specs["raw_meat"] = Power(HoldPose.Hold, ItemVisuals.MeatGripPoint, ItemVisuals.MeatAxis, ItemVisuals.MeatUp, 0.0125f, 0.85f);
+        specs["cooked_meat"] = Power(HoldPose.Hold, ItemVisuals.MeatGripPoint, ItemVisuals.MeatAxis, ItemVisuals.MeatUp, 0.0125f, 0.85f);
         specs["cooked_meat"].Use = UseGesture.Eat;
         specs["bandage"] = Power(HoldPose.Hold, new Vector3(0, 0.03f, 0), Vector3.up, Vector3.forward, 0.05f, 0.75f);
         specs["bandage"].Use = UseGesture.Bandage;
