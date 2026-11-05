@@ -107,10 +107,11 @@ public class GameManager : MonoBehaviour
         Damage(b.starveDamage, hungry ? "끝내 굶주림을 견디지 못했다." : "끝내 갈증을 견디지 못했다.");
     }
 
-    // 방공호에 있을 때만 저장한다 (도시 탐험 도중 상태는 저장하지 않음)
+    // 방공호에 있을 때만 저장한다 (도시 탐험 도중 상태는 저장하지 않음). 새 게임·이어하기로 슬롯을 고르기 전에는 저장하지 않는다
+    // (에디터에서 방공호 씬을 열어 둔 채 Play를 누르면 예전에는 슬롯 1이 새 게임으로 덮어써졌다)
     public void SaveGame()
     {
-        if (IsGameOver || State == null) return;
+        if (IsGameOver || State == null || !SaveSystem.SlotChosen) return;
         // 정전으로 들어온 좀비도 함께 저장한다 (나갔다 들어와서 피할 수 없게)
         if (InShelter) State.ShelterInvaders = ShelterInvasion.Instance != null ? ShelterInvasion.Instance.InvaderCount : 0;
         SaveSystem.Save(State);
@@ -185,6 +186,7 @@ public class GameManager : MonoBehaviour
         if (IsTransitioning) return;
         IsGameOver = false;
         SaveSystem.CurrentSlot = slot;
+        SaveSystem.SlotChosen = true;
         State = new GameState();
         if (!playIntro) SaveSystem.Delete(slot);
         StartCoroutine(playIntro ? NewGameRoutine() : LoadRoutine(ShelterScene, false));
@@ -247,6 +249,7 @@ public class GameManager : MonoBehaviour
         }
         IsGameOver = false;
         SaveSystem.CurrentSlot = slot;
+        SaveSystem.SlotChosen = true;
         State = loaded;
         StartCoroutine(ContinueRoutine(notice));
     }
@@ -277,7 +280,17 @@ public class GameManager : MonoBehaviour
         // 출발 직후 상태를 저장한다. 탐험 도중 게임을 끄면 이어하기 때 가져간 물건을 잃고 방공호에서 다시 시작한다
         State.InExpedition = true;
         SaveGame();
-        StartCoroutine(LoadRoutine(CityScene, false, true));
+        StartCoroutine(DepartRoutine());
+    }
+
+    // 철문을 손으로 열고 나가는 1인칭 연출 뒤에 도시 씬을 연다
+    IEnumerator DepartRoutine()
+    {
+        IsTransitioning = true;
+        UI.ClosePanel();
+        UI.SetPaused(false);
+        yield return ShelterDeparture.Play();
+        yield return LoadRoutine(CityScene, false, true);
     }
 
     // 탐험 중 쓰러뜨린 적 (탐험 일지에 적는다)
@@ -296,7 +309,17 @@ public class GameManager : MonoBehaviour
         expeditionRedNightSeconds = city != null ? city.RedNightElapsed : 0;
         if (!AdvanceTurn()) return;
         Tutorial.Notify("return");
-        StartCoroutine(LoadRoutine(ShelterScene, true, true));
+        StartCoroutine(ArriveRoutine());
+    }
+
+    // 주인공이 해치로 걸어 들어가는 3인칭 연출 뒤에 방공호 씬을 연다
+    IEnumerator ArriveRoutine()
+    {
+        IsTransitioning = true;
+        UI.ClosePanel();
+        UI.SetPaused(false);
+        yield return HatchArrival.Play();
+        yield return LoadRoutine(ShelterScene, true, true);
     }
 
     public void ExpeditionTimeUp()

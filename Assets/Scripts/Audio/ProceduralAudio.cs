@@ -437,6 +437,27 @@ public static class ProceduralAudio
         };
     }
 
+    // 웅덩이를 밟는 첨벙 (3가지): 낮은 퐁 + 물이 갈라지는 쏴 + 떨어지는 물방울 몇 개
+    public static AudioClip Splash()
+    {
+        int v = rng.Next(3);
+        var body = Biquad.BandPass(1400 + v * 300, 0.7f);
+        var fine = Biquad.BandPass(4200, 1.0f);
+        var lp = Biquad.LowPass(900);
+        float drip = 0;
+        int k = 0;
+        return Make("splash" + v, 0.5f, t =>
+        {
+            float plop = Mathf.Sin(2 * Mathf.PI * (160f - 90f * Mathf.Clamp01(t * 12)) * t) * Mathf.Exp(-t * 26) * 1.4f;
+            float wash = body.Process(Noise()) * Mathf.Exp(-t * 9) * Mathf.Clamp01(t * 60) * 2.2f;
+            float hiss = fine.Process(Noise()) * Mathf.Exp(-t * 14) * 0.5f;
+            if (k++ % 441 == 0 && t > 0.12f && rng.NextDouble() < 0.35) drip = Rand(0.3f, 0.8f);
+            float drops = lp.Process(Noise()) * drip;
+            drip *= 0.9985f;
+            return plop + wash + hiss + drops * 0.6f;
+        }, 0.8f);
+    }
+
     // ---------- 전투·이동·출입 소리 ----------
 
     // 불이 확 붙는 소리 (훅 하는 바람 + 낮은 울림)

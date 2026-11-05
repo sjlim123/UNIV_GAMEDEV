@@ -7,6 +7,7 @@ public enum ZombieKind { Normal, Leather, Ranged, Heavy, Raider }
 
 // 좀비: 배회 → 소리를 들으면 확인하러 옴 → 보이면 추격·공격. 닫힌 문은 두드려 부순다.
 // 종류에 따라 수치(GameBalance)·겉모습·공격 방식이 다르다. Configure를 부르지 않으면 일반 좀비.
+// 죽으면 관절이 풀려 물리(Ragdoll)로 힘없이 무너지고, 쓰러진 자리에 피가 번지며, 잠시 뒤 어두워지면서 땅으로 가라앉아 사라진다(Gore)
 [RequireComponent(typeof(NavMeshAgent))]
 public class Zombie : MonoBehaviour, IDamageable
 {
@@ -548,6 +549,13 @@ public class Zombie : MonoBehaviour, IDamageable
         float stride = IsRaider ? (chasing ? 1.3f : 0.75f) : Kind == ZombieKind.Heavy ? 1f : chasing ? 1.1f : 0.65f;
         if (stepDistance < stride * size) return;
         stepDistance = 0;
+        // 웅덩이를 밟으면 첨벙 (물결·물방울은 PuddleFx)
+        if (PuddleFx.Step(transform.position, chasing ? 0.8f : 0.5f, false))
+        {
+            feet.pitch = Random.Range(0.9f, 1.1f);
+            feet.PlayOneShot(ProceduralAudio.Splash(), chasing ? 0.9f : 0.5f);
+            return;
+        }
         if (IsRaider)
         {
             feet.pitch = Random.Range(0.8f, 0.95f);
@@ -635,40 +643,33 @@ public class Zombie : MonoBehaviour, IDamageable
         agent.enabled = false;
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
+        if (flash != null) flash.enabled = false;
         // 남은 신음·발소리를 끊고 마지막 소리만 낸다
         feet.Stop();
         voice.Stop();
         voice.pitch = IsRaider ? 0.85f : VoicePitch() * 0.75f;
         voice.PlayOneShot(IsRaider ? ProceduralAudio.Hurt() : ProceduralAudio.ZombieGroan(), 1f);
+        if (jaw != null) jaw.localRotation = Quaternion.Euler(22, 0, 0);
 
-        // 무릎이 꺾이며 맞은 방향으로 쓰러진다. 팔은 힘없이 늘어진다
+        // 관절이 풀려 중력에 힘없이 무너진다 (맞은 방향으로 밀린다)
         var flat = new Vector3(direction.x, 0, direction.z).normalized;
-        var axis = Vector3.Cross(Vector3.up, flat);
-        if (axis.sqrMagnitude < 0.01f) axis = transform.right;
-        var startRot = transform.rotation;
-        var endRot = Quaternion.AngleAxis(88, axis) * startRot;
-        Quaternion bodyFrom = body != null ? body.localRotation : Quaternion.identity, headFrom = head != null ? head.localRotation : Quaternion.identity;
-        Quaternion armLFrom = armL != null ? armL.localRotation : Quaternion.identity, armRFrom = armR != null ? armR.localRotation : Quaternion.identity;
-        for (float t = 0; t < 1; t += Time.deltaTime / 0.75f)
+        var impulse = (flat * 90f + Vector3.up * 12f) * Mathf.Max(0.6f, size);
+        var parts = Ragdoll.Human(rig, impulse);
+        DropLoot();
+
+        // 몸이 바닥에 늘어진 뒤 그 자리에 피가 번진다
+        float settle = 0;
+        while (settle < 4f && !(settle > 0.9f && Ragdoll.Settled(parts)))
         {
-            float buckle = Mathf.Clamp01(t * 2.2f);       // 먼저 무릎이 꺾이고
-            float fall = Mathf.Clamp01((t - 0.2f) / 0.8f); // 이어서 몸이 넘어간다
-            transform.rotation = Quaternion.Slerp(startRot, endRot, fall * fall);
-            if (shinL != null) shinL.localRotation = Quaternion.Euler(55 * buckle, 0, 0);
-            if (shinR != null) shinR.localRotation = Quaternion.Euler(70 * buckle, 0, 0);
-            if (legL != null) legL.localRotation = Quaternion.Euler(-25 * buckle, 0, -4 * buckle);
-            if (legR != null) legR.localRotation = Quaternion.Euler(-35 * buckle, 0, 6 * buckle);
-            if (body != null) body.localRotation = Quaternion.Slerp(bodyFrom, Quaternion.Euler(28, 0, 6), buckle);
-            if (head != null) head.localRotation = Quaternion.Slerp(headFrom, Quaternion.Euler(35, 20, 25), buckle);
-            if (armL != null) armL.localRotation = Quaternion.Slerp(armLFrom, Quaternion.Euler(-30, 0, -35), fall);
-            if (armR != null) armR.localRotation = Quaternion.Slerp(armRFrom, Quaternion.Euler(-60, 0, 30), fall);
-            if (jaw != null) jaw.localRotation = Quaternion.Euler(28 * buckle, 0, 0);
+            settle += Time.deltaTime;
             yield return null;
         }
-        transform.rotation = endRot;
-        ProceduralAudio.PlayAt3D(ProceduralAudio.Bang(), transform.position, 0.5f, 0.6f);
-        DropLoot();
-        Destroy(gameObject, 40f);
+        var torso = body != null ? body.position : transform.position;
+        ProceduralAudio.PlayAt3D(ProceduralAudio.Bang(), torso, 0.35f, 0.6f);
+        Gore.BloodPool(torso, Random.Range(0.55f, 0.8f) * Mathf.Max(0.7f, size));
+
+        // 잠시 뒤 색이 어두워지며 땅으로 가라앉아 사라진다
+        yield return Gore.FadeAway(gameObject, rig != null ? rig.Model : transform, rig != null ? rig.Renderers : new Renderer[0], parts, 7f, 5f, 3.5f);
     }
 
     // 일반·가죽·원거리 좀비는 쓰러진 자리에 밧줄·천·고철 중 하나를 떨어뜨린다

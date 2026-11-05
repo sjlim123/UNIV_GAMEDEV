@@ -185,7 +185,16 @@ public class Workbench : Interactable
         var gm = GameManager.Instance;
         var s = gm.State;
         if (!CanCraft(s, recipe)) return false;
+        // 재료는 창고에서 먼저, 모자라면 소지품에서 쓴다 (GameState.ConsumeFromAnywhere). 어디서 몇 개 썼는지 세어 알린다
+        int fromStorage = 0, fromCarried = 0;
+        foreach (var kv in recipe.Ingredients)
+        {
+            int st = Mathf.Min(kv.Value, s.Storage.Count(kv.Key));
+            fromStorage += st;
+            fromCarried += kv.Value - st;
+        }
         foreach (var kv in recipe.Ingredients) s.ConsumeFromAnywhere(kv.Key, kv.Value);
+        string used = fromStorage > 0 && fromCarried > 0 ? $"재료: 창고 {fromStorage}개 + 소지품 {fromCarried}개" : fromStorage > 0 ? $"재료: 창고에서 {fromStorage}개" : $"재료: 소지품에서 {fromCarried}개";
         if (IsInstall(recipe))
         {
             s.FurnaceBuilt = true;
@@ -200,7 +209,7 @@ public class Workbench : Interactable
             return true;
         }
         bool toHand = StoreResult(s, recipe);
-        gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)} x{recipe.ResultCount} 제작 완료" + (toHand ? "" : " (무거워서 창고에 넣었다)"));
+        gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)} x{recipe.ResultCount} 제작 완료" + (toHand ? "" : " (무거워서 창고에 넣었다)") + "  <size=18><color=#a8a294>" + used + "</color></size>", 3f);
         PlayHammer(soundAt);
         return true;
     }

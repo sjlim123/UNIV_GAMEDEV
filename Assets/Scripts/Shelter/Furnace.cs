@@ -147,6 +147,7 @@ public class Furnace : Interactable
             baseIntensity = fireLight.intensity;
             baseColor = fireLight.color;
         }
+        EmissionFix.Ensure(transform); // 에디터 재임포트 뒤 발광 키워드가 빠진 재질(화구 불·숯) 대비
         if (mouthGlow != null && mouthGlow.sharedMaterial != null && mouthGlow.sharedMaterial.HasProperty(EmissionId))
             baseEmission = mouthGlow.sharedMaterial.GetColor(EmissionId);
         if (crackle == null) crackle = MakeSource(0.3f, 9f);

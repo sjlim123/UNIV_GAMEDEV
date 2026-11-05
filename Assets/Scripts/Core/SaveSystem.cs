@@ -10,6 +10,8 @@ public static class SaveSystem
 
     // 지금 하는 게임의 슬롯 (1 ~ SlotCount)
     public static int CurrentSlot { get; set; } = 1;
+    // 새 게임·이어하기로 슬롯을 골랐는가. 고르기 전(에디터에서 방공호 씬을 바로 Play했을 때)에는 어느 슬롯에도 저장하지 않는다
+    public static bool SlotChosen { get; set; }
 
     static string Dir => Application.persistentDataPath;
     static string PathOf(int slot) => Path.Combine(Dir, $"save{slot}.json");

@@ -5,14 +5,15 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 // 방공호 장치의 이펙트: 바닥에 쾅 놓일 때 바닥을 따라 퍼지는 먼지와 튀는 파편, 망치질 먼지, 바닥에 튕기는 불꽃, 가지처럼 뻗는 전기 아크,
-// 피어오르는 김, 섬광, 잠깐 켜지는 불빛.
+// 피어오르는 김, 섬광, 잠깐 켜지는 불빛. 라디오 스피커의 음파 고리, 문 종류별(나무·철·황금·방폭·해치) 부스러기.
+// 발전기 배기관의 검회색 연기(Smoke), 웅덩이를 밟을 때의 물방울·물보라(Splash).
 // 텍스처·재질·입자 시스템은 처음 쓸 때 코드로 만들고 씬이 바뀌어도 그대로 둔다 (HitEffects의 피와 같은 방식).
 // 입자는 모두 EmitParams로 하나씩 내보내므로 위치·속도·색을 그 자리의 상황(벽 방향, 조명)에 맞춘다.
 // 먼지는 빛을 받지 않는 재질이라 그 자리의 조명을 어림해 색에 미리 곱한다 (전구 옆은 따뜻하게, 구석은 어둡게).
 public static class Vfx
 {
-    static ParticleSystem dust, chips, sparks, arcs, flash;
-    static Material dustMat, sparkMat, arcMat, flashMat, chipMat;
+    static ParticleSystem dust, chips, sparks, arcs, flash, waves, chipsWood, chipsRust, chipsGold, drops;
+    static Material dustMat, sparkMat, arcMat, flashMat, chipMat, waveMat, dropMat;
     static VfxRunner runner;
     static readonly List<Light> sceneLights = new List<Light>();
     static Scene lightsScene;
@@ -205,6 +206,53 @@ public static class Vfx
             Random.Range(1.4f, 2.4f), Random.Range(0.16f, 0.28f), SteamTint, Random.Range(0.5f, 0.7f));
     }
 
+    // 배기 연기 한 뭉치 (발전기): 검회색 먼지 뭉치가 느리게 오르며 퍼진다. dark 0~1 = 더 검게 (연료를 막 넣었을 때).
+    // 먼지처럼 그 자리 조명으로 물들이되, 어두운 천장 아래서도 읽히게 밝기 바닥값을 둔다
+    public static void Smoke(Vector3 pos, Vector3 vel, float life, float size, float alpha, float dark = 0.5f)
+    {
+        Init();
+        var tint = Color.Lerp(new Color(0.5f, 0.5f, 0.52f), new Color(0.2f, 0.2f, 0.21f), dark);
+        var lit = LightAt(pos) * tint;
+        var c = new Color(Mathf.Max(lit.r, tint.r * 0.9f), Mathf.Max(lit.g, tint.g * 0.9f), Mathf.Max(lit.b, tint.b * 0.9f), alpha);
+        var p = new ParticleSystem.EmitParams
+        {
+            position = pos,
+            velocity = vel,
+            startLifetime = life,
+            startSize = size,
+            startColor = c,
+            rotation = Random.Range(0f, 360f),
+            angularVelocity = Random.Range(-20f, 20f)
+        };
+        dust.Emit(p, 1);
+    }
+
+    // 웅덩이 첨벙 (strength 0~1): 물방울이 튀어 오르고 낮게 물보라가 인다
+    public static void Splash(Vector3 pos, float strength)
+    {
+        Init();
+        var light = LightAt(pos);
+        int n = Count(10 + 22 * strength);
+        for (int i = 0; i < n; i++)
+        {
+            var dir = (Vector3.up * Random.Range(0.6f, 1.4f) + Random.insideUnitSphere * 0.5f).normalized;
+            var tint = Color.Lerp(new Color(0.5f, 0.56f, 0.62f), new Color(0.7f, 0.74f, 0.8f), Random.value);
+            var c = Color.Lerp(tint, tint * light, 0.5f);
+            c.a = Random.Range(0.6f, 0.85f);
+            var p = new ParticleSystem.EmitParams
+            {
+                position = pos + new Vector3(Random.Range(-0.12f, 0.12f), 0.01f, Random.Range(-0.12f, 0.12f)),
+                velocity = dir * Random.Range(0.8f, 2.2f) * (0.5f + strength),
+                startLifetime = Random.Range(0.3f, 0.55f),
+                startSize = Random.Range(0.015f, 0.04f),
+                startColor = c
+            };
+            drops.Emit(p, 1);
+        }
+        for (int i = 0; i < 2; i++)
+            Puff(pos + Vector3.up * 0.05f, Vector3.up * 0.25f + Random.insideUnitSphere * 0.3f, Random.Range(0.5f, 0.8f), 0.18f + 0.15f * strength, new Color(0.6f, 0.64f, 0.7f), 0.3f);
+    }
+
     // 가산 혼합 섬광 한 장 (size m, life초)
     public static void Flash(Vector3 pos, float size, float life, Color color)
     {
@@ -241,6 +289,107 @@ public static class Vfx
     }
 
     internal static void PulseEnded() => pulsesAlive = Mathf.Max(0, pulsesAlive - 1);
+
+
+    // ---------- 음파 고리 (라디오 스피커) ----------
+
+    // 스피커 앞으로 퍼져 나가는 얇은 빛 고리 하나. normal: 스피커가 보는 쪽, size: 다 퍼졌을 때 지름(m), strength: 밝기(0~1)
+    public static void SoundWave(Vector3 pos, Vector3 normal, float size, float strength)
+    {
+        Init();
+        normal = normal.normalized;
+        var p = new ParticleSystem.EmitParams
+        {
+            position = pos,
+            velocity = normal * (size * 0.9f),
+            startLifetime = 0.55f,
+            startSize = size,
+            startColor = new Color(1f, 0.8f, 0.5f, 0.42f * Mathf.Clamp01(strength)),
+            rotation3D = Quaternion.LookRotation(normal).eulerAngles
+        };
+        waves.Emit(p, 1);
+    }
+
+    // ---------- 문 파편 ----------
+
+    public enum DoorKind { Wood, Steel, Gold, Blast, Hatch }
+
+    // 문이 열리거나 닫힐 때 문틀 위 모서리(a→b)에서 떨어지는 부스러기. 종류마다 다르다:
+    // 나무문 톱밥·나무 가시, 철문 녹 가루·녹 조각, 황금문 금박 조각, 방폭문 콘크리트 먼지·녹 조각(움직이는 동안 조금씩), 해치 녹·흙덩이.
+    // normal: 문이 보는 쪽 (양쪽으로 조금씩 떨어진다), strength: 세기 (좀비가 부수면 2쯤)
+    public static void DoorDebris(DoorKind kind, Vector3 a, Vector3 b, Vector3 normal, float strength = 1f)
+    {
+        Init();
+        normal = normal.normalized;
+        var along = b - a;
+        float len = Mathf.Max(0.1f, along.magnitude);
+        along /= len;
+        Vector3 At(float t) => a + along * (t * len);
+        Vector3 Side() => normal * Random.Range(-0.06f, 0.06f);
+        switch (kind)
+        {
+            case DoorKind.Wood:
+            {
+                var sawdust = new Color(0.78f, 0.62f, 0.4f);
+                int n = Count(7 * strength);
+                for (int i = 0; i < n; i++)
+                    Puff(At(Random.value) + Side() + Vector3.down * Random.Range(0f, 0.08f), Vector3.down * Random.Range(0.25f, 0.6f) + normal * Random.Range(-0.15f, 0.15f),
+                        Random.Range(1.2f, 2.2f), Random.Range(0.06f, 0.14f), sawdust, Random.Range(0.35f, 0.6f));
+                int bits = Count(5 * strength);
+                for (int i = 0; i < bits; i++)
+                    ChipIn(chipsWood, At(Random.Range(0.55f, 1f)) + Side(), Vector3.down * Random.Range(0.2f, 1f) + normal * Random.Range(-0.5f, 0.5f) + along * Random.Range(-0.2f, 0.2f),
+                        Random.Range(0.012f, 0.03f), new Vector3(0.5f, 0.35f, 2.6f));
+                break;
+            }
+            case DoorKind.Steel:
+            case DoorKind.Hatch:
+            {
+                var rustDust = new Color(0.55f, 0.32f, 0.18f);
+                int n = Count(6 * strength);
+                for (int i = 0; i < n; i++)
+                    Puff(At(Random.value) + Side() + Vector3.down * Random.Range(0f, 0.1f), Vector3.down * Random.Range(0.3f, 0.7f) + normal * Random.Range(-0.1f, 0.1f),
+                        Random.Range(1f, 1.8f), Random.Range(0.05f, 0.11f), rustDust, Random.Range(0.35f, 0.55f));
+                int flakes = Count(8 * strength);
+                for (int i = 0; i < flakes; i++)
+                    ChipIn(chipsRust, At(Random.value) + Side(), Vector3.down * Random.Range(0.1f, 0.6f) + normal * Random.Range(-0.4f, 0.4f),
+                        Random.Range(0.01f, 0.024f), new Vector3(1.6f, 0.18f, 1.3f));
+                if (kind == DoorKind.Hatch)
+                {
+                    int clods = Count(4 * strength);
+                    for (int i = 0; i < clods; i++)
+                        ChipIn(chips, At(Random.value) + Side(), Vector3.down * Random.Range(0.2f, 0.8f) + normal * Random.Range(-0.3f, 0.3f), Random.Range(0.012f, 0.03f), Vector3.one);
+                }
+                if (strength > 1.5f) SparkBurst(At(0.9f), -normal, 4, 1f, 2.5f, 0.8f, 0.7f);
+                break;
+            }
+            case DoorKind.Gold:
+            {
+                int n = Count(5 * strength);
+                for (int i = 0; i < n; i++)
+                    Puff(At(Random.value) + Side(), Vector3.down * Random.Range(0.2f, 0.5f), Random.Range(1f, 1.6f), Random.Range(0.05f, 0.1f), new Color(0.85f, 0.7f, 0.4f), 0.35f);
+                int flakes = Count(7 * strength);
+                for (int i = 0; i < flakes; i++)
+                    ChipIn(chipsGold, At(Random.value) + Side(), Vector3.down * Random.Range(0.1f, 0.5f) + normal * Random.Range(-0.35f, 0.35f),
+                        Random.Range(0.01f, 0.022f), new Vector3(1.8f, 0.12f, 1.5f));
+                break;
+            }
+            case DoorKind.Blast:
+            {
+                int n = Count(10 * strength);
+                for (int i = 0; i < n; i++)
+                    Puff(At(Random.value) + Side() + Vector3.down * Random.Range(0f, 0.15f), Vector3.down * Random.Range(0.4f, 1.1f) + normal * Random.Range(-0.2f, 0.2f),
+                        Random.Range(1.4f, 2.6f), Random.Range(0.08f, 0.2f), DustTint, Random.Range(0.4f, 0.7f));
+                int flakes = Count(6 * strength);
+                for (int i = 0; i < flakes; i++)
+                    ChipIn(chipsRust, At(Random.value) + Side(), Vector3.down * Random.Range(0.3f, 1f) + normal * Random.Range(-0.4f, 0.4f),
+                        Random.Range(0.012f, 0.028f), new Vector3(1.5f, 0.2f, 1.2f));
+                int grit = Count(5 * strength);
+                for (int i = 0; i < grit; i++)
+                    ChipIn(chips, At(Random.value) + Side(), Vector3.down * Random.Range(0.4f, 1.2f) + normal * Random.Range(-0.3f, 0.3f), Random.Range(0.008f, 0.02f), Vector3.one);
+                break;
+            }
+        }
+    }
 
     // 그 자리의 빛을 어림한다 (씬의 점광원 + 주변광). 밝은 곳은 눈이 뭉개지듯 부드럽게 누른다
     public static Color LightAt(Vector3 p)
@@ -302,6 +451,71 @@ public static class Vfx
         chips.Emit(p, 1);
     }
 
+
+    // 색·질감이 다른 파편 (나무 가시·녹 조각·금박). shape: 세 축 비율 (얇고 긴 조각 등)
+    static void ChipIn(ParticleSystem system, Vector3 pos, Vector3 vel, float size, Vector3 shape)
+    {
+        var p = new ParticleSystem.EmitParams
+        {
+            position = pos,
+            velocity = vel,
+            startLifetime = Random.Range(2f, 3.5f),
+            startSize3D = new Vector3(size * shape.x * Random.Range(0.7f, 1.4f), size * shape.y * Random.Range(0.6f, 1.2f), size * shape.z * Random.Range(0.7f, 1.4f)),
+            rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f)),
+            angularVelocity3D = Random.insideUnitSphere * 400f,
+            startColor = Color.white
+        };
+        system.Emit(p, 1);
+    }
+
+    // 파편 시스템 하나 (상자 메시, 바닥에 튕긴다)
+    static ParticleSystem ChipSystem(string name, Material mat, int max)
+    {
+        var ps = System(name, mat, max);
+        var main = ps.main;
+        main.gravityModifier = 1f;
+        main.startRotation3D = true;
+        var col = ps.collision;
+        col.enabled = true;
+        col.type = ParticleSystemCollisionType.World;
+        col.mode = ParticleSystemCollisionMode.Collision3D;
+        col.bounce = 0.3f;
+        col.dampen = 0.4f;
+        col.lifetimeLoss = 0f;
+        col.radiusScale = 0.5f;
+        col.quality = ParticleSystemCollisionQuality.Medium;
+        var size = ps.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0, 1), new Keyframe(0.8f, 1), new Keyframe(1, 0)));
+        var r = ps.GetComponent<ParticleSystemRenderer>();
+        r.renderMode = ParticleSystemRenderMode.Mesh;
+        r.mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+        r.alignment = ParticleSystemRenderSpace.World;
+        r.enableGPUInstancing = true;
+        return ps;
+    }
+
+    // 얇은 고리 그림 (음파)
+    static Texture2D RingTexture()
+    {
+        const int S = 64;
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "VfxRing" };
+        var px = new Color[S * S];
+        for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2 - 1, v = (y + 0.5f) / S * 2 - 1;
+                float r = Mathf.Sqrt(u * u + v * v);
+                float band = Mathf.Exp(-Mathf.Pow((r - 0.8f) / 0.07f, 2f));
+                float inner = 0.12f * Mathf.Exp(-Mathf.Pow((r - 0.55f) / 0.08f, 2f));
+                float a = Mathf.Clamp01(band + inner) * Mathf.Clamp01((1f - r) * 8f);
+                px[y * S + x] = new Color(1f, 0.95f, 0.85f, a);
+            }
+        tex.SetPixels(px);
+        tex.Apply(true);
+        return tex;
+    }
+
     // 바닥 방향 하나: open이 있으면 그쪽 반구(벽 반대쪽)에서만 뽑는다
     static Vector3 Spread(Vector3 open, float minDot)
     {
@@ -342,6 +556,9 @@ public static class Vfx
         sparkMat = Make("Effects/M_VfxSpark", true, hot, new Color(3f, 2.3f, 1.4f, 1f), 0f, 0f, 0.05f, 0.2f);
         arcMat = Make("Effects/M_VfxSpark", true, hot, new Color(1.2f, 1.6f, 2.6f, 1f), 0f, 0f, 0.03f, 0.15f);
         flashMat = Make("Effects/M_VfxSpark", true, soft, new Color(2.2f, 2.2f, 2.2f, 1f), 0f, 0.12f, 0.08f, 0.3f);
+        waveMat = Make("Effects/M_VfxSpark", true, RingTexture(), new Color(1.6f, 1.3f, 0.9f, 1f), 0f, 0f, 0.03f, 0.12f);
+        waveMat.SetFloat("_Cull", 0); // 고리는 양면
+        dropMat = Make("Effects/M_VfxDust", false, soft, Color.white, 0f, 0f, 0.04f, 0.18f);
         chipMat = RuntimeVisuals.Mat(new Color(0.55f, 0.5f, 0.44f), 0.2f);
 
         // 먼지·연기·김: 천천히 퍼지며 커지고, 바람에 흔들리듯 조금씩 흐른다
@@ -468,6 +685,30 @@ public static class Vfx
             r.maxParticleSize = 0.3f;
         }
 
+
+        // 음파 고리: 스피커 앞을 보는 평평한 고리가 퍼지며 옅어진다 (메시 입자라 방향을 따로 준다)
+        waves = System("VfxWaves", waveMat, 200);
+        {
+            var size = waves.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0, 0.2f), new Keyframe(1, 1f)));
+            var col = waves.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                new[] { new GradientAlphaKey(0.6f, 0), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0, 1) });
+            col.color = g;
+            var r = waves.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Mesh;
+            r.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            r.alignment = ParticleSystemRenderSpace.World;
+            r.maxParticleSize = 1f;
+        }
+        // 색이 다른 파편: 나무 가시·녹 조각·금박
+        chipsWood = ChipSystem("VfxChipsWood", RuntimeVisuals.Mat(new Color(0.52f, 0.37f, 0.2f), 0.2f), 300);
+        chipsRust = ChipSystem("VfxChipsRust", RuntimeVisuals.Mat(new Color(0.46f, 0.22f, 0.1f), 0.15f), 300);
+        chipsGold = ChipSystem("VfxChipsGold", RuntimeVisuals.Mat(new Color(0.9f, 0.7f, 0.3f), 0.65f, 0.8f), 200);
+
         // 섬광: 확 커졌다가 줄며 사라지는 둥근 빛
         flash = System("VfxFlash", flashMat, 200);
         {
@@ -482,6 +723,27 @@ public static class Vfx
             col.color = g;
             var r = flash.GetComponent<ParticleSystemRenderer>();
             r.maxParticleSize = 1f;
+        }
+
+        // 물방울: 작은 둥근 알갱이가 속도 방향으로 조금 늘어나 포물선을 그리며 떨어진다
+        drops = System("VfxDrops", dropMat, 600);
+        {
+            var main = drops.main;
+            main.gravityModifier = 1.3f;
+            var size = drops.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 1, 1, 0.5f));
+            var col = drops.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(1, 0.7f), new GradientAlphaKey(0, 1) });
+            col.color = g;
+            var r = drops.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Stretch;
+            r.lengthScale = 1.6f;
+            r.velocityScale = 0.03f;
+            r.maxParticleSize = 0.3f;
         }
     }
 

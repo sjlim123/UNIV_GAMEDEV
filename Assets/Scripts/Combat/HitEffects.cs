@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// 타격감: 맞은 적이 빨갛게 번쩍이고(HitFlash), 맞은 자리에서 피가 튀고(Blood),
+// 타격감: 맞은 적이 붉게 달아오르고(HitFlash), 맞은 자리에서 피가 튀며 붉은 빛이 잠깐 번지고(Blood·Vfx.Flash·Vfx.Pulse),
 // 아주 잠깐 화면이 멈칫하며(HitStop) 조준점에 빨간 X가 뜬다 (UIManager.ShowHitMarker)
 public static class HitEffects
 {
@@ -13,6 +13,10 @@ public static class HitEffects
     public static void PlayerHit(Component target, Vector3 point, Vector3 direction, bool killed)
     {
         Blood(point, -direction, killed ? 44 : 14);
+        // 맞은 자리에 붉은 빛이 잠깐 번진다 (몸의 붉은 달아오름과 함께, 어두운 밤에도 맞았다는 것이 보인다. 참고 영상보다 훨씬 은은하게)
+        var back = -direction.normalized;
+        Vfx.Flash(point + back * 0.06f, killed ? 0.5f : 0.32f, 0.14f, new Color(1f, 0.12f, 0.08f, killed ? 0.5f : 0.32f));
+        Vfx.Pulse(point + back * 0.3f, new Color(1f, 0.2f, 0.1f), killed ? 1.6f : 0.9f, 2.2f, 0.16f, false);
         var ui = GameManager.Instance.UI;
         ui.ShowHitMarker(killed);
         HitStop(killed ? 0.09f : 0.05f);
@@ -143,19 +147,27 @@ public static class HitEffects
     }
 }
 
-// 맞으면 몸 전체가 잠깐 빨갛게 번쩍인다 (불에 타면 주황색으로 일렁인다). 재질은 그대로 두고 MaterialPropertyBlock만 바꾼다
+// 맞으면 몸 전체가 잠깐 붉게 달아오른다 (불에 타면 주황색으로 일렁인다).
+// 어두운 밤에는 색만 바꿔서는 보이지 않아, 발광(_EMISSION)을 켠 쌍둥이 재질로 잠깐 바꿔 끼우고 MaterialPropertyBlock으로 발광색을 준다.
+// 쌍둥이는 재질마다 하나만 만들어 모든 적이 함께 쓰고, 번쩍임이 끝나면 원래 재질로 되돌린다 (평소 그리기 비용은 그대로).
+// 빌드에 이 셰이더 변형(_NORMALMAP + _EMISSION)이 들어가도록 Resources/Effects/M_HitGlow 재질을 둔다
 public class HitFlash : MonoBehaviour
 {
-    public static readonly Color HitColor = new Color(1f, 0.12f, 0.08f);
-    public static readonly Color BurnColor = new Color(1f, 0.45f, 0.08f);
-    const float FlashTime = 0.18f;
+    public static readonly Color HitColor = new Color(1f, 0.1f, 0.06f);
+    public static readonly Color BurnColor = new Color(1f, 0.42f, 0.08f);
+    const float FlashTime = 0.45f; // 참고 영상보다 훨씬 은은하게: 잠깐 달아올랐다 식는다
+    const float HitGlow = 0.5f;    // 발광 세기 (몸의 음영이 남을 만큼만. 블룸은 거의 번지지 않는다)
+
+    static readonly Dictionary<Material, Material> twins = new Dictionary<Material, Material>();
+    static readonly int BaseColorId = Shader.PropertyToID("_BaseColor"), EmissionId = Shader.PropertyToID("_EmissionColor");
 
     Renderer[] renderers;
+    Material[] originals, glowing;
     Color[] baseColors;
     MaterialPropertyBlock block;
     Color color;
     float t = 1f, burn;
-    bool dirty;
+    bool swapped;
 
     public static HitFlash For(GameObject go, Renderer[] renderers)
     {
@@ -168,14 +180,35 @@ public class HitFlash : MonoBehaviour
     void Bind(Renderer[] list)
     {
         if (renderers != null) Clear();
-        renderers = list ?? new Renderer[0];
+        // 눈처럼 스스로 빛나는 부품은 뺀다
+        var use = new List<Renderer>();
+        foreach (var r in list ?? new Renderer[0])
+            if (r != null && r.sharedMaterial != null && !r.sharedMaterial.IsKeywordEnabled("_EMISSION")) use.Add(r);
+        renderers = use.ToArray();
+        originals = new Material[renderers.Length];
+        glowing = new Material[renderers.Length];
         baseColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
         {
-            var m = renderers[i] != null ? renderers[i].sharedMaterial : null;
-            baseColors[i] = m != null && m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white;
+            var m = renderers[i].sharedMaterial;
+            originals[i] = m;
+            glowing[i] = Twin(m);
+            baseColors[i] = m.HasProperty(BaseColorId) ? m.GetColor(BaseColorId) : Color.white;
         }
         block ??= new MaterialPropertyBlock();
+    }
+
+    // 발광을 켠 쌍둥이 재질 (재질마다 하나). 노멀맵 키워드도 켜서 변형이 M_HitGlow와 같게 한다 (노멀맵이 없으면 평평한 기본 노멀)
+    static Material Twin(Material src)
+    {
+        if (twins.TryGetValue(src, out var tw) && tw != null) return tw;
+        tw = new Material(src) { name = src.name + "_glow" };
+        tw.EnableKeyword("_EMISSION");
+        tw.EnableKeyword("_NORMALMAP");
+        tw.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        tw.SetColor(EmissionId, Color.black);
+        twins[src] = tw;
+        return tw;
     }
 
     public void Flash(Color c)
@@ -196,30 +229,45 @@ public class HitFlash : MonoBehaviour
     {
         if (renderers == null) return;
         t = Mathf.Min(1f, t + Time.deltaTime / FlashTime);
-        float hit = (1 - t) * (1 - t);
-        float b = burn > 0 ? burn * (0.25f + 0.2f * Mathf.PerlinNoise(Time.time * 9f, 0.3f)) : 0;
-        if (hit <= 0.001f && b <= 0.001f)
+        float hit = (1 - t) * (1 - t); // 처음에 달아올랐다 식는다
+        float b = burn > 0 ? burn * (0.3f + 0.25f * Mathf.PerlinNoise(Time.time * 9f, 0.3f)) : 0;
+        if (hit <= 0.002f && b <= 0.002f)
         {
-            if (dirty) Clear();
+            if (swapped) Clear();
             if (burn <= 0) enabled = false;
             return;
         }
+        if (!swapped) Swap(true);
         for (int i = 0; i < renderers.Length; i++)
         {
             var r = renderers[i];
             if (r == null) continue;
-            var c = Color.Lerp(baseColors[i], BurnColor, b);
-            c = Color.Lerp(c, color, hit * 0.85f);
-            block.SetColor("_BaseColor", c);
+            var c = Color.Lerp(baseColors[i], BurnColor, b * 0.5f);
+            c = Color.Lerp(c, color, hit * 0.3f);
+            var glow = BurnColor * (b * 1.2f) + color * (hit * HitGlow);
+            block.SetColor(BaseColorId, c);
+            block.SetColor(EmissionId, glow);
             r.SetPropertyBlock(block);
         }
-        dirty = true;
+    }
+
+    void Swap(bool on)
+    {
+        for (int i = 0; i < renderers.Length; i++)
+            if (renderers[i] != null) renderers[i].sharedMaterial = on ? glowing[i] : originals[i];
+        swapped = on;
     }
 
     void Clear()
     {
         foreach (var r in renderers)
             if (r != null) r.SetPropertyBlock(null);
-        dirty = false;
+        if (swapped) Swap(false);
+    }
+
+    // 죽어서 꺼지면 원래 재질로 되돌린다 (죽음 연출이 재질을 다루기 전에)
+    void OnDisable()
+    {
+        if (renderers != null && swapped) Clear();
     }
 }

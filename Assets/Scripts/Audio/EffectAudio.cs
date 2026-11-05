@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 방공호 장치 이펙트 소리를 코드로 합성한다 (FurnaceAudio와 같은 방식):
-// 무거운 것이 바닥에 쾅 놓이는 소리, 망치질, 불꽃이 튀는 치직 소리, 전기가 튀는 지직 소리, 고기가 지글거리는 소리
+// 무거운 것이 바닥에 쾅 놓이는 소리, 망치질, 불꽃이 튀는 치직 소리, 전기가 튀는 지직 소리, 고기가 지글거리는 소리,
+// 미닫이 철문이 레일 위를 구르는 소리·걸쇠·끝에서 탁 멈추는 소리
 public static class EffectAudio
 {
     const int SR = 44100;
@@ -64,20 +65,25 @@ public static class EffectAudio
         }
     }
 
-    static AudioClip Make(string name, float seconds, System.Func<float, float> sample, float peak)
+    // 만들어 두고 다시 쓴다. loopFade > 0이면 끝을 앞에 겹쳐 자연스럽게 반복된다
+    static AudioClip Make(string name, float seconds, System.Func<float, float> sample, float peak, float loopFade = 0f)
     {
         if (cache.TryGetValue(name, out var clip) && clip != null) return clip;
         int n = (int)(seconds * SR);
-        var data = new float[n];
-        float max = 0.0001f;
-        for (int i = 0; i < n; i++)
+        int fade = (int)(loopFade * SR);
+        var data = new float[n + fade];
+        for (int i = 0; i < data.Length; i++) data[i] = sample(i / (float)SR);
+        for (int i = 0; i < fade; i++)
         {
-            data[i] = sample(i / (float)SR);
-            max = Mathf.Max(max, Mathf.Abs(data[i]));
+            float k = i / (float)fade;
+            data[i] = data[i] * k + data[n + i] * (1 - k);
         }
-        for (int i = 0; i < n; i++) data[i] = data[i] / max * peak;
+        float max = 0.0001f;
+        for (int i = 0; i < n; i++) max = Mathf.Max(max, Mathf.Abs(data[i]));
+        var outData = new float[n];
+        for (int i = 0; i < n; i++) outData[i] = data[i] / max * peak;
         clip = AudioClip.Create(name, n, 1, SR, false);
-        clip.SetData(data, 0);
+        clip.SetData(outData, 0);
         cache[name] = clip;
         return clip;
     }
@@ -174,5 +180,55 @@ public static class EffectAudio
             float env = Mathf.Clamp01(t * 6) * Mathf.Clamp01((dur - t) * 1.5f);
             return (hiss.Process(Noise()) * 0.5f * sway + pops.Next(0.95f)) * env;
         }, 0.55f);
+    }
+
+    // 미닫이 철문이 레일 위를 굴러가는 소리 (반복): 낮은 우르릉 + 쇠가 긁히는 쉭 + 바퀴가 이음매를 넘는 덜컹
+    public static AudioClip DoorRoll()
+    {
+        var rumble = Filter.LowPass(220, 0.9f);
+        var grind = Filter.BandPass(900, 1.2f);
+        var hp = Filter.HighPass(40);
+        var bumps = new Pops(380, 2.2f, 6f);
+        float brown = 0;
+        return Make("fx_doorroll", 1.6f, t =>
+        {
+            brown = (brown + 0.05f * Noise()) / 1.02f;
+            float body = rumble.Process(brown * 6f) * 1.4f + grind.Process(Noise()) * 0.18f * (0.7f + 0.3f * Mathf.Sin(2 * Mathf.PI * 7f * t));
+            return hp.Process(body + bumps.Next(0.97f) * 0.9f);
+        }, 0.7f, 0.3f);
+    }
+
+    // 문이 끝에 닿아 탁 멈추는 소리: 쇠가 부딪히는 쿵 + 짧은 울림 + 레일이 덜덜거리는 여운
+    public static AudioClip DoorStop()
+    {
+        const float dur = 0.9f;
+        var thud = Filter.LowPass(260, 0.9f);
+        var ring = Filter.BandPass(1700, 6f);
+        var rattle = Filter.BandPass(520, 2f);
+        var hp = Filter.HighPass(45);
+        float phase = 0;
+        return Make("fx_doorstop", dur, t =>
+        {
+            float f = 95f * Mathf.Exp(-t * 14f) + 55f;
+            phase += 2 * Mathf.PI * f / SR;
+            float boom = Mathf.Sin(phase) * Mathf.Exp(-t * 9f) * 1.5f + thud.Process(Noise()) * Mathf.Exp(-t * 30f) * 3f;
+            float clang = ring.Process(Noise()) * Mathf.Exp(-t * 12f) * 0.8f;
+            float shake = rattle.Process(Noise()) * Mathf.Exp(-t * 6f) * 0.5f * (0.5f + 0.5f * Mathf.Sin(2 * Mathf.PI * 23f * t));
+            return hp.Process(boom + clang + shake);
+        }, 0.95f);
+    }
+
+    // 걸쇠를 풀고 손잡이를 당기는 짧은 철컥
+    public static AudioClip DoorUnlatch()
+    {
+        const float dur = 0.22f;
+        var click = Filter.BandPass(2100, 2.5f);
+        var tock = Filter.BandPass(420, 3f);
+        return Make("fx_doorunlatch", dur, t =>
+        {
+            float a = click.Process(Noise()) * Mathf.Exp(-t * 90f) * 2f;
+            float b = tock.Process(Noise()) * Mathf.Exp(-Mathf.Max(0, t - 0.06f) * 60f) * (t > 0.06f ? 2.5f : 0f);
+            return a + b;
+        }, 0.6f);
     }
 }
