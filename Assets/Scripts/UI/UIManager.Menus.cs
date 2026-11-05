@@ -142,7 +142,7 @@ public partial class UIManager
         Place(label.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(56, 34));
         label.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
 
-        // 알약 모양 홈 + 테두리 + 둥근 손잡이. 켜지면 홈이 호박색이 되고 손잡이가 오른쪽으로 간다
+        // 알약 모양 홈 + 테두리 + 둥근 손잡이. 켜지면 홈이 메뉴의 핏빛 붉은색이 되고 손잡이가 오른쪽으로 간다
         var sw = NewRect("Switch", row);
         Place(sw, new Vector2(0, 0.5f), new Vector2(56, 0), new Vector2(TipSwitchW, TipSwitchH));
         tipTrack = sw.gameObject.AddComponent<Image>();
@@ -154,7 +154,7 @@ public partial class UIManager
         frame.sprite = UIStyle.CapsuleFrame;
         frame.type = Image.Type.Sliced;
         frame.pixelsPerUnitMultiplier = 32f / TipSwitchH;
-        frame.color = new Color(1, 1, 1, 0.22f);
+        frame.color = new Color(1, 1, 1, 0.3f);
         frame.raycastTarget = false;
         tipKnob = NewRect("Knob", sw);
         tipKnob.anchorMin = tipKnob.anchorMax = new Vector2(0, 0.5f);
@@ -193,8 +193,9 @@ public partial class UIManager
     {
         if (tipKnob == null) return;
         bool on = GameSettings.Tips;
-        tipTrack.color = on ? new Color(Accent.r, Accent.g, Accent.b, 0.95f) : new Color(0.16f, 0.17f, 0.18f, 0.95f);
-        tipKnobImg.color = on ? new Color(0.98f, 0.96f, 0.9f) : new Color(0.55f, 0.55f, 0.55f);
+        // 켜지면 핏빛 붉은색, 꺼지면 어두운 강판색 (2026-11-05 저녁: 호박색에서 메인 메뉴 팔레트로)
+        tipTrack.color = on ? new Color(0.62f, 0.09f, 0.07f, 0.96f) : new Color(0.1f, 0.1f, 0.105f, 0.96f);
+        tipKnobImg.color = on ? Pale : new Color(0.5f, 0.49f, 0.46f);
         tipState.text = on ? "켜짐  ·  할 일 · 나침반 · 대상 불빛 · 힌트 · 조작키" : "꺼짐  ·  안내 없이 플레이";
         if (instant) tipKnob.anchoredPosition = new Vector2(TipKnobX(on), 0);
     }
@@ -217,19 +218,22 @@ public partial class UIManager
 
     // ---------- 더러운 강판 ----------
 
-    // 더러운 강판 꾸밈: 흙먼지(타일) → 긁힘·먼지 → 가장자리 그늘 → 군데군데 칠이 벗겨진 가는 테두리("WornFrame", 돌려준다. 호버가 색을 바꾼다)
-    static Image DirtyPlate(RectTransform rt, float dirt = 1f)
+    // 더러운 강판 꾸밈: 흙먼지(타일) → 긁힘·먼지 → 가장자리 그늘 → 군데군데 칠이 벗겨진 가는 테두리("WornFrame", 돌려준다. 호버가 색을 바꾼다).
+    // tile < 1이면 흙먼지·긁힘 무늬가 커져 큰 판(창)에서 되풀이가 눈에 띄지 않는다
+    static Image DirtyPlate(RectTransform rt, float dirt = 1f, float tile = 1f)
     {
         var dust = NewRect("Dust", rt).gameObject.AddComponent<Image>();
         Stretch(dust.rectTransform);
         dust.sprite = UIStyle.Dust;
         dust.type = Image.Type.Tiled;
+        dust.pixelsPerUnitMultiplier = tile;
         dust.color = new Color(0.45f, 0.36f, 0.22f, 0.28f * dirt);
         dust.raycastTarget = false;
         var grime = NewRect("Grime", rt).gameObject.AddComponent<Image>();
         Stretch(grime.rectTransform);
         grime.sprite = UIStyle.Grime;
         grime.type = Image.Type.Tiled;
+        grime.pixelsPerUnitMultiplier = tile;
         grime.color = new Color(1, 1, 1, 0.35f * dirt);
         grime.raycastTarget = false;
         var shade = NewRect("Shade", rt).gameObject.AddComponent<Image>();
@@ -261,6 +265,54 @@ public partial class UIManager
         bar.color = MenuRed;
         bar.raycastTarget = false;
         return glow;
+    }
+
+    // 창 제목 왼쪽의 핏빛 세로 막대 (일반 창·패치노트·소지품·제작대·트럭). pos = 왼쪽 위 기준 자리
+    static void RedTitleBar(RectTransform parent, Vector2 pos, float height)
+    {
+        var bar = NewRect("TitleMark", parent);
+        Place(bar, new Vector2(0, 1), pos, new Vector2(5, height));
+        var img = bar.gameObject.AddComponent<Image>();
+        img.color = MenuRed;
+        img.raycastTarget = false;
+    }
+
+    // 작은 강판 버튼 (창 '닫기', 컷씬 '다음', 끝 화면 '메인 메뉴로'): 더러운 강판 + 오른쪽 끝 붉은 막대, 왼쪽 이름(제목 글꼴) + 오른쪽 영문 꼬리표(모노).
+    // 크기·자리는 부르는 쪽이 Place로 정한다. 자식 "RedGlow"는 다른 코드가 깜빡이게 쓸 수 있다 (컷씬 '다음')
+    Button PlateButton(Transform parent, string label, string tag, Action onClick, int fontSize = 20, float barHeight = 22f)
+    {
+        var rt = NewRect("PlateButton", parent);
+        var slab = rt.gameObject.AddComponent<Image>();
+        slab.sprite = UIStyle.Fill;
+        slab.type = Image.Type.Sliced;
+        slab.color = PlateFill;
+        var frame = DirtyPlate(rt, 0.8f);
+        var b = rt.gameObject.AddComponent<Button>();
+        b.targetGraphic = slab;
+        b.transition = Selectable.Transition.None;
+        b.navigation = new Navigation { mode = Navigation.Mode.None };
+        b.onClick.AddListener(() => onClick());
+        UIPress.Attach(b, 1.02f);
+        var glow = RedBar(rt, 10, new Vector2(3, barHeight), 36, 0.25f);
+        bool hasTag = !string.IsNullOrEmpty(tag);
+        var t = NewText(rt, label, fontSize, hasTag ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter, Text, FontTitle);
+        Stretch(t.rectTransform, 16, 0);
+        t.rectTransform.offsetMax = new Vector2(-22, 0);
+        t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+        var hover = rt.gameObject.AddComponent<UIHover>();
+        hover.Gate = b;
+        hover.Add(slab, PlateFill, PlateHover)
+             .Add(frame, new Color(1, 1, 1, 0.3f), new Color(1, 1, 1, 0.75f))
+             .Add(t, Text, Color.white)
+             .Add(glow, new Color(MenuRed.r, MenuRed.g, MenuRed.b, 0.25f), new Color(1f, 0.25f, 0.15f, 0.8f));
+        if (hasTag)
+        {
+            var tg = NewText(rt, tag, 11, TextAnchor.MiddleRight, PaleDim, FontMono);
+            Stretch(tg.rectTransform, 16, 0);
+            tg.rectTransform.offsetMax = new Vector2(-22, 0);
+            hover.Add(tg, PaleDim, Pale);
+        }
+        return b;
     }
 
     // 메뉴 버튼: 더러운 강판 위에 한글 이름(왼쪽)과 영문 꼬리표(오른쪽), 오른쪽 끝 붉은 막대.
@@ -436,7 +488,7 @@ public partial class UIManager
         var le = card.GetComponent<LayoutElement>();
         le.minHeight = le.preferredHeight = 112;
 
-        var c = exists ? Accent : Dim;
+        var c = exists ? Pale : Dim;
         var badge = Box(card, "Number", new Color(c.r, c.g, c.b, exists ? 0.14f : 0.05f), new Color(c.r, c.g, c.b, exists ? 0.6f : 0.22f));
         badge.GetComponent<Image>().raycastTarget = false;
         var ble = badge.gameObject.AddComponent<LayoutElement>();
@@ -456,7 +508,7 @@ public partial class UIManager
         ile.flexibleWidth = 1;
         ile.minHeight = ile.preferredHeight = 86;
 
-        string head = $"슬롯 {slot}" + (exists && latest ? "   <size=16><color=#f9c252>· 최근 저장</color></size>" : "");
+        string head = $"슬롯 {slot}" + (exists && latest ? "   <size=16><color=#d85a4a>· 최근 저장</color></size>" : "");
         SlotText(info, head, 26, exists ? Text : Dim, FontSemiBold);
         if (!exists) SlotText(info, "비어 있음", 20, Dim, null);
         else if (data == null) SlotText(info, "저장 파일이 손상됨", 20, Danger, null);
@@ -641,7 +693,7 @@ public partial class UIManager
         var row = Row(c);
         RowLabel(row, label);
         RowButton(row, "<", () => { change(-1); ApplyAllSettings(); RefreshPanel(); }, true, 54);
-        var v = NewText(row, value, 22, TextAnchor.MiddleCenter, Accent, FontSemiBold);
+        var v = NewText(row, value, 22, TextAnchor.MiddleCenter, Pale, FontTitle);
         var le = v.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = le.minWidth = 170;
         RowButton(row, ">", () => { change(1); ApplyAllSettings(); RefreshPanel(); }, true, 54);
@@ -679,14 +731,20 @@ public partial class UIManager
         }, "controls");
     }
 
-    // 키 이름을 작은 유리 키캡으로 보여 준다 (조작법 창)
+    // 키 이름을 작은 강판 키캡으로 보여 준다 (조작법 창): 어두운 강판 + 칠이 벗겨진 테두리, 종이색 글자
     static void KeyCap(RectTransform row, string key)
     {
-        var cap = Box(row, "Key", new Color(1, 1, 1, 0.06f), new Color(0.98f, 0.76f, 0.32f, 0.4f));
-        cap.GetComponent<Image>().raycastTarget = false;
+        var cap = NewRect("Key", row);
+        var img = cap.gameObject.AddComponent<Image>();
+        img.sprite = UIStyle.Fill;
+        img.type = Image.Type.Sliced;
+        img.color = new Color(0.04f, 0.04f, 0.045f, 0.95f);
+        img.raycastTarget = false;
+        var frame = DirtyPlate(cap, 0.6f);
+        frame.color = new Color(1, 1, 1, 0.4f);
         var le = cap.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = le.minWidth = 190;
-        var t = NewText(cap, key, 20, TextAnchor.MiddleCenter, Accent, FontSemiBold);
+        var t = NewText(cap, key, 20, TextAnchor.MiddleCenter, Pale, FontTitle);
         Stretch(t.rectTransform, 8, 0);
     }
 
@@ -694,10 +752,10 @@ public partial class UIManager
     {
         OpenPanel("제작진", c =>
         {
-            Line(c, "Team_31", 30, Accent);
+            Line(c, "Team_31", 30, Pale);
             Line(c, "기획 · 개발 · 테스트: Team_31");
             Line(c, "");
-            Line(c, "사용한 무료 에셋", 22, Accent);
+            Line(c, "사용한 무료 에셋", 22, PaleDim);
             Line(c, "· 텍스처: Poly Haven (CC0) — 콘크리트, 아스팔트, 녹슨 금속, 벽돌, 나무");
             Line(c, "· 효과음: 코드로 합성한 소리 (외부 에셋 없음)");
             Line(c, "· 폰트: Pretendard (SIL Open Font License 1.1) — Kil Hyung-jin");

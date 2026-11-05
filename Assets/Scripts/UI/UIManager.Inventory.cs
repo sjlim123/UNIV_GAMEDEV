@@ -119,20 +119,20 @@ public partial class UIManager
 
         invBlur = BlurBackdrop(r, new Color(0.02f, 0.025f, 0.03f, 0.34f));
 
-        var glass = Box(r, "Glass", GlassFill, GlassFrame);
-        Grime(glass);
+        var glass = PlateWindow(r, "Glass"); // 메인 메뉴와 같은 더러운 강판 (2026-11-05 저녁)
         glass.gameObject.AddComponent<UIPopIn>();
         Place(glass, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440, 840));
 
-        var title = NewText(glass, "소지품", 38, TextAnchor.MiddleLeft, Text, FontBold);
+        RedTitleBar(glass, new Vector2(30, -28), 48);
+        var title = NewText(glass, "소지품", 38, TextAnchor.MiddleLeft, Text, FontTitle);
         Place(title.rectTransform, new Vector2(0, 1), new Vector2(44, -24), new Vector2(170, 56));
         if (!CompactItemCards)
         {
             var sub = NewText(glass, "메고 입은 장비는 무게에 들지 않는다. 핫바에서 가방·방어구를 우클릭해도 장착된다.", 19, TextAnchor.MiddleLeft, Dim);
             Place(sub.rectTransform, new Vector2(0, 1), new Vector2(184, -34), new Vector2(900, 40));
         }
-        var close = MakeButton(glass, "닫기 (Esc)", CloseInventory, true);
-        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(170, 46));
+        var close = PlateButton(glass, "닫기", "ESC", CloseInventory);
+        Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(-36, -28), new Vector2(150, 44));
         var line = NewRect("Line", glass);
         line.anchorMin = new Vector2(0, 1);
         line.anchorMax = new Vector2(1, 1);
