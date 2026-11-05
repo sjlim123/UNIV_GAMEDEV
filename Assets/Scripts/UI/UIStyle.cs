@@ -293,6 +293,161 @@ public static class UIStyle
         return Finish(tex, px, Vector4.zero);
     }
 
+    // ---------- 유리 HUD · 먹 번짐 · 붓 결 (2026-11-05) ----------
+    static Sprite glassSoft, glassPill, glassLight, inkWash;
+
+    // 가장자리가 밖으로 갈수록 투명해지는 둥근 판 (9-slice, 테두리 40px가 페더). HudGlass 재질과 함께 쓴다
+    public static Sprite GlassSoft => glassSoft != null ? glassSoft : glassSoft = MakeGlassSoft();
+    // 알약 유리판: A = 모양(가장자리 1.5px 안티앨리어스), R = 비스듬한 면 높이(가장자리 0 → 안쪽 1, 셰이더 굴절용)
+    public static Sprite GlassPill => glassPill != null ? glassPill : glassPill = MakeGlassPill();
+    // 알약 유리판 위의 빛: 바깥 테두리 반사선(위쪽이 밝다) + 윗면 광택 + 바닥 가장자리 반사 (흰색, 알파만)
+    public static Sprite GlassLight => glassLight != null ? glassLight : glassLight = MakeGlassLight();
+    // 먹이 번진 자국 (손전등·배터리 뒤 배경). 색은 Image.color로
+    public static Sprite InkWash => inkWash != null ? inkWash : inkWash = MakeInkWash();
+
+    static Sprite MakeGlassSoft()
+    {
+        const int size = 128, border = 40;
+        var tex = NewTex("UIGlassSoft", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        float half = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // 둥근 사각형(반지름 = border)의 가장자리에서 안쪽으로 들어온 거리 (0~border)
+                float dx = Mathf.Max(Mathf.Abs(x + 0.5f - half) - (half - border), 0);
+                float dy = Mathf.Max(Mathf.Abs(y + 0.5f - half) - (half - border), 0);
+                float d = border - Mathf.Sqrt(dx * dx + dy * dy);
+                float t = Mathf.Clamp01(d / border);
+                float a = t * t * (3 - 2 * t);     // 바깥은 투명, 가운데로 갈수록 진하다
+                a = Mathf.Pow(a, 1.35f);           // 바깥쪽을 조금 더 오래 옅게
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeGlassPill()
+    {
+        const int size = 64, border = 28;
+        const float radius = 24f, bevel = 12f;
+        // 높이(R)를 선형으로 읽어야 하므로 선형 텍스처로 만든다
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "UIGlassPill" };
+        var px = new Color32[size * size];
+        float half = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Max(Mathf.Abs(x + 0.5f - half) - (half - radius), 0);
+                float dy = Mathf.Max(Mathf.Abs(y + 0.5f - half) - (half - radius), 0);
+                float d = radius - Mathf.Sqrt(dx * dx + dy * dy); // 안쪽이 양수
+                float a = Mathf.Clamp01(d + 0.5f);
+                float h = Mathf.Sin(Mathf.Clamp01(d / bevel) * Mathf.PI * 0.5f); // 렌즈처럼 가장자리는 가파르고 안쪽은 평평하다
+                byte hv = (byte)(h * 255);
+                px[y * size + x] = new Color32(hv, hv, hv, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeGlassLight()
+    {
+        const int size = 64, border = 28;
+        const float radius = 24f;
+        var tex = NewTex("UIGlassLight", size, size, TextureWrapMode.Clamp);
+        var px = new Color32[size * size];
+        float half = size / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float cx = x + 0.5f - half, cy = y + 0.5f - half;
+                float dx = Mathf.Max(Mathf.Abs(cx) - (half - radius), 0);
+                float dy = Mathf.Max(Mathf.Abs(cy) - (half - radius), 0);
+                float d = radius - Mathf.Sqrt(dx * dx + dy * dy);
+                float cover = Mathf.Clamp01(d + 0.5f);
+                // 빛은 왼쪽 위에서 온다: 테두리 반사선은 위·왼쪽이 밝고 아래·오른쪽은 흐리다
+                float lit = Mathf.Clamp01(0.55f + 0.45f * (cy / half * 0.85f - cx / half * 0.3f));
+                float rim = Mathf.Clamp01(1.6f - Mathf.Abs(d - 1.1f)) * (0.35f + 0.65f * lit);
+                float inner = Mathf.Clamp01(1 - d / 7f) * 0.22f * lit;
+                // 윗면 광택: 위 가장자리에서 아래로 18px 동안 옅어진다
+                float sheen = Mathf.Clamp01(1 - (size - 1 - y) / 18f);
+                sheen = sheen * sheen * 0.5f;
+                // 바닥 가장자리의 가는 반사 (빛이 아랫면에서 꺾여 나온다)
+                float bottom = Mathf.Clamp01(1 - Mathf.Abs(y - 2f) / 2f) * 0.22f;
+                float a = Mathf.Clamp01(rim * 0.9f + inner + sheen + bottom) * cover;
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeInkWash()
+    {
+        const int w = 320, h = 160;
+        var tex = NewTex("UIInkWash", w, h, TextureWrapMode.Clamp);
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float u = (x + 0.5f) / w * 2 - 1, v = (y + 0.5f) / h * 2 - 1;
+                float ang = Mathf.Atan2(v, u);
+                // 타원 반지름을 각도에 따라 울퉁불퉁하게 (큰 굴곡 + 잔 굴곡)
+                float wob = 0.78f + 0.12f * Mathf.Sin(ang * 3 + 0.7f) + 0.06f * Mathf.Sin(ang * 7 + 2.1f) + 0.04f * Mathf.Sin(ang * 11 + 4f);
+                float r = Mathf.Sqrt(u * u + v * v) / wob; // 1 = 자국 가장자리
+                // 번진 가장자리: 종이 섬유를 따라 들쭉날쭉
+                float fiber = Noise(x * 0.35f, y * 0.35f, 171) * 0.5f + Noise(x * 0.9f, y * 0.9f, 172) * 0.5f;
+                float edge = r + (fiber - 0.5f) * 0.22f;
+                float a = Mathf.Clamp01((1.08f - edge) / 0.3f); // 안쪽 1 → 가장자리 0
+                a = a * a * (3 - 2 * a);
+                // 먹의 농담: 가운데는 진하고 군데군데 옅은 얼룩, 가장자리에 살짝 진한 테 (마르면서 생긴 자국)
+                float pool = 0.72f + 0.28f * Noise(x * 0.04f, y * 0.04f, 173);
+                float ring = Mathf.Clamp01(1 - Mathf.Abs(edge - 0.92f) / 0.12f) * 0.22f;
+                a *= Mathf.Clamp01(pool + ring);
+                px[y * w + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
+    // ---------- 더러운 강판 메뉴 (시안 B) ----------
+    static Sprite wornFrame, dust;
+
+    // 군데군데 칠이 벗겨진 가는 테두리 (9-slice, Tiled로 쓰면 벗겨진 자국이 늘어나지 않는다). 색은 Image.color
+    public static Sprite WornFrame => wornFrame != null ? wornFrame : wornFrame = MakeWornFrame();
+    // 뿌연 흙먼지 구름 (타일, 흰색 알파). 흙색을 입혀 판 위에 깐다
+    public static Sprite Dust => dust != null ? dust : dust = MakeDust();
+
+    static Sprite MakeWornFrame()
+    {
+        const int size = 48, border = 8;
+        var tex = NewTex("UIWornFrame", size, size);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int edge = Mathf.Min(Mathf.Min(x, y), Mathf.Min(size - 1 - x, size - 1 - y));
+                // 바깥 1.5px 선이 노이즈를 따라 군데군데 끊기고 옅어진다 (벗겨진 칠)
+                float line = edge == 0 ? 1f : edge == 1 ? 0.5f : 0f;
+                float wear = Noise(x * 0.35f, y * 0.35f, 191) * 0.6f + Noise(x * 1.3f, y * 1.3f, 192) * 0.4f;
+                float a = line * Mathf.Clamp01((wear - 0.22f) / 0.5f);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, border, border, border));
+    }
+
+    static Sprite MakeDust()
+    {
+        const int size = 128;
+        var tex = NewTex("UIDust", size, size);
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // 넓은 얼룩 구름 세 옥타브 + 잔 알갱이. 타일로 이어도 끊기지 않는다
+                float n = 0.55f * TileNoise(x, y, size, 3, 193) + 0.3f * TileNoise(x, y, size, 7, 194) + 0.15f * TileNoise(x, y, size, 17, 195);
+                float a = Mathf.Clamp01((n - 0.38f) / 0.45f);
+                a = a * a * (0.9f + 0.1f * Hash(x, y, 196));
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, Vector4.zero);
+    }
+
     // ---------- 기본 사각형 ----------
 
     static Sprite fill, frame;

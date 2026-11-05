@@ -4,7 +4,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // 소지품 창 가운데 아래의 핫바 줄: 아이템 카드를 끌어다 1~8번 칸에 놓는다.
-// 칸끼리 끌면 맞바꾸고, 칸의 아이템을 줄 밖으로 끌어 놓으면 핫바에서 뺀다 (소지품에는 그대로 있다)
+// 칸끼리 끌면 맞바꾸고, 칸의 아이템을 줄 밖으로 끌어 놓으면 핫바에서 뺀다 (소지품에는 그대로 있다).
+// 넣고 뺄 때 알림 띠는 띄우지 않는다 (매번 뜨는 '핫바에 놓았다/뺐다'가 번잡하다는 의견, 2026-11-05). 넣지 못한 까닭만 알린다
 public partial class UIManager
 {
     const float InvBarSlot = 56, InvBarGap = 8, InvBarHeight = 104;
@@ -143,13 +144,11 @@ public partial class UIManager
             else s.SetHotbar(slot, dragId);
             ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.45f, 0.9f, SoundCategory.UI);
             invBarSlots[slot].Rect.localScale = Vector3.one * 1.2f;
-            ShowMessage($"{ColoredName(dragId)}{PlayerHotbar.Eul(ItemDatabase.Name(dragId))} 핫바 {slot + 1}번 칸에 놓았다.", 1.6f);
         }
         else if (dragFromSlot >= 0)
         {
             s.Hotbar[dragFromSlot] = null;
             ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.35f, 1f, SoundCategory.UI);
-            ShowMessage($"{ColoredName(dragId)}{PlayerHotbar.Eul(ItemDatabase.Name(dragId))} 핫바에서 뺐다.", 1.6f);
         }
         CancelItemDrag();
         RefreshInventory();
@@ -202,7 +201,6 @@ public partial class UIManager
         s.SetHotbar(empty, id);
         ProceduralAudio.Play2D(ProceduralAudio.Click(), 0.45f, 0.9f, SoundCategory.UI);
         if (empty < invBarSlots.Count) invBarSlots[empty].Rect.localScale = Vector3.one * 1.2f;
-        ShowMessage($"{ColoredName(id)}{PlayerHotbar.Eul(ItemDatabase.Name(id))} 핫바 {empty + 1}번 칸에 놓았다.", 1.6f);
         RefreshInventory();
     }
 
@@ -214,7 +212,6 @@ public partial class UIManager
         string id = s.Hotbar[slot];
         s.Hotbar[slot] = null;
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.35f, 1f, SoundCategory.UI);
-        ShowMessage($"{ColoredName(id)}{PlayerHotbar.Eul(ItemDatabase.Name(id))} 핫바에서 뺐다.", 1.6f);
         RefreshInventory();
     }
 }
