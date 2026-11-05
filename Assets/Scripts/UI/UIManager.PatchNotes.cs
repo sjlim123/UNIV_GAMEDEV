@@ -193,7 +193,7 @@ public partial class UIManager
             var t = NewText(patchContent, v.title, 24, TextAnchor.MiddleLeft, Accent, FontSemiBold);
             t.gameObject.AddComponent<LayoutElement>().minHeight = 34;
         }
-        string meta = v.date + (v.version == Application.version ? "   ·   지금 플레이 중인 버전" : "");
+        string meta = v.date + (IsCurrentVersion(v.version) ? "   ·   지금 플레이 중인 버전" : "");
         Line(patchContent, meta, 18, Dim);
 
         Section("추가사항", AddedColor, v.added);
@@ -205,6 +205,15 @@ public partial class UIManager
     }
 
     // 버전 탭: 더러운 강판. 고른 탭은 흙색 판에 오른쪽 끝 붉은 막대가 켜진다 (메인 메뉴 버튼과 같은 꼴)
+    // 패치노트의 버전 이름("26.0.2.0 (First BETA)")과 게임 버전("26.0.2.0b")은 꾸밈말이 달라 숫자 부분만 비교한다
+    static string VersionCore(string v)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(v ?? "", @"\d+(\.\d+)*");
+        return m.Success ? m.Value : (v ?? "");
+    }
+
+    static bool IsCurrentVersion(string v) => VersionCore(v) == VersionCore(Application.version);
+
     void VersionTab(PatchVersion v, bool selected, Action onClick)
     {
         var rt = NewRect("Version", patchVersionList);
@@ -238,7 +247,7 @@ public partial class UIManager
         var date = NewText(rt, v.date, 14, TextAnchor.UpperLeft, PaleDim);
         Place(date.rectTransform, new Vector2(0, 1), new Vector2(18, -38), new Vector2(170, 22));
 
-        string badge = v.version == Application.version ? "현재" : v.date == "개발 중" ? "예정" : "";
+        string badge = IsCurrentVersion(v.version) ? "현재" : v.date == "개발 중" ? "예정" : "";
         if (badge != "")
         {
             var c = badge == "현재" ? AddedColor : ChangedColor;

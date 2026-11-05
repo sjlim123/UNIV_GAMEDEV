@@ -391,7 +391,8 @@ public static partial class GameSceneBuilder
     static void BeginMeshes(string path)
     {
         AssetDatabase.DeleteAsset(path);
-        var holder = new Mesh { name = "MeshHolder" };
+        var holder = ScriptableObject.CreateInstance<MeshHolder>(); // [PreferBinarySerialization] → 파일 전체(서브에셋 포함)가 바이너리로 저장 (Assets/Scripts/Core/MeshHolder.cs)
+        holder.name = "MeshHolder";
         AssetDatabase.CreateAsset(holder, path);
         meshContainer = holder;
         meshCache = new Dictionary<string, Mesh>();

@@ -99,7 +99,7 @@ public static partial class GameSceneBuilder
         mound.AddComponent<MeshRenderer>().sharedMaterial = M["earth"];
         var mc = mound.AddComponent<MeshCollider>();
         mc.sharedMesh = mesh;
-        GameObjectUtility.SetStaticEditorFlags(mound, StaticEditorFlags.BatchingStatic | StaticEditorFlags.NavigationStatic);
+        GameObjectUtility.SetStaticEditorFlags(mound, StaticEditorFlags.BatchingStatic); // 내비메시는 NavMeshSurface가 콜라이더로 모은다 (NavigationStatic은 폐기됨)
         Stain("Scorch", g, new Vector3(0, 0.012f, 0), radius * 0.6f, radius * 0.55f, M["scorch"], 5300 + r.Next(40));
         Stain("Ash", g, new Vector3(KF(r, -0.4f, 0.4f), 0.02f, KF(r, -0.4f, 0.4f)), radius * 0.3f, radius * 0.28f, M["ashPile"], 5350 + r.Next(40));
         // 둔덕 위 부서진 아스팔트 조각·철근
