@@ -253,9 +253,10 @@ public static partial class CharacterModels
         string k = b.Key;
         float bulk = h.Bulk, limb = h.Limb;
 
-        // --- 골반 (엉덩이 관절 높이, 몸통이 숙여도 다리와 붙어 있게 따로 둔다) ---
+        // --- 골반 (엉덩이 관절 높이, 몸통이 숙여도 다리와 붙어 있게 따로 둔다). 아래는 관절에서 7.5cm까지만, 허벅지 사이에 끼게 좁다:
+        //     예전(15cm·폭 25cm)에는 달릴 때 다리가 앞뒤로 벌어지면 가랑이 덩어리가 다리 사이로 튀어나와 몸통이 길어 보였다 ---
         var hips = b.Joint("Hips", rig.Model, new Vector3(0, HipY, 0));
-        var pelvis = Tube(k + "pelvis", -0.15f, 0.125f * bulk, 0.088f * bulk, 0f, -0.08f, 0.165f * bulk, 0.11f * bulk, 0.005f, 0f, 0.16f * bulk, 0.106f * bulk, 0.004f, 0.06f, 0.15f * bulk, 0.1f * bulk, 0.004f);
+        var pelvis = Tube(k + "pelvis", -0.075f, 0.104f * bulk, 0.076f * bulk, 0f, -0.035f, 0.15f * bulk, 0.1f * bulk, 0.004f, 0.01f, 0.163f * bulk, 0.108f * bulk, 0.005f, 0.06f, 0.15f * bulk, 0.1f * bulk, 0.004f);
         b.Part(hips, pelvis, h.Pants, Vector3.zero);
         if (h.Belt)
         {

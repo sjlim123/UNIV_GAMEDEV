@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 1인칭 이동: 이동키(기본 WASD), 마우스 시점, 달리기(스테미너 소모), 앉기, 점프. 조작키는 설정 → 컨트롤에서 바꾼다 (KeyBindings).
 // 소지 무게가 들 수 있는 무게의 80%를 넘으면 100%까지 걸음이 서서히 느려지고 (GameBalance.slowLoadRatio·fullLoadSpeedMultiplier),
-// 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio). 방공호 안에서는 둘 다 적용하지 않는다.
+// 90%를 넘으면 달리기·점프에 스테미너를 더 쓴다 (GameBalance.heavyLoadRatio). 방공호 안에서는 둘 다 적용하지 않고, 스테미너 자체가 줄지 않는다.
 // 발소리와 소음 수치, 카메라 움직임(걸음 흔들림·옆걸음 기울기·달릴 때 시야 넓어짐·점프 착지 출렁임·지친 숨)도 여기서 만든다.
 // 침대에서 잘 때는 SetSleep으로 카메라를 침대에 눕힌다
 [RequireComponent(typeof(CharacterController))]
@@ -152,7 +152,8 @@ public class PlayerController : MonoBehaviour
 
     void UpdateStamina(bool runHeld, float dt, GameBalance balance)
     {
-        if (IsRunning)
+        // 방공호 안에서는 스테미너가 줄지 않는다 (창고·제작대 사이를 뛰어다녀도 된다)
+        if (IsRunning && !GameManager.Instance.InShelter)
         {
             Stamina = Mathf.Max(0, Stamina - balance.staminaRunCostPerSecond * StaminaCostMultiplier * dt);
             if (Stamina <= 0) exhausted = true;
@@ -219,7 +220,7 @@ public class PlayerController : MonoBehaviour
         // 점프: 땅에 서 있고 앉지 않았을 때. 스테미너를 쓰고, 짐이 무거우면 덜 뛴다
         if (jump && grounded && !IsCrouching)
         {
-            float cost = balance.jumpStaminaCost * StaminaCostMultiplier;
+            float cost = GameManager.Instance.InShelter ? 0f : balance.jumpStaminaCost * StaminaCostMultiplier; // 방공호 안에서는 점프도 스테미너를 쓰지 않는다
             if (Stamina >= cost)
             {
                 Stamina -= cost;

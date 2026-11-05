@@ -75,8 +75,8 @@ public partial class UIManager
         else
         {
             var kills = new List<string>();
-            if (r.ZombiesKilled > 0) kills.Add($"좀비 {r.ZombiesKilled}마리");
-            if (r.DogsKilled > 0) kills.Add($"좀비개 {r.DogsKilled}마리");
+            if (r.ZombiesKilled > 0) kills.Add($"감염자 {r.ZombiesKilled}마리");
+            if (r.DogsKilled > 0) kills.Add($"들개 {r.DogsKilled}마리");
             AddJournalLine("  쓰러뜨린 것:  " + string.Join(", ", kills), 23, Ink, Font, 4, -0.4f);
         }
         float lost = r.HealthBefore - r.HealthAfter;

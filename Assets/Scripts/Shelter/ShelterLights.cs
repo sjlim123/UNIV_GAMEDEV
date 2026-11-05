@@ -37,7 +37,7 @@ public class ShelterLights : MonoBehaviour
         var s = GameManager.Instance.State;
         GameManager.Instance.UI.ShowMessage(s.Turn == 0
             ? "핵폭발 이후, 방공호. 북쪽 복도 끝 출입구로 나가 물자를 모아 200턴을 버텨라."
-            : $"방공호로 돌아왔다. (턴 {s.Turn} / {GameState.MaxTurns})", 5f);
+            : $"방공호로 돌아왔다. (턴 {s.Turn} / {GameState.MaxTurns})" + EnemyPace.ArrivalNote(s.Turn), 5f);
     }
 
     void Update()

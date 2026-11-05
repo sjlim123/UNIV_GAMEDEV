@@ -16,7 +16,7 @@ public class CrawlHint : MonoBehaviour
         var local = transform.InverseTransformPoint(pc.transform.position);
         if (Mathf.Abs(local.x) > halfSize.x || Mathf.Abs(local.z) > halfSize.z || local.y < -0.5f || local.y > halfSize.y * 2) return;
         if (pc.IsCrouching) return;
-        GameManager.Instance.UI.ShowMessage($"판자 아래 틈이 있다. {KeyBindings.Label(GameAction.Crouch)}를 눌러 앉으면 기어서 지나갈 수 있다. (좀비는 못 따라온다)", 3f);
+        GameManager.Instance.UI.ShowMessage($"판자 아래 틈이 있다. {KeyBindings.Label(GameAction.Crouch)}를 눌러 앉으면 기어서 지나갈 수 있다. (감염자는 못 따라온다)", 3f);
         cooldown = 8f;
     }
 }

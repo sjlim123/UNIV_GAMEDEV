@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 // 손가락은 쥔 물건 표면에 닿을 때까지 감는다(HandRig.Wrap). 바꿔 들 때는 손을 내렸다 올리며 펴진 손가락을 오므려 쥔다.
 // 주먹·찌르기·휘두르기·새총·먹기·마시기·붕대 감기·구급상자·라이터 켜기·손전등 딸깍 같은 몸짓은 기본 자세 위에 얹는다.
 // 달리면 육상 선수처럼 양팔을 엇갈려 앞뒤로 크게 젓는다 (빈손은 손을 편 채, 물건을 들었으면 작게; 손전등을 켰으면 불빛이 흔들리지 않게 조금만).
-// 연출(방공호 문 열기)에서는 SetStowed로 든 물건을 내려놓고(손이 내려갔다 빈손으로 올라온다) LockRight로 오른손을 바깥 세계의 한 점에 붙일 수 있다.
+// 연출(방공호 문 열기)에서는 SetStowed로 든 물건을 내려놓고(손이 내려갔다 빈손으로 올라온다) LockRight·LockLeft로 두 손을 바깥 세계의 한 점에 붙일 수 있다 (왼손은 든 손전등을 잠시 감춘다).
 // 그때 팔뚝은 어깨(화면 오른쪽 아래)에서 굽힌 팔꿈치를 거쳐 손목으로 오게 두어, 손이 멀리 있어도 팔이 몸에서 떨어져 보이지 않는다.
 // 조명 아래 플레이어 그림자는 그림자 전용 몸(PlayerShadowBody)이 이 팔들을 따라 움직이며 드리운다.
 public class PlayerHands : MonoBehaviour
@@ -60,6 +60,11 @@ public class PlayerHands : MonoBehaviour
     float lockWeight;
     float[] lockFingers;
     bool stowed; // 연출 동안 든 물건을 내려놓고 빈손이 된다
+    // 연출용 왼손 고정 (오른손과 같은 식)
+    Vector3 lockWristL;
+    Quaternion lockRotL = Quaternion.identity;
+    float lockWeightL;
+    float[] lockFingersL;
     // 1인칭 오른쪽 어깨 자리 (카메라 기준)와 손목이 꺾이는 한계
     static readonly Vector3 ShoulderLocal = new Vector3(0.19f, -0.27f, -0.08f);
     const float MaxWristBend = 70f;
@@ -496,6 +501,34 @@ public class PlayerHands : MonoBehaviour
 
     public Transform RightWrist => right != null ? right.Wrist : null;
 
+    // 연출용: 왼손 손목을 월드의 wrist에 두고 손이 rot(월드: +z 손가락, +y 엄지)을 향하게 한다. 든 손전등은 잠시 감춘다. weight 0이면 풀린다
+    public void LockLeft(Vector3 wrist, Quaternion rot, float weight, float[] fingers = null)
+    {
+        lockWristL = wrist;
+        lockRotL = rot;
+        lockWeightL = Mathf.Clamp01(weight);
+        lockFingersL = fingers;
+    }
+
+    public Transform LeftWrist => left != null ? left.Wrist : null;
+
+    // 연출: 왼손 손목을 바깥 세계의 한 점에 붙인다 (LockRight와 같은 식, 어깨는 화면 왼쪽 아래, 팔꿈치는 바깥 아래)
+    void ApplyLeftLock(ref Vector3 wrist, ref Quaternion forearm, ref Quaternion bend)
+    {
+        if (lockWeightL <= 0) return;
+        var shoulder = new Vector3(-ShoulderLocal.x, ShoulderLocal.y, ShoulderLocal.z);
+        var local = handsRoot.InverseTransformPoint(lockWristL);
+        var localRot = Quaternion.Inverse(handsRoot.rotation) * lockRotL;
+        var elbow = ElbowFor(shoulder, local, shoulder + new Vector3(-0.35f, -0.6f, 0.1f));
+        var foreRot = Quaternion.LookRotation(local - elbow, localRot * Vector3.up);
+        var bendRot = Quaternion.Inverse(foreRot) * localRot;
+        float bendAngle = Quaternion.Angle(Quaternion.identity, bendRot);
+        if (bendAngle > MaxWristBend) bendRot = Quaternion.Slerp(Quaternion.identity, bendRot, MaxWristBend / bendAngle);
+        wrist = Vector3.Lerp(wrist, local, lockWeightL);
+        forearm = Quaternion.Slerp(forearm, foreRot, lockWeightL);
+        bend = Quaternion.Slerp(bend, bendRot, lockWeightL);
+    }
+
     // 연출용: 든 물건을 내려놓는다(true) / 다시 든다(false). 손이 화면 아래로 내려갔다가 빈손으로 올라온다
     public void SetStowed(bool on) => stowed = on;
 
@@ -652,8 +685,9 @@ public class PlayerHands : MonoBehaviour
         }
         else leftSwap = Mathf.MoveTowards(leftSwap, 0f, dt / 0.26f);
         float swap = Ease(leftSwap);
+        if (leftModel != null && leftHolds && leftModel.activeSelf == lockWeightL > 0.3f) leftModel.SetActive(lockWeightL <= 0.3f); // 연출로 왼손을 붙이면 손전등은 잠시 감춘다
 
-        bool show = leftHolds || leftSwap < 1f || wrap > 0.001f || run > 0.01f;
+        bool show = leftHolds || leftSwap < 1f || wrap > 0.001f || run > 0.01f || lockWeightL > 0f;
         if (left.Elbow.gameObject.activeSelf != show) left.Elbow.gameObject.SetActive(show);
         if (!show) return;
         if (!leftHolds)
@@ -693,12 +727,14 @@ public class PlayerHands : MonoBehaviour
             forearm = Quaternion.Slerp(forearm, BandageHand, k);
             bend = Quaternion.Slerp(bend, Quaternion.identity, k);
         }
+        ApplyLeftLock(ref wrist, ref forearm, ref bend);
         left.Place(wrist, forearm, bend);
 
         System.Array.Copy(leftGrip, leftFingers, HandRig.PoseLength);
         leftFingers[2] += 25 * c;
         leftFingers[3] += 30 * c;
         if (k > 0) HandRig.Blend(leftFingers, HandRig.Open, k, leftFingers);
+        if (lockWeightL > 0 && lockFingersL != null) HandRig.Blend(leftFingers, lockFingersL, lockWeightL, leftFingers);
         left.Apply(leftFingers);
     }
 
@@ -719,8 +755,11 @@ public class PlayerHands : MonoBehaviour
             wrist = Vector3.Lerp(wrist, BandageWrist, k);
             forearm = Quaternion.Slerp(forearm, BandageHand, k);
         }
-        left.Place(wrist, forearm, Quaternion.identity);
+        var bend = Quaternion.identity;
+        ApplyLeftLock(ref wrist, ref forearm, ref bend);
+        left.Place(wrist, forearm, bend);
         HandRig.Blend(HandRig.Relaxed, HandRig.Open, Mathf.Max(0.85f * run, k), leftFingers);
+        if (lockWeightL > 0 && lockFingersL != null) HandRig.Blend(leftFingers, lockFingersL, lockWeightL, leftFingers);
         left.Apply(leftFingers);
     }
 

@@ -7,7 +7,7 @@ using UnityEngine.InputSystem.Controls;
 public enum GameAction
 {
     MoveForward, MoveBack, MoveLeft, MoveRight, Run, Crouch, Jump,
-    Attack, UseItem, Interact, Flashlight, Inventory, DropItem,
+    Attack, UseItem, Interact, Flashlight, Inventory, DropItem, Reload,
     Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8,
 }
 
@@ -25,7 +25,7 @@ public static class KeyBindings
         { GameAction.Run, (int)Key.LeftShift }, { GameAction.Crouch, (int)Key.C }, { GameAction.Jump, (int)Key.Space },
         { GameAction.Attack, MouseLeft }, { GameAction.UseItem, MouseRight },
         { GameAction.Interact, (int)Key.F }, { GameAction.Flashlight, (int)Key.Q },
-        { GameAction.Inventory, (int)Key.E }, { GameAction.DropItem, (int)Key.G },
+        { GameAction.Inventory, (int)Key.E }, { GameAction.DropItem, (int)Key.G }, { GameAction.Reload, (int)Key.R },
         { GameAction.Slot1, (int)Key.Digit1 }, { GameAction.Slot2, (int)Key.Digit2 }, { GameAction.Slot3, (int)Key.Digit3 }, { GameAction.Slot4, (int)Key.Digit4 },
         { GameAction.Slot5, (int)Key.Digit5 }, { GameAction.Slot6, (int)Key.Digit6 }, { GameAction.Slot7, (int)Key.Digit7 }, { GameAction.Slot8, (int)Key.Digit8 },
     };
@@ -46,10 +46,11 @@ public static class KeyBindings
             case GameAction.Jump: return "점프";
             case GameAction.Attack: return "공격";
             case GameAction.UseItem: return "아이템 사용";
-            case GameAction.Interact: return "상호작용 · 손전등 꺼내기";
+            case GameAction.Interact: return "상호작용";
             case GameAction.Flashlight: return "손전등 켜기/끄기";
             case GameAction.Inventory: return "소지품 열기";
             case GameAction.DropItem: return "아이템 버리기";
+            case GameAction.Reload: return "장전 · 배터리 교체";
             default: return $"핫바 {(int)a - (int)GameAction.Slot1 + 1}번";
         }
     }

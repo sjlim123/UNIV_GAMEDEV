@@ -93,11 +93,12 @@ public static partial class ItemVisuals
             case "flashlight":
                 Flashlight(t);
                 break;
+            // 고기(닭다리)는 ItemVisuals.Meat.cs
             case "raw_meat":
-                Meat(t, new Color(0.52f, 0.1f, 0.09f), new Color(0.86f, 0.74f, 0.66f), false);
+                Meat(t, false);
                 break;
             case "cooked_meat":
-                Meat(t, new Color(0.42f, 0.22f, 0.1f), new Color(0.72f, 0.5f, 0.28f), true);
+                Meat(t, true);
                 break;
 
             // 무기 (방망이류는 +z로 길게: 손에 들 때 PlayerHands가 세운다)
@@ -391,19 +392,6 @@ public static partial class ItemVisuals
         labelTex.SetPixels32(px);
         labelTex.Apply(true, true);
         return labelTex;
-    }
-
-    // 고기: 살코기 + 지방(또는 구운 껍질) + 뼈다귀. 구운 고기는 석쇠 자국을 낸다
-    static void Meat(Transform t, Color flesh, Color fat, bool grilled)
-    {
-        var bone = new Color(0.9f, 0.87f, 0.78f);
-        RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(0, 0.045f, 0), new Vector3(0.26f, 0.09f, 0.19f), flesh, 0.7f);
-        RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(0.06f, 0.05f, 0.04f), new Vector3(0.12f, 0.07f, 0.08f), fat, 0.6f);
-        RuntimeVisuals.Part(PrimitiveType.Cylinder, t, new Vector3(-0.15f, 0.04f, 0), new Vector3(0.035f, 0.08f, 0.035f), bone, 0.3f, new Vector3(0, 0, 90));
-        RuntimeVisuals.Part(PrimitiveType.Sphere, t, new Vector3(-0.23f, 0.04f, 0), new Vector3(0.06f, 0.06f, 0.06f), bone, 0.3f);
-        if (!grilled) return;
-        for (int i = 0; i < 3; i++)
-            RuntimeVisuals.Part(PrimitiveType.Cube, t, new Vector3(-0.05f + i * 0.055f, 0.088f, 0), new Vector3(0.012f, 0.004f, 0.15f), new Color(0.12f, 0.06f, 0.03f), 0.3f, new Vector3(0, 30, 0));
     }
 
     // 방망이: 손잡이 끝(knob)부터 +z로 손잡이 → 굵은 몸통. 바닥에 눕혀 놓을 수 있게 반지름만큼 띄운다

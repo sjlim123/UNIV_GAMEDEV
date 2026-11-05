@@ -23,6 +23,10 @@ public static partial class GameSceneBuilder
         BeginMeshes(GenDir + "/CityMeshes.asset");
         rng = new System.Random(31);
         RuinMaterials(); // 황금 문·철근·그을음 재질, 벽 재질의 금 디테일 맵 (GameSceneBuilder.Ruins.cs)
+        KoreaMaterials(); // 보도블록·화강석 연석·점자블록·차선 페인트·전봇대·울타리 재질과 그림 (GameSceneBuilder.Korea.cs)
+        KoreaShopMaterials(); // 간판·돌출 간판·현수막 그림, 셔터·새시·실외기·어닝 재질 (GameSceneBuilder.KoreaShops.cs)
+        KoreaApartmentMaterials(); // 아파트 동 번호 띠·정문 표지·벽·난간 재질 (GameSceneBuilder.KoreaApartment.cs)
+        KoreaRuinMaterials(); // 대피 안내문·검문소 표지·흙·모래주머니 재질 (GameSceneBuilder.KoreaRuin.cs)
 
         var root = new GameObject("City").transform;
         var geo = Group("Geometry", root, Vector3.zero);
@@ -31,12 +35,18 @@ public static partial class GameSceneBuilder
         for (int gx = 0; gx < 8; gx++)
             for (int gz = 0; gz < 8; gz++)
                 Box("Ground", geo, new Vector3(-85 + 10.625f + gx * 21.25f, -0.1f, -85 + 10.625f + gz * 21.25f), new Vector3(21.25f, 0.2f, 21.25f), M["asphalt"], 5f);
-        BuildRoadLines(geo);
+        // 동쪽 확장 (x 85~127.5): 삼일아파트 단지 자리
+        for (int gx = 0; gx < 2; gx++)
+            for (int gz = 0; gz < 8; gz++)
+                Box("Ground", geo, new Vector3(85 + 10.625f + gx * 21.25f, -0.1f, -85 + 10.625f + gz * 21.25f), new Vector3(21.25f, 0.2f, 21.25f), M["asphalt"], 5f);
+        BuildRoadMarkings(geo); // 황색 중앙 복선·흰 차로 점선·횡단보도·정지선·화살표·맨홀 (GameSceneBuilder.KoreaStreet.cs)
 
         foreach (var bx in new[] { -46f, 0f, 46f })
             foreach (var bz in new[] { -46f, 0f, 46f })
                 BuildBlock(geo, points, new Vector3(bx, 0, bz));
 
+        BuildStreetFurniture(geo, points); // 전봇대·전선·녹색 울타리·버스 정류장·가로수·소화전 (GameSceneBuilder.KoreaStreet.cs)
+        KoreaRuinCity(geo, geo.Find("StreetFurniture")); // 충격 구덩이·쓰러진 전봇대·안내문·검문소 (GameSceneBuilder.KoreaRuin.cs)
         BuildStreetProps(geo, points);
         AddStreetsideItemPoints(points);
         BuildHatch(geo, CityHatchPos);
@@ -50,6 +60,7 @@ public static partial class GameSceneBuilder
             if (Vector3.Distance(p, SpawnPos) < 30) { i--; continue; }
             Spawn<ZombieSpawnPoint>(points, p);
         }
+        BuildAptZone(geo, points); // 동쪽 확장: 삼일아파트 101~103동과 단지 마당 (GameSceneBuilder.KoreaApartment.cs). 모든 도시 난수 사용자 뒤에 짓는다
 
         // 하늘·안개·달빛
         var moon = new GameObject("Moonlight").AddComponent<Light>();
@@ -123,7 +134,8 @@ public static partial class GameSceneBuilder
     static void BuildBlock(Transform geo, Transform points, Vector3 c)
     {
         var b = Group($"Block_{c.x}_{c.z}", geo, c);
-        Box("Sidewalk", b, new Vector3(0, 0.075f, 0), new Vector3(34, 0.15f, 34), M["floor"], 3f);
+        BuildSidewalkRing(b); // 보도블록 판·화강석 연석·L형 측구·점자블록·볼라드·빗물받이 (GameSceneBuilder.KoreaStreet.cs)
+        KoreaRuinBlock(b, KRandom(c, 66)); // 연석의 재 더미 (GameSceneBuilder.KoreaRuin.cs)
 
         for (int ix = 0; ix < 2; ix++)
             for (int iz = 0; iz < 2; iz++)
@@ -163,19 +175,19 @@ public static partial class GameSceneBuilder
         {
             var side = rng.Next(4);
             float along = R(-15, 15);
-            var p = side == 0 ? new Vector3(along, 0.15f, -16f) : side == 1 ? new Vector3(along, 0.15f, 16f) : side == 2 ? new Vector3(-16f, 0.15f, along) : new Vector3(16f, 0.15f, along);
-            if (Chance(0.5)) DeadTree(b, p);
+            var p = side == 0 ? new Vector3(along, 0.15f, -15.2f) : side == 1 ? new Vector3(along, 0.15f, 15.2f) : side == 2 ? new Vector3(-15.2f, 0.15f, along) : new Vector3(15.2f, 0.15f, along);
+            if (Chance(0.5)) KBurnDraws(30); // 예전 죽은 나무(DeadTree) 자리: 가로수는 StreetTree가 규칙적으로 심는다 (난수만 그만큼 소비: 방향 1 + 기욺 1 + 가지 4×7)
             else RubblePile(b, p, 4, 0.8f);
         }
     }
 
-    // 블록 안 13x13m 구역의 바깥 모서리(도로 쪽)에 붙도록 건물 크기와 위치를 정한다
+    // 블록 안 12x12m 구역의 바깥 모서리(도로 쪽)에 붙도록 건물 크기와 위치를 정한다 (건물 선 KLotHalf = 13.5 → 인도 3.5m)
     static void LotRect(int ix, int iz, out float x0, out float z0, out float w, out float d)
     {
-        w = R(9.5f, 13f);
+        w = R(9.5f, 13f); // 예전 값 그대로 (무너진 건물의 벽 조각 수가 길이에 달려 있어 값을 바꾸면 도시 난수 흐름이 달라진다). 건물 사이 골목은 1~8m
         d = R(9.5f, 13f);
-        x0 = ix == 0 ? -14.5f : 14.5f - w;
-        z0 = iz == 0 ? -14.5f : 14.5f - d;
+        x0 = ix == 0 ? -KLotHalf : KLotHalf - w;
+        z0 = iz == 0 ? -KLotHalf : KLotHalf - d;
     }
 
     static void EnterableBuilding(Transform block, Transform points, int ix, int iz, bool trader)
@@ -193,13 +205,20 @@ public static partial class GameSceneBuilder
         var ops = new Op[4][];
         for (int s = 0; s < 4; s++) ops[s] = Solid;
         float doorC = R(2f, len(doorSide) - 2f);
-        ops[doorSide] = new[] { DoorOp(doorC) };
-        ops[winSide] = new[] { WinOp(len(winSide) * 0.3f), WinOp(len(winSide) * 0.7f) };
+        ops[doorSide] = KShopOps(len(doorSide), doorC); // 문 + 옆 통유리 (GameSceneBuilder.KoreaShops.cs)
+        ops[winSide] = KShopOps(len(winSide), -1f);     // 통유리
         int backSide = doorSide == xSide ? (zSide == 0 ? 1 : 0) : (xSide == 2 ? 3 : 2);
         if (Chance(0.5)) ops[backSide] = new[] { WinOp(len(backSide) * 0.5f) };
 
         var walls = RoomWalls(g, x0, z0, w, d, h, t, mat, ops[0], ops[1], ops[2], ops[3]);
         Box("Floor", g, new Vector3(x0 + w / 2, 0.02f, z0 + d / 2), new Vector3(w - t, 0.04f, d - t), M["floor"], 2.5f);
+        // 상점 꾸밈: 알루미늄 창틀·유리(멀쩡·깨짐)·내린 셔터·어닝 (자리에서 뽑은 난수라 도시 배치는 그대로)
+        var shopRng = KRandom(block.localPosition + new Vector3(x0, 0, z0), 21);
+        int shopIndex = trader ? KTraderShop : shopRng.Next(KTraderShop);
+        foreach (int side in new[] { doorSide, winSide })
+            foreach (var op in ops[side])
+                if (op.bottom > 0.3f)
+                    KStorefront(walls[side], op.c + ShiftFor(side, t), op.w, op.bottom, op.top, KOutSign(side), t, KShopState(shopRng), shopRng);
 
         // 2층 설계: 계단은 문 맞은편(늘 막힌 벽)을 따라 오른다.
         // 도시 난수와 따로 둔 난수를 써서 나머지 도시 배치(건물 종류·소품·좀비 자리)는 예전과 똑같이 나온다
@@ -218,7 +237,10 @@ public static partial class GameSceneBuilder
         int floors = rng.Next(1, 5);
         var ops2 = UpperWindowOps(x0, z0, w, d, t, plan.junctions);
         var g2 = Group("Floor2", g, new Vector3(0, Floor2Y, 0));
-        RoomWalls(g2, x0, z0, w, d, Floor2H, t, mat, ops2[0], ops2[1], ops2[2], ops2[3]);
+        var walls2 = RoomWalls(g2, x0, z0, w, d, Floor2H, t, mat, ops2[0], ops2[1], ops2[2], ops2[3]);
+        for (int s = 0; s < 4; s++)
+            foreach (var op in ops2[s])
+                KWindowDress(walls2[s], op.c + ShiftFor(s, t), op, KOutSign(s), t, shopRng); // 흰 새시·유리·실외기
         float roofY = Floor2Y + Floor2H;
         Box("Roof", g, new Vector3(x0 + w / 2, roofY + 0.15f, z0 + d / 2), new Vector3(w + t, 0.3f, d + t), M["dirty"], 3f);
 
@@ -228,8 +250,26 @@ public static partial class GameSceneBuilder
             float upperH = (floors - 1) * 3.2f;
             Box("Upper", g, new Vector3(x0 + w / 2, roofY + 0.3f + upperH / 2, z0 + d / 2), new Vector3(w + t, upperH, d + t), mat, 3f);
         }
-        FacadeWindows(g, x0 - t / 2, z0 - t / 2, w + t, d + t, roofY + 0.3f, floors - 1);
-        FacadeWeathering(g, x0 - t / 2, z0 - t / 2, w + t, d + t, roofY + 0.3f + (floors > 1 ? (floors - 1) * 3.2f : 0f), block.localPosition + new Vector3(x0, 0, z0));
+        float X0 = x0 - t / 2, Z0 = z0 - t / 2, W = w + t, D = d + t;
+        float roofTop = roofY + 0.3f + (floors > 1 ? (floors - 1) * 3.2f : 0f);
+        KBurnDraws((floors - 1) * 2 * (Mathf.Max(1, Mathf.FloorToInt(W / 3f)) + Mathf.Max(1, Mathf.FloorToInt(D / 3f)))); // 예전 FacadeWindows가 쓰던 난수
+        KUpperWindows(g, X0, Z0, W, D, roofY + 0.3f, floors - 1, shopRng);
+        FacadeWeathering(g, X0, Z0, W, D, roofTop, block.localPosition + new Vector3(x0, 0, z0));
+        // 가로 간판·돌출 간판·옥상·빗물 홈통·계량기함·현수막 (GameSceneBuilder.KoreaShops.cs)
+        bool lit = shopRng.NextDouble() < 0.22; // 발전기·배터리로 켜 둔 간판 몇 개 (깜빡인다)
+        int signKind = shopRng.NextDouble() < 0.15 ? 2 : (shopRng.NextDouble() < 0.35 ? 1 : 0);
+        KSignBand(g, doorSide, X0, Z0, W, D, h - 0.55f, h + 0.4f, shopIndex, signKind, lit, shopRng);
+        KSignBand(g, winSide, X0, Z0, W, D, h - 0.55f, h + 0.4f, shopIndex, shopRng.NextDouble() < 0.3 ? 1 : 0, false, shopRng);
+        if (shopRng.NextDouble() < 0.45) KSideSign(g, winSide, (winSide < 2 ? W : D) - 0.45f, Floor2Y + 1.5f, X0, Z0, W, D, shopRng.Next(KSideSigns.Length));
+        KRooftop(g, X0, Z0, W, D, roofTop, shopRng);
+        KDownpipe(g, doorSide, 0.4f, X0, Z0, W, D, roofTop);
+        if (ops[doorSide].Length < 3) KMeterBox(walls[doorSide], doorC + ShiftFor(doorSide, t) + (ops[doorSide].Length == 2 && ops[doorSide][1].c > doorC ? -1.05f : 1.05f), KOutSign(doorSide), t);
+        if (floors > 1 && shopRng.NextDouble() < 0.3)
+        {
+            var outN = KSideOut(doorSide);
+            float bl = doorSide < 2 ? W : D, by = roofY + 0.2f;
+            KBanner(g, FacePoint(doorSide, bl * 0.22f, by, X0, Z0, W, D) + outN * 0.1f, FacePoint(doorSide, bl * 0.78f, by, X0, Z0, W, D) + outN * 0.1f, outN, shopRng.Next(KBanners.Length), shopRng);
+        }
 
         // 출입구: 문을 달거나(70%), 그중 일부는 판자로 막아 앉아서만 기어 들어가게 한다 (도시 배치 난수와 따로 둔 난수)
         bool door = !trader && Chance(0.7);
@@ -673,16 +713,20 @@ public static partial class GameSceneBuilder
         var mat = Pick(M["wall"], M["brick"], M["cracked"]);
         Box("Mass", g, new Vector3(x0 + w / 2, h / 2, z0 + d / 2), new Vector3(w, h, d), mat, 3f);
         int floors = Mathf.FloorToInt((h - 3.5f) / 3.2f);
-        FacadeWindows(g, x0, z0, w, d, 3.5f, floors);
+        KBurnDraws(floors * 2 * (Mathf.Max(1, Mathf.FloorToInt(w / 3f)) + Mathf.Max(1, Mathf.FloorToInt(d / 3f)))); // 예전 FacadeWindows가 쓰던 난수
+        var towerRng = KRandom(block.localPosition + new Vector3(x0, 0, z0), 33);
+        KUpperWindows(g, x0, z0, w, d, 3.5f, floors, towerRng); // 흰 새시 창·실외기·깨진 창 (GameSceneBuilder.KoreaShops.cs)
         FacadeWeathering(g, x0, z0, w, d, h, block.localPosition + new Vector3(x0, 0, z0));
-        // 1층 녹슨 셔터
+        // 1층 상가: 두 바깥 면에 통유리 상점 칸(또는 셔터)과 유리문, 층마다 가로 간판, 돌출 간판, 옥상, 홈통
         int xSide = ix == 0 ? 2 : 3, zSide = iz == 0 ? 0 : 1;
-        float sz = zSide == 0 ? z0 - 0.06f : z0 + d + 0.06f;
-        Box("ShutterZ", g, new Vector3(x0 + w / 2, 1.4f, sz), new Vector3(Mathf.Min(6, w - 2), 2.6f, 0.1f), M["metal"], 1.5f);
+        KTowerShopfront(g, zSide, x0, z0, w, d, towerRng);
         float sx = xSide == 2 ? x0 - 0.06f : x0 + w + 0.06f;
-        Box("ShutterX", g, new Vector3(sx, 1.4f, z0 + d / 2), new Vector3(0.1f, 2.6f, Mathf.Min(6, d - 2)), M["metal"], 1.5f);
+        KTowerShopfront(g, xSide, x0, z0, w, d, towerRng);
         RubblePile(g, new Vector3(sx + (xSide == 2 ? -1.2f : 1.2f), 0, z0 + R(1, d - 1)), 6, 1.0f);
         if (Chance(0.5)) OutdoorItemPoint(points, g.TransformPoint(new Vector3(sx + (xSide == 2 ? -0.8f : 0.8f), 0.1f, z0 + d * 0.3f)));
+        KTowerSigns(g, xSide, zSide, x0, z0, w, d, floors, towerRng);
+        KRooftop(g, x0, z0, w, d, h, towerRng);
+        KDownpipe(g, zSide, 0.4f, x0, z0, w, d, h);
     }
 
     static void CollapsedBuilding(Transform block, Transform points, int ix, int iz)
@@ -756,6 +800,8 @@ public static partial class GameSceneBuilder
             Prim(PrimitiveType.Cylinder, "Branch", g, new Vector3(R(-0.3f, 0.3f), R(2.2f, 3.1f), R(-0.3f, 0.3f)), new Vector3(0.07f, R(0.5f, 0.9f), 0.07f), M["wood"], new Vector3(R(-60, 60), R(0, 360), R(-60, 60)));
     }
 
+    // 가로등 (한국 도시형): 잿빛 강관 기둥 8m + 굽은 팔 + 납작한 LED 등. 받침 플랜지·볼트, 허리의 제어함. 메뉴·컷씬 씬도 같이 쓴다.
+    // 난수 순서는 예전과 같다 (방향, 휨, 휜 각도, 켜짐). 켜진 등은 드물고 깜빡인다
     static void LampPost(Transform parent, Vector3 pos, bool forceLit = false)
     {
         var g = Group("LampPost", parent, pos, R(0, 360));
@@ -763,15 +809,30 @@ public static partial class GameSceneBuilder
         var tilt = bent ? new Vector3(R(8, 20), 0, 0) : Vector3.zero;
         var pole = Group("Pole", g, Vector3.zero);
         pole.localRotation = Quaternion.Euler(tilt);
-        Prim(PrimitiveType.Cylinder, "Pole", pole, new Vector3(0, 3f, 0), new Vector3(0.14f, 3f, 0.14f), M["metal"], null, true);
-        Box("Arm", pole, new Vector3(0, 5.9f, 0.6f), new Vector3(0.08f, 0.08f, 1.3f), M["metal"], 1f, false);
-        Box("Head", pole, new Vector3(0, 5.8f, 1.2f), new Vector3(0.3f, 0.12f, 0.5f), M["metal"], 1f, false);
+        var steel = M.ContainsKey("steelGrey") ? M["steelGrey"] : M["metal"];
+        var parts = new List<CombineInstance>();
+        KCylAt(parts, new Vector3(0, 0.04f, 0), 0.22f, 0.08f, Quaternion.identity); // 받침 플랜지
+        for (int i = 0; i < 4; i++)
+        {
+            float a = i * 90f * Mathf.Deg2Rad;
+            KCylAt(parts, new Vector3(Mathf.Cos(a) * 0.16f, 0.1f, Mathf.Sin(a) * 0.16f), 0.02f, 0.05f, Quaternion.identity);
+        }
+        KCylAt(parts, new Vector3(0, 2.6f, 0), 0.09f, 5.2f, Quaternion.identity);
+        KCylAt(parts, new Vector3(0, 6.5f, 0), 0.07f, 3.0f, Quaternion.identity);
+        KPart(parts, new Vector3(0.22f, 0.5f, 0.16f), 1f, new Vector3(0, 1.1f, 0.12f), Quaternion.identity); // 제어함
+        KRod(parts, new Vector3(0, 7.95f, 0), new Vector3(0, 8.25f, 0.5f), 0.045f);
+        KRod(parts, new Vector3(0, 8.25f, 0.5f), new Vector3(0, 8.4f, 1.1f), 0.04f);
+        KRod(parts, new Vector3(0, 8.4f, 1.1f), new Vector3(0, 8.42f, 1.6f), 0.035f);
+        CombineInto(pole, "Post", parts, steel);
+        Box("Head", pole, new Vector3(0, 8.38f, 1.65f), new Vector3(0.34f, 0.1f, 0.62f), M.ContainsKey("lampHead") ? M["lampHead"] : M["tire"], 1f, false);
+        ColliderBox("PoleCollider", pole, new Vector3(0, 4f, 0), new Vector3(0.22f, 8f, 0.22f), Vector3.zero);
         if (!bent && (forceLit || Chance(0.3)))
         {
-            Box("Glow", pole, new Vector3(0, 5.73f, 1.2f), new Vector3(0.24f, 0.02f, 0.4f), M["lantern"], 1f, false);
-            var l = PointLight("StreetLight", pole, new Vector3(0, 5.4f, 1.2f), new Color(1f, 0.6f, 0.3f), 35f, 18f);
+            Box("Glow", pole, new Vector3(0, 8.325f, 1.65f), new Vector3(0.28f, 0.01f, 0.52f), M["bulb"], 1f, false);
+            var l = PointLight("StreetLight", pole, new Vector3(0, 8.0f, 1.65f), new Color(1f, 0.72f, 0.42f), 40f, 20f);
             Flicker(l, 0.15f, 20f, true);
         }
+        else Box("Dark", pole, new Vector3(0, 8.325f, 1.65f), new Vector3(0.28f, 0.01f, 0.52f), M["glass"], 1f, false);
     }
 
     static void FireBarrel(Transform parent, Vector3 pos)
@@ -863,7 +924,7 @@ public static partial class GameSceneBuilder
                     Vector3 local;
                     if (r.NextDouble() < 0.75)
                     {
-                        float along = F(-15.5f, 15.5f), edge = F(15.0f, 16.4f) * (r.NextDouble() < 0.5 ? -1 : 1);
+                        float along = F(-15.5f, 15.5f), edge = F(14.0f, 16.3f) * (r.NextDouble() < 0.5 ? -1 : 1);
                         local = r.NextDouble() < 0.5 ? new Vector3(along, 0, edge) : new Vector3(edge, 0, along);
                     }
                     else local = r.NextDouble() < 0.5 ? new Vector3(F(-1.2f, 1.2f), 0, F(-13f, 13f)) : new Vector3(F(-13f, 13f), 0, F(-1.2f, 1.2f));
@@ -992,7 +1053,7 @@ public static partial class GameSceneBuilder
         rng = new System.Random(4646);
 
         // 정비소 로컬 좌표: 원점 = 구역 가운데 인도 높이, +x 동쪽, +z 북쪽
-        var yard = Group("TruckYard", block, new Vector3(-14.5f + YardHalf, 0.15f, -14.5f + YardHalf));
+        var yard = Group("TruckYard", block, new Vector3(-KLotHalf + YardHalf, 0.15f, -KLotHalf + YardHalf));
         Box("Pad", yard, new Vector3(0, 0.02f, 0), new Vector3(YardHalf * 2, 0.04f, YardHalf * 2), M["dirty"], 3f);
         // 기름 얼룩 (엔진 밑에는 꼭 하나)
         Box("OilStain", yard, new Vector3(-1.4f, 0.042f, 3.3f), new Vector3(1.3f, 0.004f, 0.9f), M["tire"], 1f, false, new Vector3(0, R(0, 180), 0));
@@ -1495,29 +1556,31 @@ public static partial class GameSceneBuilder
         }
     }
 
+    // 둘레: 서 x=-80, 남북 z=±80, 동 x=KCityEastEdge(126, 아파트 단지 뒤). 난수 소비는 예전과 같다 (변마다 R 10번 + 잔해 더미)
     static void BuildBoundary(Transform geo)
     {
         var g = Group("Boundary", geo, Vector3.zero);
+        float E = KCityEastEdge, cx = (E - 80f) / 2f, lenX = E + 80f;
+        var mat = M["cracked"];
+        // 북쪽 벽은 가운데(x 16~24)를 비우고 그 자리에 터널을 뚫어 둔다 (보기만 — 보이지 않는 벽이 앞을 막는다)
+        Box("WallOfRubble", g, new Vector3((-80f + 16f) / 2f, 5, 80), new Vector3(96f, 10, 3), mat, 4f);
+        Box("WallOfRubble", g, new Vector3((24f + E) / 2f, 5, 80), new Vector3(E - 24f, 10, 3), mat, 4f);
+        BuildTunnel(g, new Vector3(20, 0, 78.5f));
+        Box("Invisible", g, new Vector3(cx, 15, 78.2f), new Vector3(lenX, 30, 0.5f), mat, 4f).GetComponent<MeshRenderer>().enabled = false;
+        Box("WallOfRubble", g, new Vector3(cx, 5, -80), new Vector3(lenX, 10, 3), mat, 4f);
+        Box("Invisible", g, new Vector3(cx, 15, -78.2f), new Vector3(lenX, 30, 0.5f), mat, 4f).GetComponent<MeshRenderer>().enabled = false;
+        Box("WallOfRubble", g, new Vector3(E, 5, 0), new Vector3(3, 10, 170), mat, 4f);
+        Box("Invisible", g, new Vector3(E - 1.8f, 15, 0), new Vector3(0.5f, 30, 170), mat, 4f).GetComponent<MeshRenderer>().enabled = false;
+        Box("WallOfRubble", g, new Vector3(-80, 5, 0), new Vector3(3, 10, 170), mat, 4f);
+        Box("Invisible", g, new Vector3(-78.2f, 15, 0), new Vector3(0.5f, 30, 170), mat, 4f).GetComponent<MeshRenderer>().enabled = false;
         for (int side = 0; side < 4; side++)
-        {
-            float yaw = side * 90;
-            var rot = Quaternion.Euler(0, yaw, 0);
-            if (side == 0)
-            {
-                // 북쪽 벽은 가운데(x 16~24)를 비우고 그 자리에 터널을 뚫어 둔다 (보기만 — 보이지 않는 벽이 앞을 막는다)
-                Box("WallOfRubble", g, new Vector3(-34.5f, 5, 80), new Vector3(101, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
-                Box("WallOfRubble", g, new Vector3(54.5f, 5, 80), new Vector3(61, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
-                BuildTunnel(g, new Vector3(20, 0, 78.5f));
-            }
-            else Box("WallOfRubble", g, rot * new Vector3(0, 5, 80), new Vector3(170, 10, 3), M["cracked"], 4f, true, new Vector3(0, yaw, 0));
-            Box("Invisible", g, rot * new Vector3(0, 15, 78.2f), new Vector3(170, 30, 0.5f), M["cracked"], 4f, true, new Vector3(0, yaw, 0)).GetComponent<MeshRenderer>().enabled = false;
             for (int i = 0; i < 10; i++)
             {
-                var at = rot * new Vector3(R(-75, 75), 0, 77.5f);
+                float a = R(-75, 75);
+                var at = side == 0 ? new Vector3(a, 0, 77.5f) : side == 1 ? new Vector3(E - 2.5f, 0, -a) : side == 2 ? new Vector3(-a, 0, -77.5f) : new Vector3(-77.5f, 0, a);
                 if (side == 0 && Mathf.Abs(at.x - 20f) < 9f) continue; // 터널 입구 앞은 비운다
                 RubblePile(g, at, 6, 2f);
             }
-        }
     }
 
     // 둘레 벽을 뚫고 들어가는 터널: 메인 화면의 방공호 입구 터널과 같은 모양 (반지름·벽 높이·젖은 바닥·갈비뼈·파이프·전구)

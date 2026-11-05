@@ -313,8 +313,8 @@ public partial class UIManager : MonoBehaviour
         Place(ink.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-6, -2), new Vector2(300, 176));
         ink.rectTransform.localRotation = Quaternion.Euler(0, 0, -3f);
         ink.sprite = UIStyle.InkWash;
-        ink.material = GlassMaterial(); // 먹 자국도 뒤 화면을 흐려 비추는 유리라 어두운 바닥 위에서도 보인다
-        ink.color = new Color(0.1f, 0.1f, 0.11f, 0.5f);
+        ink.material = GlassMaterial(); // (2026-11-06부터 null: 비추지 않는 보통 반투명 먹 자국)
+        ink.color = new Color(0.08f, 0.08f, 0.09f, 0.62f);
         ink.raycastTarget = false;
         flashIcon = HudItemRow(flash, "flashlight", 0, out flashlightText);
         batteryIcon = HudItemRow(flash, "battery", 1, out batteryText);
@@ -546,7 +546,9 @@ public partial class UIManager : MonoBehaviour
 
     // 유리 재질 (Resources/Shaders/HudGlass.shader): _Blur 흐림 간격(텍셀), _Darken 바탕색 비율, _Refract 가장자리 굴절.
     // 셰이더가 없으면 null을 돌려주고 보통 반투명 그림으로 그린다
-    static Material GlassMaterial() => hudGlassMat != null ? hudGlassMat : hudGlassMat = NewGlassMaterial("HudGlass", 2.2f, 0.55f, 0f);
+    // HUD 판은 뒤 화면을 비추지 않는다 (2026-11-06): 뛰며 돌아볼 때 흐린 뒤 배경이 번들거리며 반짝여 몰입을 깬다는 의견 → 기본 UI 재질의 보통 반투명 그림으로.
+    // 흐림 유리(BunkerLab/HudGlass)는 NewGlassMaterial로 남겨 두되 HUD 판(시간·날씨·할 일·상태·손전등 먹 자국·적 체력바)에는 쓰지 않는다
+    static Material GlassMaterial() => null;
     static Material PillMaterial() => hudPillMat != null ? hudPillMat : hudPillMat = NewGlassMaterial("HudPill", 1.6f, 0.5f, 0.06f);
 
     static Material NewGlassMaterial(string name, float blur, float darken, float refract)
@@ -745,7 +747,7 @@ public partial class UIManager : MonoBehaviour
                 flashKey = key;
                 flashlightText.text = $"{s.FlashlightCharge:0}%";
                 flashlightText.color = s.FlashlightCharge < 20 ? Alert : Pale;
-                if (s.FlashlightCharge < 20) Tutorial.Hint(Tutorial.HintBattery, "손전등 배터리가 거의 없다. 배터리를 가지고 있으면 손전등을 쓸 때 저절로 갈아 끼운다.");
+                if (s.FlashlightCharge < 20) Tutorial.Hint(Tutorial.HintBattery, $"손전등 배터리가 거의 없다. 다 되면 {KeyBindings.Label(GameAction.Reload)} 키를 눌러 배터리를 갈아 끼운다.");
                 batteryText.text = s.Carried.Count("battery").ToString();
             }
         }

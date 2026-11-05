@@ -138,7 +138,7 @@ public static partial class GameSceneBuilder
                 else if (wi == flat)
                 {
                     // 바람 빠진 타이어: 납작하고 바닥에 눌린다
-                    Prim(PrimitiveType.Cylinder, "Tire", body, new Vector3(wx, wheelR - 0.05f, z), new Vector3(wheelR * 2.05f, 0.11f, (wheelR - 0.05f) * 2f), M["tire"], new Vector3(0, 0, 90));
+                    Prim(PrimitiveType.Cylinder, "Tire", body, new Vector3(wx, wheelR - 0.05f, z), new Vector3((wheelR - 0.05f) * 2f, 0.11f, wheelR * 2.05f), M["tire"], new Vector3(0, 0, 90)); // z축 90도 회전 뒤 로컬 x가 세로(높이)가 된다: 납작한 쪽이 세로, 늘어난 쪽이 앞뒤 (예전엔 뒤바뀌어 타이어가 바닥에 6cm 묻혀 CheckGrounded가 차를 띄웠다)
                     Prim(PrimitiveType.Cylinder, "Rim", body, new Vector3(wx + s * 0.005f, wheelR - 0.05f, z), new Vector3(wheelR * 1.15f, 0.113f, wheelR * 1.15f), chrome, new Vector3(0, 0, 90));
                 }
                 else
@@ -160,7 +160,7 @@ public static partial class GameSceneBuilder
         else
         {
             // 탄 차: 둘레 바닥의 그을음
-            Stain("Scorch", g, new Vector3(0, 0.008f, 0), length * 0.62f, width * 0.95f, M["scorch"], 900 + r.Next(100));
+            Stain("Scorch", g, new Vector3(0, 0.011f, 0), length * 0.62f, width * 0.95f, M["scorch"], 900 + r.Next(100)); // 차선 페인트보다 위 (z-fighting)
         }
 
         if (flipped)
@@ -220,7 +220,7 @@ public static partial class GameSceneBuilder
             {
                 // 블록 가장자리 인도
                 float bx = new[] { -46f, 0f, 46f }[r.Next(3)], bz = new[] { -46f, 0f, 46f }[r.Next(3)];
-                float along = F(-16f, 16f), edge = F(14.9f, 16.6f) * (r.NextDouble() < 0.5 ? -1 : 1);
+                float along = F(-16f, 16f), edge = F(14.0f, 16.5f) * (r.NextDouble() < 0.5 ? -1 : 1);
                 p = new Vector3(bx, 0.15f, bz) + (r.NextDouble() < 0.5 ? new Vector3(along, 0, edge) : new Vector3(edge, 0, along));
             }
             else

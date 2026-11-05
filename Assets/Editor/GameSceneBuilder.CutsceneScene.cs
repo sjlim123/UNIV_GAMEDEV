@@ -83,6 +83,7 @@ public static partial class GameSceneBuilder
         cutTemp.Clear();
         cutFont = null;
         cutAtlas = null;
+        CsKoreaMaterials(); // 한국 길거리·삼일아파트 재질 (맵 개편 세션의 Korea*.cs; 도시 씬이 저장한 것을 불러온다)
 
         var rootGo = new GameObject("CutsceneWorld");
         var d = rootGo.AddComponent<CutsceneDirector>();
@@ -602,6 +603,7 @@ public static partial class GameSceneBuilder
                 x += w + R(2f, 8f);
             }
         }
+        CsOutsideApartments(outside); // 먼 줄의 삼일아파트 둘 (GameSceneBuilder.CutsceneKorea.cs)
         // 폭심 (거실 창에서 북동쪽 약 390m): 버섯구름 발치
         d.cloudHome = Group("CloudHome", outside, new Vector3(240f, CsCityGround, 300f));
     }
@@ -620,11 +622,7 @@ public static partial class GameSceneBuilder
         CsBox("SidewalkL", root, new Vector3(-10, 0.075f, 48), new Vector3(6, 0.15f, 110), M["floor"], null, 3f);
         CsBox("SidewalkR", root, new Vector3(10, 0.075f, 48), new Vector3(6, 0.15f, 110), M["floor"], null, 3f);
         CsBox("Plaza", root, new Vector3(0, 0.03f, 3.5f), new Vector3(14f, 0.06f, 7f), M["floor"], null, 2.5f);
-        var lines = new List<CombineInstance>();
-        var dash = BoxMesh(new Vector3(0.15f, 0.02f, 2.4f), 1f);
-        for (float z = 8; z < 100; z += 6)
-            lines.Add(new CombineInstance { mesh = dash, transform = Matrix4x4.TRS(new Vector3(0, 0.005f, z), Quaternion.identity, Vector3.one) });
-        CombineInto(root, "RoadLines", lines, M["line"]);
+        CsKoreaRoadPaint(root); // 차선·횡단보도·정지선·연석·점자 블록·맨홀 (GameSceneBuilder.CutsceneKorea.cs)
 
         // 터널을 감싼 두꺼운 콘크리트 벙커 (앞면 z=0.3, 안쪽으로 14m)
         CsBox("BunkerL", root, new Vector3(-5.1f, 2.8f, -6.75f), new Vector3(4.5f, 5.6f, 14.1f), M["dirty"], null, 3f);
@@ -651,18 +649,15 @@ public static partial class GameSceneBuilder
         d.beaconLight.shadows = LightShadows.None;
         PointLight("BeaconGlow", root, new Vector3(3.4f, 4.5f, 0.9f), new Color(1f, 0.15f, 0.08f), 4f, 6f);
 
-        // 길 양옆 건물 (메인 화면과 같은 식)
+        // 길 양옆 상가 빌딩 (맵의 한국 길거리와 같은 부품: 통유리 상점·간판·새시 창·옥상, GameSceneBuilder.CutsceneKorea.cs)
         foreach (var side in new[] { -1f, 1f })
             for (float z = 2; z < 110;)
             {
                 float dd = R(8f, 13f), w = R(8f, 12f), h = R(9f, 26f);
-                // 길 동쪽 z 16.5~30.5는 주인공이 뛰쳐나오는 건물 자리
-                if (side > 0 && z < 30.5f && z + dd > 16f) { z = 30.5f + R(0.5f, 2f); continue; }
+                // 길 동쪽 z 13.5~33.5는 주인공이 뛰쳐나오는 삼일아파트 자리
+                if (side > 0 && z < 33.5f && z + dd > 13.5f) { z = 33.5f + R(0.5f, 2f); continue; }
                 float x0 = side < 0 ? -13 - w : 13;
-                var g = Group("Building", root, new Vector3(0, 0.15f, 0));
-                CsBox("Mass", g, new Vector3(x0 + w / 2, h / 2, z + dd / 2), new Vector3(w, h, dd), Pick(M["wall"], M["brick"], M["cracked"]), null, 3f);
-                FacadeWindows(g, x0, z, w, dd, 3.5f, Mathf.FloorToInt((h - 3.5f) / 3.2f));
-                if (Chance(0.6)) CsBox("Shutter", g, new Vector3(side < 0 ? x0 + w + 0.06f : x0 - 0.06f, 1.4f, z + dd / 2), new Vector3(0.1f, 2.6f, Mathf.Min(5, dd - 2)), M["metal"], null, 1.5f);
+                CsKoreaBuilding(root, side, x0, z, w, dd, h);
                 z += dd + R(0.5f, 3f);
             }
         // 먼 끝을 막는 큰 건물들
@@ -690,7 +685,8 @@ public static partial class GameSceneBuilder
         LampPost(root, new Vector3(8.5f, 0.15f, 30));
         LampPost(root, new Vector3(-8.5f, 0.15f, 52));
         DeadTree(root, new Vector3(9f, 0.15f, 6));
-        DeadTree(root, new Vector3(-9f, 0.15f, 40));
+        DeadTree(root, new Vector3(-9f, 0.15f, 72));
+        CsKoreaStreetKit(root); // 전봇대·전선·버스 정류장·소화전·가로수·현수막 (GameSceneBuilder.CutsceneKorea.cs)
         // 길에 흩어진 종이·유리 (작은 판들)
         for (int i = 0; i < 26; i++)
             CsBox("Litter", root, new Vector3(R(-9f, 9f), 0.006f, R(2f, 60f)), new Vector3(R(0.15f, 0.3f), 0.004f, R(0.2f, 0.32f)), Pick(CM["book2"], CM["mug"], CM["trim"]), new Vector3(0, R(0, 360), 0), 1f, true, false);
@@ -718,18 +714,31 @@ public static partial class GameSceneBuilder
 
     // ================= 주인공이 뛰쳐나오는 건물 =================
 
-    // 길 동쪽(x 13, z 16.5~30.5)의 아파트 현관: 유리 쌍여닫이문(경첩 피벗 exitDoorL/R, 실행 중 CutsceneDirector가 돌린다),
+    // 길 동쪽(x 13, z 14.5~32.5)의 삼일아파트 101동 현관: 유리 쌍여닫이문(경첩 피벗 exitDoorL/R, 실행 중 CutsceneDirector가 돌린다),
     // 어두운 로비(떨리는 형광등·붉은 비상등·우편함·승강기·게시판·소화기·떨어진 천장판), 쇠 문틀·채광창·캐노피·계단, 위층 창문
     static void CsBuildExitBuilding(Transform root, CutsceneDirector d)
     {
         var g = Group("ExitBuilding", root, new Vector3(0, 0.15f, 0));
-        const float X = 13f, Z0 = 16.5f, Z1 = 30.5f, H = 15f, T = 0.4f, XBack = 24f;
+        // 건물은 맵의 삼일아파트 101동 (12층, 폭 18·깊이 11: 발코니 창·층 띠·옆면 동 번호 띠·옥탑·물탱크, GameSceneBuilder.KoreaApartment.cs).
+        // 아파트의 덩어리·계단실 칸·현관은 지우고, 로비가 들어갈 자리를 비운 껍데기(같은 재질)와 기존 유리 쌍여닫이문·캐노피·계단을 쓴다
+        const float X = 13f, Z0 = 14.5f, Z1 = 32.5f, H = 12 * AptFloorH, T = 0.4f, XBack = 24f;
         const float DZ = 23.5f, OpenW = 2.6f, OpenH = 2.95f;                 // 문 가운데 z, 출입구 폭·높이
         const float LX1 = 21.4f, LZ0 = 19.5f, LZ1 = 27.5f, FloorY = 0.32f, CeilY = 3.05f;   // 로비 (바닥은 인도보다 두 계단 높다)
         float LX0 = X + T, zL = DZ - OpenW / 2, zR = DZ + OpenW / 2;
-        var wall = M["wall"];
+        var wall = M["aptWall"];
         var metal = M["metal"];
-        // 앞면(출입구 왼쪽·오른쪽·위)과 로비를 둘러싼 덩어리, 위층
+        BuildApartment(g, new Vector3((X + XBack) / 2, 0, DZ), -90f, Z1 - Z0, XBack - X, 12, 0, KRandom(new Vector3(X, 0, DZ), 31));
+        var apt = g.Find("Apartment_101");
+        if (apt != null)
+            foreach (var name in new[] { "Mass", "StairBay", "Entrance" })
+            {
+                var c = apt.Find(name);
+                if (c != null) Object.DestroyImmediate(c.gameObject);
+            }
+        // 계단실 칸(0.2m 돌출)은 로비 위부터, 현관 위 '101동' 표지
+        CsBox("StairBay", g, new Vector3(X - 0.1f, (3.0f + H) / 2, DZ), new Vector3(0.2f, H - 3.0f, 2.2f), wall, null, 4f);
+        Prim(PrimitiveType.Quad, "DongPlate", g, new Vector3(X - 0.21f, 3.42f, DZ), new Vector3(1.4f, 0.35f, 1f), M["aptPlate0"], new Vector3(0, 90f, 0)).GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        // 앞면(출입구 왼쪽·오른쪽·위)과 로비를 둘러싼 껍데기, 위층 (아파트 겉면과 같은 재질)
         CsBox("FacadeL", g, new Vector3(X + T / 2, H / 2, (Z0 + zL) / 2), new Vector3(T, H, zL - Z0), wall, null, 3f);
         CsBox("FacadeR", g, new Vector3(X + T / 2, H / 2, (zR + Z1) / 2), new Vector3(T, H, Z1 - zR), wall, null, 3f);
         CsBox("FacadeTop", g, new Vector3(X + T / 2, (OpenH + H) / 2, DZ), new Vector3(T, H - OpenH, OpenW), wall, null, 3f);
@@ -737,7 +746,6 @@ public static partial class GameSceneBuilder
         CsBox("SideMassL", g, new Vector3((LX0 + XBack) / 2, (CeilY + 0.3f) / 2, (Z0 + LZ0) / 2), new Vector3(XBack - LX0, CeilY + 0.3f, LZ0 - Z0), wall, null, 3f);
         CsBox("SideMassR", g, new Vector3((LX0 + XBack) / 2, (CeilY + 0.3f) / 2, (LZ1 + Z1) / 2), new Vector3(XBack - LX0, CeilY + 0.3f, Z1 - LZ1), wall, null, 3f);
         CsBox("BackMass", g, new Vector3((LX1 + XBack) / 2, (CeilY + 0.3f) / 2, DZ), new Vector3(XBack - LX1, CeilY + 0.3f, LZ1 - LZ0), wall, null, 3f);
-        FacadeWindows(g, X, Z0, XBack - X, Z1 - Z0, 3.6f, 3);
         // 로비 바닥(문턱까지)과 천장
         CsBox("LobbyFloor", g, new Vector3((X + LX1) / 2, FloorY / 2, DZ), new Vector3(LX1 - X, FloorY, LZ1 - LZ0), M["floor"], null, 2f);
         CsBox("LobbyCeiling", g, new Vector3((LX0 + LX1) / 2, CeilY + 0.15f, DZ), new Vector3(LX1 - LX0, 0.3f, LZ1 - LZ0), CM["ceiling"], null, 2f);

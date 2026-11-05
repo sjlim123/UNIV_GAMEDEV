@@ -649,7 +649,7 @@ public partial class UIManager
                 Line(c, "", 4);
                 Selector(c, "환경음 (바람·비·기계·라디오)", $"{GameSettings.VolumeAmbient * 100:0}%", d => GameSettings.VolumeAmbient = Step(GameSettings.VolumeAmbient, d * 0.1f, 0f, 1f));
                 Selector(c, "효과음 (발소리·타격·아이템·문)", $"{GameSettings.VolumeEffects * 100:0}%", d => GameSettings.VolumeEffects = Step(GameSettings.VolumeEffects, d * 0.1f, 0f, 1f));
-                Selector(c, "적·동물 소리 (좀비·좀비개·약탈자)", $"{GameSettings.VolumeEnemy * 100:0}%", d => GameSettings.VolumeEnemy = Step(GameSettings.VolumeEnemy, d * 0.1f, 0f, 1f));
+                Selector(c, "적·동물 소리 (감염자·들개·약탈자)", $"{GameSettings.VolumeEnemy * 100:0}%", d => GameSettings.VolumeEnemy = Step(GameSettings.VolumeEnemy, d * 0.1f, 0f, 1f));
                 Selector(c, "인터페이스 (버튼·창)", $"{GameSettings.VolumeUI * 100:0}%", d => GameSettings.VolumeUI = Step(GameSettings.VolumeUI, d * 0.1f, 0f, 1f));
                 Line(c, "전체 음량은 모든 소리에, 나머지는 그 종류에만 곱해집니다.", 17, Dim);
             }
@@ -717,7 +717,7 @@ public partial class UIManager
                 { $"{K(GameAction.MoveForward)} {K(GameAction.MoveLeft)} {K(GameAction.MoveBack)} {K(GameAction.MoveRight)}", "이동" }, { "마우스", "시점 회전" },
                 { K(GameAction.Run), "달리기 (소리가 커진다 · 짐이 무거우면 스테미너가 빨리 준다)" }, { K(GameAction.Jump), "점프" },
                 { K(GameAction.Crouch), "앉기 (조용히 숨기 · 낮은 틈 지나가기)" },
-                { K(GameAction.Interact), "줍기 · 문 열기 · 시설 사용 · 손전등 꺼내기/넣기" }, { K(GameAction.Flashlight), "손전등 켜기/끄기 (꺼내 든 뒤)" }, { "1 ~ 8 / 휠", "핫바 칸 선택" },
+                { K(GameAction.Interact), "줍기 · 문 열기 · 시설 사용" }, { K(GameAction.Flashlight), "손전등 켜기/끄기" }, { K(GameAction.Reload), "배터리 교체 (손전등이 다 됐을 때)" }, { "1 ~ 8 / 휠", "핫바 칸 선택" },
                 { K(GameAction.UseItem), "선택한 아이템 사용 (먹기·치료)" }, { K(GameAction.DropItem), "선택한 아이템 버리기" },
                 { K(GameAction.Attack), "공격 (무기를 들면 더 세다 · 새총은 돌을 쏜다 · 라이터는 불을 붙인다)" },
                 { K(GameAction.Inventory), "소지품 열기 (아이템을 핫바로 끌어다 놓기)" }, { "Esc", "일시정지 · 창 닫기" },

@@ -132,11 +132,11 @@ public class GameBalance : ScriptableObject
     [Range(0, 1)] public float raiderChance = 0.3f;
 
     [Header("적 (피 / 데미지 / 속도 / 딜레이 / 등장 턴)")]
-    public EnemyStats zombie = new EnemyStats("좀비", 100, 12, 8, 1.6f, 1);
-    public EnemyStats leatherZombie = new EnemyStats("가죽 좀비", 200, 20, 10, 1.6f, 10);
-    public EnemyStats rangedZombie = new EnemyStats("원거리 좀비", 150, 10, 8, 3f, 15);
-    public EnemyStats heavyZombie = new EnemyStats("거대 좀비", 300, 30, 8, 3f, 30);
-    public EnemyStats dog = new EnemyStats("좀비개", 80, 8, 13, 2f, 1);
+    public EnemyStats zombie = new EnemyStats("감염자", 100, 12, 8, 1.6f, 1);
+    public EnemyStats leatherZombie = new EnemyStats("가죽 감염자", 200, 20, 10, 1.6f, 10);
+    public EnemyStats rangedZombie = new EnemyStats("원거리 감염자", 150, 10, 8, 3f, 15);
+    public EnemyStats heavyZombie = new EnemyStats("거대 감염자", 300, 30, 8, 3f, 30);
+    public EnemyStats dog = new EnemyStats("들개", 80, 8, 13, 2f, 1);
     public EnemyStats raider = new EnemyStats("약탈자", 100, 15, 10, 1f, 5);
     [Tooltip("좀비가 배회할 때 속도(m/s)")]
     public float zombieWanderSpeed = 0.7f;
@@ -147,6 +147,19 @@ public class GameBalance : ScriptableObject
     public float flashlightVisibility = 1.5f;
     [Tooltip("원거리 좀비 투사체 사거리(m)")]
     public float rangedAttackRange = 12f;
+
+    [Header("추격 속도 성장 (EnemyPace: 턴이 지날수록 원래 속도에 가까워진다)")]
+    [Tooltip("이 턴이 될 때마다 추격 속도가 한 단계 오른다. 마지막 턴부터는 원래 속도(위 EnemyStats.speed)")]
+    public int[] paceStageTurns = { 25, 45, 75, 105, 135, 155, 170 };
+    [Tooltip("첫 단계 전까지의 추격 속도 배율. 작은 놈일수록 덜 느리고 큰 놈일수록 훨씬 둔하다 (들개 > 약탈자 > 감염자 > 원거리 > 가죽 > 거대)")]
+    [Range(0.05f, 1f)] public float paceStartDog = 0.5f;
+    [Range(0.05f, 1f)] public float paceStartRaider = 0.42f;
+    [Range(0.05f, 1f)] public float paceStartZombie = 0.36f;
+    [Range(0.05f, 1f)] public float paceStartRanged = 0.34f;
+    [Range(0.05f, 1f)] public float paceStartLeather = 0.28f;
+    [Range(0.05f, 1f)] public float paceStartHeavy = 0.2f;
+    [Tooltip("속도가 오르기 몇 턴 전부터 방공호(출입구·침대·돌아왔을 때)에서 경고하는가")]
+    public int paceWarnTurns = 3;
 
     [Header("방공호 정전 (전력 0%)")]
     [Tooltip("정전 중 출입구로 좀비가 들어오는 간격(초)")]

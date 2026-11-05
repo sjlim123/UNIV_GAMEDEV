@@ -52,12 +52,13 @@ public class PlayerHotbar : MonoBehaviour
         var gm = GameManager.Instance;
         var def = ItemDatabase.Get(SelectedId);
         if (def.IsConsumable) gm.UseItem(def.Id, gm.State.Carried);
-        else if (def.Id == "flashlight") { if (PlayerFlashlight.Instance != null) PlayerFlashlight.Instance.ToggleOut(); } // 우클릭으로도 꺼내고 넣는다
+        else if (def.Id == "flashlight") { if (PlayerFlashlight.Instance != null) PlayerFlashlight.Instance.Toggle(); } // 우클릭으로도 켜고 끈다 (손전등 키와 같다)
+        else if (def.Id == "raw_meat") gm.UI.ShowMessage("생고기는 그냥 먹을 수 없다. 방공호 화로에서 구워야 한다.", 3f);
         else if (def.Id == ItemDatabase.LighterId) gm.UI.ShowMessage($"라이터를 들고 {KeyBindings.Label(GameAction.Attack)}하면 적에게 불을 붙인다. 방공호에서는 화로에 불을 붙인다.");
         else if (def.IsWeapon) gm.UI.ShowMessage($"{def.Name}{Eun(def.Name)} 좌클릭으로 " + (def.Weapon == WeaponKind.Sling ? $"돌을 쏜다. 돌 1개로 {ItemDatabase.ShotsPerStone}발." : "공격한다."));
         else if (def.Slot != EquipSlot.None) Equip(def.Id); // 가방·방어구는 우클릭하면 장비 칸에 착용한다
         else if (def.Id == "fuel") gm.UI.ShowMessage("연료통은 방공호 발전기에 넣는다 (F). 트럭 재료로도 쓴다.");
-        else if (def.Id == "battery") gm.UI.ShowMessage("배터리는 손전등이 다 닳으면 저절로 갈아 끼운다.");
+        else if (def.Id == "battery") gm.UI.ShowMessage($"배터리는 손전등이 다 닳았을 때 {KeyBindings.Label(GameAction.Reload)} 키를 눌러 갈아 끼운다.");
         else gm.UI.ShowMessage($"{def.Name}: {MaterialUse(def.Id)}다.");
     }
 
@@ -123,7 +124,8 @@ public class PlayerHotbar : MonoBehaviour
         if (def.Weapon == WeaponKind.Sling) return $"좌클릭: 쏘기 · 공격력 {def.Damage:0} · {SlingAmmoText()}";
         if (def.Weapon == WeaponKind.Stab) return $"좌클릭: 찌르기 · 공격력 {def.Damage:0}";
         if (def.IsWeapon) return $"좌클릭: 휘두르기 · 공격력 {def.Damage:0}";
-        if (def.Id == "flashlight") return $"{KeyBindings.Label(GameAction.Interact)}·우클릭: 꺼내기/넣기 · {KeyBindings.Label(GameAction.Flashlight)}: 켜기/끄기";
+        if (def.Id == "flashlight") return $"{KeyBindings.Label(GameAction.Flashlight)}·우클릭: 켜기/끄기 · {KeyBindings.Label(GameAction.Reload)}: 배터리 교체";
+        if (def.Id == "raw_meat") return "날로는 못 먹는다 · 방공호 화로에서 굽기";
         if (def.Slot == EquipSlot.Backpack) return "우클릭: 장비 칸에 메기";
         if (def.Slot == EquipSlot.Armor) return "우클릭: 장비 칸에 입기";
         if (def.Id == "fuel") return "방공호 발전기 연료 · 트럭 재료";
