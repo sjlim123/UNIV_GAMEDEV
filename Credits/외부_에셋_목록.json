@@ -1,17 +1,39 @@
 {
   "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
-  "updated": "2026-11-03",
+  "updated": "2026-11-05",
   "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
   "licenses": {
-    "CC0": { "name": "Creative Commons CC0 1.0 (퍼블릭 도메인 기증)", "url": "https://creativecommons.org/publicdomain/zero/1.0/", "summary": "표기 없이 상업용 포함 자유롭게 사용·수정 가능" },
-    "OFL": { "name": "SIL Open Font License 1.1", "url": "https://openfontlicense.org/", "summary": "게임에 내장·배포 가능, 글꼴 자체를 단독 판매만 금지, 라이선스 문서 동봉" }
+    "CC0": {
+      "name": "Creative Commons CC0 1.0 (퍼블릭 도메인 기증)",
+      "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "summary": "표기 없이 상업용 포함 자유롭게 사용·수정 가능"
+    },
+    "OFL": {
+      "name": "SIL Open Font License 1.1",
+      "url": "https://openfontlicense.org/",
+      "summary": "게임에 내장·배포 가능, 글꼴 자체를 단독 판매만 금지, 라이선스 문서 동봉"
+    },
+    "CC-BY-3.0": {
+      "name": "Creative Commons Attribution 3.0 (저작자 표시)",
+      "url": "https://creativecommons.org/licenses/by/3.0/",
+      "summary": "제작자와 출처를 표기하면 상업용 포함 사용·수정 가능 (이 목록과 게임 크레딧에 표기)"
+    }
   },
   "assets": [
     {
       "id": "polyhaven-textures",
       "kind": "텍스처",
       "name": "Poly Haven 텍스처 9종",
-      "items": ["asphalt_02", "brick_wall_10", "concrete_floor_worn_001", "concrete_wall_008", "cracked_concrete_wall", "dirty_concrete", "rusty_metal_02", "wood_planks_dirt"],
+      "items": [
+        "asphalt_02",
+        "brick_wall_10",
+        "concrete_floor_worn_001",
+        "concrete_wall_008",
+        "cracked_concrete_wall",
+        "dirty_concrete",
+        "rusty_metal_02",
+        "wood_planks_dirt"
+      ],
       "author": "Poly Haven",
       "source": "https://polyhaven.com/textures",
       "license": "CC0",
@@ -24,7 +46,15 @@
       "id": "polyhaven-models",
       "kind": "3D 모델",
       "name": "Poly Haven 모델 7종 (1K FBX + 색·노멀 텍스처)",
-      "items": ["metal_tool_chest", "old_military_crate", "metal_jerrycan", "old_gas_mask", "medical_box", "old_tyre", "trashbag"],
+      "items": [
+        "metal_tool_chest",
+        "old_military_crate",
+        "metal_jerrycan",
+        "old_gas_mask",
+        "medical_box",
+        "old_tyre",
+        "trashbag"
+      ],
       "author": "Poly Haven",
       "source": "https://polyhaven.com/models",
       "license": "CC0",
@@ -136,6 +166,52 @@
       "used_for": "연기·먼지·불티 파티클",
       "added": "2026-11-03",
       "status": "예정"
+    },
+    {
+      "id": "oga-fantozzi-footsteps",
+      "kind": "효과음",
+      "name": "Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z",
+      "items": [
+        "Fantozzi-StoneL1~L3·R1~R3 → stone",
+        "Fantozzi-SandL1~L3·R1~R3 → sand"
+      ],
+      "author": "Fantozzi (Freesound 팩 10338), 잘라 올린 이 qubodup (OpenGameArt)",
+      "source": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
+      "license": "CC0",
+      "location": "Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)",
+      "used_for": "플레이어 발소리: 방공호·복도·터널·보도(돌), 흙·재(모래), 출발 연출 걸음",
+      "added": "2026-11-05",
+      "status": "사용 중"
+    },
+    {
+      "id": "kenney-impact-sounds",
+      "kind": "효과음",
+      "name": "Impact Sounds 1.0 — footstep_concrete_000~004",
+      "items": [],
+      "author": "Kenney (kenney.nl)",
+      "source": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0",
+      "location": "Assets/Resources/Audio/Footsteps/interior/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)",
+      "used_for": "플레이어 발소리: 건물 안 바닥",
+      "added": "2026-11-05",
+      "status": "사용 중"
+    },
+    {
+      "id": "oga-footsteps-surfaces",
+      "kind": "효과음",
+      "name": "footsteps on different surfaces (footsteps_0.zip) — gravel 0~9, boots 0~8, water 0~4",
+      "items": [
+        "gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0",
+        "boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0",
+        "water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0"
+      ],
+      "author": "묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound)",
+      "source": "https://opengameart.org/content/footsteps-on-different-surfaces",
+      "license": "CC-BY-3.0",
+      "location": "Assets/Resources/Audio/Footsteps/gravel/, boots/, water/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)",
+      "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화)",
+      "added": "2026-11-05",
+      "status": "사용 중"
     }
   ]
 }

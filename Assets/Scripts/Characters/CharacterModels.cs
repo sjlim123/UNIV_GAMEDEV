@@ -166,6 +166,7 @@ public static partial class CharacterModels
         public FaceStyle Face;   // 매끄러운 얼굴의 생김새·표정 변주 (시체). null이면 주인공 얼굴
         public float Hunch;     // 몸통이 앞으로 굽은 정도 (m)
         public float NeckDrop;  // 머리를 어깨 쪽으로 내려 목을 짧게 보이게 하는 정도 (m)
+        public bool LiveFingers; // 손가락 마디를 합치지 않고 따로 둔다 (컷씬 배우: 입을 가릴 때 더 감긴다)
         public float Shoulders = 1f;
     }
 
@@ -348,21 +349,31 @@ public static partial class CharacterModels
         float s = h.Limb;
         // 손바닥은 허벅지 쪽(안쪽)을 보고, 엄지는 앞(+z)
         b.Part(hand, Tube(k + "palm", 0.01f, 0.017f * s, 0.024f * s, 0f, -0.03f, 0.016f * s, 0.037f * s, 0f, -0.08f, 0.015f * s, 0.040f * s, 0f, -0.10f, 0.013f * s, 0.036f * s, 0f), skin, Vector3.zero);
-        float curl = (h.Zombie ? 28f : 14f) * -side;
+        // 손가락은 두 마디: 손등 관절(curl)과 가운데 관절(bend)에서 감겨 힘을 뺀 손이 둥글게 보인다 (좀비는 갈고리처럼 더 감긴다).
+        // 살아 움직이는 손(h.LiveFingers: 컷씬 배우)만 마디를 부모-자식으로 엮어 따로 돌릴 수 있게 두고(합쳐지지 않는다),
+        // 나머지는 같은 자리를 손 관절 바로 아래 두어 Finish()에서 한 메시로 합쳐진다
+        float curl = (h.Zombie ? 26f : 20f) * -side;
+        float bend = (h.Zombie ? 42f : 30f) * -side;
         float[] z = { 0.027f, 0.009f, -0.009f, -0.027f }, len = { 0.075f, 0.082f, 0.077f, 0.062f };
+        var nail = h.Zombie ? ProcTex.Plain(Hex("5a5232"), 0.4f) : null; // 좀비 손톱은 길고 누렇다
+        Transform Seg(Transform parent, Mesh m, Material mat, Vector3 pos, Quaternion rot)
+        {
+            if (h.LiveFingers || parent == hand) return b.Part(parent, m, mat, pos, rot.eulerAngles);
+            return b.Part(hand, m, mat, parent.localPosition + parent.localRotation * pos, (parent.localRotation * rot).eulerAngles);
+        }
         for (int i = 0; i < 4; i++)
         {
-            float L = len[i] * (h.Zombie ? 1.08f : 1f);
-            var finger = Tube(k + "finger" + i, 0f, 0.0088f * s, 0.0085f * s, 0f, -L * 0.5f, 0.0082f * s, 0.0078f * s, 0f, -L, 0.0066f * s, 0.006f * s, 0f, -L - 0.006f, 0.002f, 0.002f, 0f);
-            b.Part(hand, finger, skin, new Vector3(0, -0.095f, z[i] * s), new Vector3(0, 0, curl + (i - 1.5f) * 3f));
+            float L = len[i] * (h.Zombie ? 1.08f : 1f), L1 = L * 0.55f, L2 = L * 0.5f;
+            var p = Seg(hand, Tube(k + "finger" + i, 0f, 0.0088f * s, 0.0085f * s, 0f, -L1 * 0.5f, 0.0084f * s, 0.008f * s, 0f, -L1 - 0.003f, 0.0076f * s, 0.0073f * s, 0f), skin,
+                new Vector3(0, -0.095f, z[i] * s), Quaternion.Euler(0, 0, curl + (i - 1.5f) * 3f));
+            var d = Seg(p, Tube(k + "finger" + i + "b", 0.003f, 0.0078f * s, 0.0075f * s, 0f, -L2 * 0.5f, 0.0072f * s, 0.0068f * s, 0f, -L2, 0.0062f * s, 0.0058f * s, 0f, -L2 - 0.006f, 0.002f, 0.002f, 0f), skin,
+                new Vector3(0, -L1, 0), Quaternion.Euler(0, 0, bend));
+            if (nail != null) Seg(d, ProcMesh.Cone("nail", 0.006f, 0.016f, 4), nail, new Vector3(-side * 0.004f, -L2, 0), Quaternion.Euler(180, 0, 0));
         }
-        var thumb = Tube(k + "thumb", 0f, 0.011f * s, 0.0105f * s, 0f, -0.035f, 0.009f * s, 0.009f * s, 0f, -0.055f, 0.006f * s, 0.006f * s, 0f, -0.06f, 0.002f, 0.002f, 0f);
-        b.Part(hand, thumb, skin, new Vector3(-side * 0.008f, -0.03f, 0.03f * s), new Vector3(-38, 0, curl * 0.6f));
-        // 좀비 손톱은 길고 누렇다
-        if (h.Zombie)
-            for (int i = 0; i < 4; i++)
-                b.Part(hand, ProcMesh.Cone("nail", 0.006f, 0.016f, 4), ProcTex.Plain(Hex("5a5232"), 0.4f),
-                    new Vector3(-side * 0.004f, -0.095f - len[i] * 1.08f * Mathf.Cos(curl * Mathf.Deg2Rad), z[i] * s), new Vector3(180, 0, curl), null, false);
+        var t = Seg(hand, Tube(k + "thumb", 0f, 0.011f * s, 0.0105f * s, 0f, -0.02f, 0.0098f * s, 0.0095f * s, 0f, -0.036f, 0.009f * s, 0.0088f * s, 0f), skin,
+            new Vector3(-side * 0.008f, -0.03f, 0.03f * s), Quaternion.Euler(-38, 0, curl * 0.6f));
+        Seg(t, Tube(k + "thumbb", 0.003f, 0.0088f * s, 0.0086f * s, 0f, -0.016f, 0.008f * s, 0.0078f * s, 0f, -0.026f, 0.006f * s, 0.006f * s, 0f, -0.031f, 0.002f, 0.002f, 0f), skin,
+            new Vector3(0, -0.033f, 0), Quaternion.Euler(0, 0, bend * 0.5f));
     }
 
     static void Head(Builder b, Human h)
@@ -864,6 +875,7 @@ public static partial class CharacterModels
             PantsBaggy = false,
             Belt = true,
             SmoothFace = true,
+            LiveFingers = true, // 입을 가릴 때 손가락 마디가 따로 감긴다 (CutsceneActor)
             NeckDrop = 0.035f, // 목이 길어 보인다는 피드백: 머리를 3.5cm 내린다
         };
         h.Skin.SetFloat("_BumpScale", 0.12f);   // 가까이 찍히는 얼굴이라 모공 요철을 약하게

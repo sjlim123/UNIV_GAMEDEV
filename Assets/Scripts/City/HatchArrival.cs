@@ -88,7 +88,7 @@ public class HatchArrival : MonoBehaviour
         // 1) 걸어온다 (빠른 걸음), 문 앞에 서서 문을 본다
         actor.Set(CutsceneActor.Mode.Walk, 0.35f);
         actor.WalkCadence = 1.35f;
-        actor.OnFootstep = p => ProceduralAudio.PlayAt(ProceduralAudio.Footstep(), p, 0.5f, Random.Range(0.9f, 1.05f));
+        actor.OnFootstep = p => ProceduralAudio.PlayAt(Footsteps.Clip(Footsteps.Surface.Asphalt), p, 0.6f, Random.Range(0.9f, 1.05f));
         yield return WalkTo(actorGo.transform, goal, WalkSpeed, 0.8f, 0.9f);
         var faceDoor = Quaternion.LookRotation(-outward, Vector3.up);
         actor.Set(CutsceneActor.Mode.Stand, 0.4f);

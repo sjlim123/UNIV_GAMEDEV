@@ -59,6 +59,9 @@ public class Zombie : MonoBehaviour, IDamageable
 
     public ZombieKind Kind { get; private set; }
     public bool IsDead => state == State.Dead;
+    public float Health => health;                                    // 남은 체력 (HUD 체력바)
+    public float MaxHealth => stats != null ? stats.health : 1f;
+    public string DisplayName => stats != null ? stats.displayName : "좀비";
     public bool IsChasing => state == State.Chase;
     bool IsRaider => Kind == ZombieKind.Raider;
 

@@ -274,12 +274,12 @@ public class PlayerController : MonoBehaviour
             if (stepDistance >= stride)
             {
                 stepDistance = 0;
-                stepSource.pitch = Random.Range(0.85f, 1.1f);
-                // 웅덩이를 밟으면 첨벙 (물결과 물방울은 PuddleFx가 낸다)
+                stepSource.pitch = Random.Range(0.92f, 1.08f);
+                // 발밑 바닥에 맞는 실제 녹음 발소리 (Footsteps). 웅덩이를 밟으면 물 발소리 (물결과 물방울은 PuddleFx가 낸다)
                 if (PuddleFx.Step(transform.position, IsCrouching ? 0.35f : IsRunning ? 1f : 0.6f, false))
-                    stepSource.PlayOneShot(ProceduralAudio.Splash(), IsCrouching ? 0.25f : IsRunning ? 0.8f : 0.5f);
+                    stepSource.PlayOneShot(Footsteps.Clip(Footsteps.Surface.Water), IsCrouching ? 0.3f : IsRunning ? 0.9f : 0.6f);
                 else
-                    stepSource.PlayOneShot(ProceduralAudio.Footstep(), IsCrouching ? 0.12f : IsRunning ? 0.7f : 0.38f);
+                    stepSource.PlayOneShot(Footsteps.Clip(Footsteps.SurfaceUnder(transform.position, transform)), IsCrouching ? 0.18f : IsRunning ? 0.85f : 0.5f);
             }
         }
         else bobTimer = Mathf.Lerp(bobTimer, Mathf.Round(bobTimer / Mathf.PI) * Mathf.PI, dt * 5);
