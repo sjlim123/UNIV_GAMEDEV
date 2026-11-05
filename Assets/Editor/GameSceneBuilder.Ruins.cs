@@ -268,7 +268,7 @@ public static partial class GameSceneBuilder
         AddDoor(walls[doorSide], doorC + ShiftFor(doorSide, t), 1.4f, 2.3f, Pick(M["wood"], M["metal"]));
         // 폭발에 떨어진 가로 간판 (자리에서 뽑은 난수)
         var signRng = KRandom(block.localPosition + new Vector3(x0, 0, z0), 21);
-        KSignBand(g, doorSide, x0 - t / 2, z0 - t / 2, w + t, d + t, h - 0.55f, h + 0.4f, signRng.Next(KTraderShop), 2, false, signRng);
+        KSignBand(g, doorSide, x0 - t / 2, z0 - t / 2, w + t, d + t, h - 0.55f, h + 0.4f, signRng.Next(KTraderShop), 2, false, signRng, 0f, -1f, doorC + t / 2); // 문 앞은 비운다 (2층 좀비가 나올 길)
 
         // 계단은 문 맞은편 벽을 따라 (PlanUpstairs가 난수를 쓴다)
         var plan = PlanUpstairs(x0, z0, w, d, t, doorSide ^ 1);
@@ -279,7 +279,10 @@ public static partial class GameSceneBuilder
 
         // 1층 안: 선반·상자·잔해·아이템 자리
         Vector3 center = new Vector3(x0 + w / 2, 0, z0 + d / 2);
-        var shelf = BuildShelf(g, plan.P(plan.len - 1.2f, plan.depth - 0.3f, 0), plan.yaw + 180f, true);
+        // 문의 계단 설계 좌표(a): 선반·떨어진 판이 문 안쪽 길(문 중심 ±1.2m)을 막지 않게 한다 (2층 감염자가 내려와 나오는 길)
+        var doorLocal = FacePoint(doorSide, doorC + t / 2, 0, x0 - t / 2, z0 - t / 2, w + t, d + t);
+        float doorA = Vector3.Dot(doorLocal - plan.O, plan.R);
+        var shelf = BuildShelf(g, plan.P(doorA - 2.1f, plan.depth - 0.3f, 0), plan.yaw + 180f, true); // 예전 plan.len - 1.2: 문과 0.3m 겹쳐 지나갈 폭이 1m 아래였다
         Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(-0.4f, 0.65f, 0));
         Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(0.4f, 1.15f, 0));
         for (int i = 0; i < 2; i++)
@@ -291,7 +294,9 @@ public static partial class GameSceneBuilder
         for (int i = 0; i < 5; i++)
             Box("Debris", g, plan.P(F(0.5f, plan.len - 0.5f), F(StairWidth + 0.6f, plan.depth - 0.5f), 0.05f), new Vector3(F(0.15f, 0.6f), 0.07f, F(0.15f, 0.5f)), Pick(M["cracked"], M["dirty"], M["wood"]), 1f, false, new Vector3(F(-10, 10), F(0, 180), 0));
         // 천장에서 떨어진 콘크리트 판 하나 (1층 안, 계단 길은 피해서)
-        Box("FallenSlab", g, plan.P(F(2f, plan.len - 2f), plan.depth - 1.6f, 0.45f), new Vector3(F(1.6f, 2.4f), 0.2f, F(1f, 1.6f)), M["dirty"], 2.5f, true, new Vector3(F(14, 26), F(0, 360), 0));
+        float slabA = F(2f, plan.len - 2f);
+        if (slabA > doorA - 3f) slabA = doorA - 3f; // 문 앞에 떨어지면 못 지나간다 → 터진 모퉁이 쪽으로
+        Box("FallenSlab", g, plan.P(slabA, plan.depth - 1.6f, 0.45f), new Vector3(F(1.6f, 2.4f), 0.2f, F(1f, 1.6f)), M["dirty"], 2.5f, true, new Vector3(F(14, 26), F(0, 360), 0));
         if (Chance(0.5)) Spawn<ZombieSpawnPoint>(points, g.TransformPoint(center));
 
         // 2층: 터진 모퉁이 = 바깥 모퉁이 (xSide, zSide). 모퉁이에서 안쪽으로 cx·cz만큼이 무너진 영역

@@ -434,10 +434,20 @@ public static partial class GameSceneBuilder
 
     // 가로 간판: 바깥 면 side의 벽 위 (y 2.95~3.95) 전체 폭. kind: 0 걸림, 1 기움, 2 떨어짐(인도에 기대 누움). lit이면 켜진 재질 + 깜빡이는 등
     // a0~a1: 면을 따라 간판이 차지하는 구간 (a1 < 0이면 면 전체)
-    static void KSignBand(Transform g, int side, float X0, float Z0, float W, float D, float y0, float y1, int shop, int kind, bool lit, System.Random r, float a0 = 0f, float a1 = -1f)
+    // doorAlong: 면을 따라 잰 문 중심(음수면 문 없음). 떨어진 간판(kind 2)이 문 앞을 막지 않게 한다
+    static void KSignBand(Transform g, int side, float X0, float Z0, float W, float D, float y0, float y1, int shop, int kind, bool lit, System.Random r, float a0 = 0f, float a1 = -1f, float doorAlong = -1f)
     {
         float faceLen = side < 2 ? W : D;
         if (a1 < 0f) a1 = faceLen;
+        bool flat = false;
+        if (kind == 2 && doorAlong >= 0f)
+        {
+            // 떨어진 간판이 문 앞을 막으면 안의 좀비가 못 나오고 플레이어도 못 들어간다: 문에서 2.4m 이상 떨어진 긴 쪽 구간에만 기대 눕히고,
+            // 그 구간이 3m도 안 되면 인도 바깥쪽(벽에서 1.6~2.6m)에 납작하게 눕혀 벽을 따라 지나갈 길을 남긴다
+            float left = doorAlong - 2.4f - a0, right = a1 - (doorAlong + 2.4f);
+            if (Mathf.Max(left, right) >= 3f) { if (left >= right) a1 = doorAlong - 2.4f; else a0 = doorAlong + 2.4f; }
+            else flat = true;
+        }
         float len = a1 - a0;
         float mid = (a0 + a1) / 2f;
         var outN = KSideOut(side);
@@ -450,9 +460,18 @@ public static partial class GameSceneBuilder
         {
             // 떨어진 간판: 인도에 비스듬히 기대 누움 (벽에는 자국만)
             Box("Ghost", g, FacePoint(side, mid, (y0 + y1) / 2f, X0, Z0, W, D) + outN * 0.004f, side < 2 ? new Vector3(len - 0.3f, h - 0.1f, 0.006f) : new Vector3(0.006f, h - 0.1f, len - 0.3f), M["soot"], 1f, false);
-            sg.localPosition = FacePoint(side, mid + KF(r, -1f, 1f), 0, X0, Z0, W, D) + outN * 0.9f;
-            sg.localRotation = Quaternion.Euler(0, yaw, 0) * Quaternion.Euler(-62f, KF(r, -8f, 8f), 0);
-            sg.localPosition += Vector3.up * 0.45f;
+            if (flat)
+            {
+                // 문 앞을 비우려고 인도 바깥쪽에 얼굴을 위로 납작하게 (벽과 간판 사이 1.6m 통로)
+                sg.localPosition = FacePoint(side, mid + KF(r, -1f, 1f), 0, X0, Z0, W, D) + outN * 2.1f + Vector3.up * (dep / 2f + 0.02f);
+                sg.localRotation = Quaternion.Euler(0, yaw, 0) * Quaternion.Euler(90f, KF(r, -8f, 8f), 0);
+            }
+            else
+            {
+                sg.localPosition = FacePoint(side, mid + KF(r, -1f, 1f), 0, X0, Z0, W, D) + outN * 0.9f;
+                sg.localRotation = Quaternion.Euler(0, yaw, 0) * Quaternion.Euler(-62f, KF(r, -8f, 8f), 0);
+                sg.localPosition += Vector3.up * 0.45f;
+            }
         }
         else if (kind == 1)
         {

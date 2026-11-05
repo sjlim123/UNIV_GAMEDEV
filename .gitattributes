@@ -22,3 +22,4 @@
 *.ogg binary
 *.ttf binary
 *.otf binary
+Assets/Generated/*Meshes.asset binary

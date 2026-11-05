@@ -89,11 +89,19 @@ public static partial class GameSceneBuilder
         director.zombiePrefab = zombiePrefab;
         director.dogPrefab = dogPrefab;
 
-        // 내비메시 굽기 (좀비·들개가 다닐 길)
+        // 내비메시 굽기 (좀비·들개가 다닐 길). 문짝(Leaf)은 굽는 동안 꺼 둔다: NavMeshModifier.ignoreFromBuild는 PhysicsColliders 수집에 적용되지 않아
+        // 문짝이 그대로 구워져 경첩문 문간이 전부 메시에서 빠져 있었다. 닫힌 문은 런타임 NavMeshObstacle이 뚫고, 좀비는 두드려서 연다
+        var doorLeaves = new List<GameObject>();
+        foreach (var dr in geo.GetComponentsInChildren<Door>(true))
+        {
+            var leaf = dr.transform.Find("Leaf");
+            if (leaf != null && leaf.gameObject.activeSelf) { doorLeaves.Add(leaf.gameObject); leaf.gameObject.SetActive(false); }
+        }
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
         surface.BuildNavMesh();
+        foreach (var leaf in doorLeaves) leaf.SetActive(true);
         string navPath = GenDir + "/CityNavMesh.asset";
         AssetDatabase.DeleteAsset(navPath);
         AssetDatabase.CreateAsset(surface.navMeshData, navPath);
@@ -258,7 +266,7 @@ public static partial class GameSceneBuilder
         // 가로 간판·돌출 간판·옥상·빗물 홈통·계량기함·현수막 (GameSceneBuilder.KoreaShops.cs)
         bool lit = shopRng.NextDouble() < 0.22; // 발전기·배터리로 켜 둔 간판 몇 개 (깜빡인다)
         int signKind = shopRng.NextDouble() < 0.15 ? 2 : (shopRng.NextDouble() < 0.35 ? 1 : 0);
-        KSignBand(g, doorSide, X0, Z0, W, D, h - 0.55f, h + 0.4f, shopIndex, signKind, lit, shopRng);
+        KSignBand(g, doorSide, X0, Z0, W, D, h - 0.55f, h + 0.4f, shopIndex, signKind, lit, shopRng, 0f, -1f, doorC + t / 2); // 떨어진 간판은 문 앞을 비운다
         KSignBand(g, winSide, X0, Z0, W, D, h - 0.55f, h + 0.4f, shopIndex, shopRng.NextDouble() < 0.3 ? 1 : 0, false, shopRng);
         if (shopRng.NextDouble() < 0.45) KSideSign(g, winSide, (winSide < 2 ? W : D) - 0.45f, Floor2Y + 1.5f, X0, Z0, W, D, shopRng.Next(KSideSigns.Length));
         KRooftop(g, X0, Z0, W, D, roofTop, shopRng);
@@ -335,7 +343,7 @@ public static partial class GameSceneBuilder
         if (crawl)
             for (int i = 0; i < 3; i++)
                 Spawn<ItemSpawnPoint>(points, g.TransformPoint(Inside((float)crawlRng.NextDouble(), (float)crawlRng.NextDouble())) + Vector3.up * 0.1f);
-        if (Chance(0.3) && !trader) Spawn<ZombieSpawnPoint>(points, g.TransformPoint(center));
+        if (Chance(0.3) && !trader) Spawn<ZombieSpawnPoint>(points, g.TransformPoint(crawl ? FacePoint(doorSide, doorC, 0, X0, Z0, W, D) + KSideOut(doorSide) * 2.2f : center)); // 판자 집 안은 좀비가 못 나오니 문 앞 인도에
         if (Chance(0.25) && !trader)
         {
             var l = PointLight("BrokenLight", g, center + Vector3.up * (h - 0.3f), new Color(0.75f, 0.85f, 0.8f), 5f, 8f);
