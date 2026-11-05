@@ -448,6 +448,32 @@ public static class UIStyle
         return Finish(tex, px, Vector4.zero);
     }
 
+    // ---------- 알약(캡슐) ----------
+    static Sprite capsule, capsuleFrame;
+
+    // 알약 모양 채우기·테두리 (64×32, 양 끝 반지름 16, 9-slice 가로 테두리 16). pixelsPerUnitMultiplier = 32 / 높이로 쓰면 양 끝이 정확한 반원이 된다
+    public static Sprite Capsule => capsule != null ? capsule : capsule = MakeCapsule(false);
+    public static Sprite CapsuleFrame => capsuleFrame != null ? capsuleFrame : capsuleFrame = MakeCapsule(true);
+
+    static Sprite MakeCapsule(bool outline)
+    {
+        const int w = 64, h = 32, border = 16;
+        const float radius = 15.5f, width = 1.5f;
+        var tex = NewTex(outline ? "UICapsuleFrame" : "UICapsule", w, h, TextureWrapMode.Clamp);
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                // 두 끝 원 중심을 잇는 선분까지의 거리 (안쪽이 음수)
+                float dx = Mathf.Max(Mathf.Abs(x + 0.5f - w / 2f) - (w / 2f - 16f), 0);
+                float dy = Mathf.Abs(y + 0.5f - h / 2f);
+                float d = Mathf.Sqrt(dx * dx + dy * dy) - radius;
+                float a = outline ? Mathf.Clamp01(0.5f - d) * Mathf.Clamp01(d + width + 0.5f) : Mathf.Clamp01(0.5f - d);
+                px[y * w + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+        return Finish(tex, px, new Vector4(border, 0, border, 0));
+    }
+
     // ---------- 기본 사각형 ----------
 
     static Sprite fill, frame;
