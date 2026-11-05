@@ -71,11 +71,14 @@ public class PuddleFx : MonoBehaviour
     }
 
     // 발을 디뎠다: 웅덩이 안이면 물결과 물방울을 내고 true. sound면 그 자리에서 첨벙 소리도 낸다 (플레이어·좀비는 제 발소리 채널로 내므로 false)
-    public static bool Step(Vector3 pos, float strength, bool sound)
+    public static bool Step(Vector3 pos, float strength, bool sound) => Step(pos, strength, sound, Vector3.zero);
+
+    // forward: 플레이어의 앞쪽 (1인칭에서 보이게 물보라가 손 높이까지 솟아 앞으로 퍼진다). 0이면 낮게 튀는 물방울
+    public static bool Step(Vector3 pos, float strength, bool sound, Vector3 forward)
     {
         if (!Inside(pos)) return false;
         instance.AddRipple(pos, strength);
-        Vfx.Splash(pos, strength);
+        Vfx.Splash(pos, strength, forward);
         if (sound) ProceduralAudio.PlayAt(ProceduralAudio.Splash(), pos, 0.35f + 0.4f * strength, Random.Range(0.9f, 1.1f), 1f, 18f);
         return true;
     }
