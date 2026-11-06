@@ -211,7 +211,7 @@ public static partial class GameSceneBuilder
                 {
                     float bx = -1.8f + i * 0.9f + (row % 2) * 0.45f;
                     if (row == 2 && r.NextDouble() < 0.4) continue;
-                    Box("Sandbag", wall, new Vector3(bx, 0.17f + row * 0.3f, KF(r, -0.03f, 0.03f)), new Vector3(0.85f, 0.32f, 0.45f), M["sandbag"], 1f, true, new Vector3(0, KF(r, -5f, 5f), 0));
+                    KSandbag(wall, new Vector3(bx, 0.17f + row * 0.3f, KF(r, -0.03f, 0.03f)), KF(r, -5f, 5f)); // 둥근 모래주머니 (GameSceneBuilder.KoreaBunker.cs)
                 }
         }
         // 철조망: 두 모래주머니 벽 사이에 나선 (둥근 고리들)
