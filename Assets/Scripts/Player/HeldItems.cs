@@ -7,6 +7,7 @@ public enum GripKind
     Power, // 손잡이를 주먹으로 감아쥔다 (방망이·병·통조림·배터리·손전등)
     Palm,  // 손바닥을 위로 펴고 올려 든다 (천·판·부품·큰 물건)
     Hook,  // 손잡이를 쥐고 물건을 아래로 매단다 (가방 손잡이·연료통·바퀴·방어구 어깨끈)
+    Edge,  // 납작한 것을 옆에서 쥔다: 긴 옆면을 손바닥에 대고 엄지는 윗면에 얹으며, 손가락은 옆면을 감싸 밑을 건다 (철주괴·천·판)
 }
 
 // 팔을 드는 자세 (화면 속 손 위치와 방향)
@@ -19,6 +20,7 @@ public enum HoldPose
     Palm,       // 손바닥을 위로 펴 내민다
     Hook,       // 가로로 누운 손잡이를 쥐고 앞으로 내민다 (물건은 주먹 아래로 매달린다)
     Knife,      // 단검: 주먹으로 쥔 손잡이가 위·앞으로 서고 칼날이 그 위로 뻗는다 (손등이 보인다. 자세 수치는 PlayerHands.Knife*)
+    Side,       // 옆에서 쥐기: 손바닥이 화면 가운데 쪽을 보고 엄지가 위, 손가락은 앞·아래로 (납작한 것의 옆면을 쥔다. 자세 수치는 PlayerHands.Side*)
 }
 
 // 쓰는(우클릭) 몸짓
@@ -54,6 +56,10 @@ public static class HeldItems
 
     static HeldSpec Palm(float scale, Vector3? up = null, Vector3? forward = null) =>
         new HeldSpec { Grip = GripKind.Palm, Pose = HoldPose.Palm, AutoPoint = true, Axis = up ?? Vector3.up, Second = forward ?? Vector3.forward, Scale = scale };
+
+    // 납작한 것: 바닥의 내 쪽 모서리를 손가락 위에 올리고 엄지로 감싼다 (자리·기울기·손가락 자세는 PlayerHands.Edge*)
+    static HeldSpec Edge(float scale) =>
+        new HeldSpec { Grip = GripKind.Edge, Pose = HoldPose.Side, AutoPoint = true, Axis = Vector3.up, Second = Vector3.forward, Scale = scale };
 
     static HeldSpec Hook(Vector3 point, Vector3 axis, Vector3 up, float radius, float scale = 1f) =>
         new HeldSpec { Grip = GripKind.Hook, Pose = HoldPose.Hook, Point = point, Axis = axis, Second = up, Radius = radius, Scale = scale };
@@ -97,16 +103,16 @@ public static class HeldItems
         // 손바닥에 올려 드는 것
         specs["screw"] = Palm(1f);
         specs["semiconductor"] = Palm(0.6f);
-        specs["circuit_board"] = Palm(0.8f);
+        specs["circuit_board"] = Edge(0.8f);
         specs["stone"] = Palm(0.8f);
         specs["rope"] = Palm(0.75f);
         specs["copper_wire"] = Palm(0.8f);
-        specs["rubber"] = Palm(0.8f);
-        specs["leather"] = Palm(0.7f);
-        specs["cloth"] = Palm(0.6f);
+        specs["rubber"] = Edge(0.8f);
+        specs["leather"] = Edge(0.7f);
+        specs["cloth"] = Edge(0.6f);
         specs["metal"] = Palm(0.7f);
-        specs["iron_ingot"] = Palm(0.8f);
-        specs["alloy_plate"] = Palm(0.6f);
+        specs["iron_ingot"] = Edge(0.8f);
+        specs["alloy_plate"] = Edge(0.6f);
         specs["motor"] = Palm(0.5f);
         specs["engine"] = Palm(0.42f);
         specs[ItemDatabase.FurnaceId] = Palm(0.42f);

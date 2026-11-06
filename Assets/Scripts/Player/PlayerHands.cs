@@ -351,6 +351,20 @@ public class PlayerHands : MonoBehaviour
                 second = Quaternion.Inverse(arm * wristBend) * Vector3.up;
                 break;
             }
+            case GripKind.Edge: // 옆에서 쥐기: 물건의 내 쪽 긴 옆면을 손바닥에 대고(윗면은 화면 기준 수평), 엄지는 윗면에 얹고 손가락은 옆면을 감싸 밑을 건다
+            {
+                BasePose(HoldPose.Side, out _, out var arm, out var wristBend);
+                var inv = Quaternion.Inverse(arm * wristBend); // 화면 → 손 좌표
+                axis = inv * Vector3.up;
+                second = new Vector3(-side, 0, 0); // 깊이 방향 = 손바닥 쪽: 옆면이 손바닥과 나란히 닿고 물건은 화면 가운데 쪽으로 뻗는다
+                var b = LocalBounds(model);
+                var up = spec.Axis.normalized;
+                var fwd = Vector3.ProjectOnPlane(spec.Second, up).normalized;
+                point = b.center + up * Support(b, up) - fwd * Support(b, fwd); // 손바닥 쪽 옆면의 윗모서리 가운데
+                at = inv * new Vector3(0, EdgeAt.y, EdgeAt.z); // 높이·앞뒤는 화면 좌표로
+                at.x = -side * EdgeAt.x; // 손바닥에서 띄우는 거리
+                break;
+            }
             default: // 손바닥 위 (손가락 뿌리 가까이)
                 at = new Vector3(-side * 0.012f, 0, 0.062f);
                 axis = new Vector3(-side, 0, 0);
@@ -399,6 +413,7 @@ public class PlayerHands : MonoBehaviour
         int mask = 0b11111;
         if (spec.Grip == GripKind.Power) { start = PowerStart; max = PowerMax; }
         else if (spec.Grip == GripKind.Hook) { start = PowerStart; max = PowerMax; }
+        else if (spec.Grip == GripKind.Edge) { start = EdgePose(EdgeThumbStart, EdgeFingerStart); max = EdgePose(EdgeThumbMax, EdgeFingerMax); }
         System.Array.Copy(start, pose, HandRig.PoseLength);
         rig.Wrap(pose, max, shapes, mask);
     }
@@ -441,11 +456,36 @@ public class PlayerHands : MonoBehaviour
                 wrist = new Vector3(0.19f, -0.09f, 0.5f);
                 rot = Aim(new Vector3(-1f, 0.05f, 0.25f), new Vector3(-0.25f, 0.4f, 0.88f));
                 break;
+            case HoldPose.Side:
+                // 옆에서 쥐기: 팔뚝은 오른쪽 아래에서 앞으로, 손바닥은 화면 가운데 쪽을 보고 엄지가 위. 손목을 새끼 쪽으로 꺾어 손가락이 앞·아래로 늘어진다
+                wrist = SideWrist;
+                rot = HandRig.Look(SideForearm, SideThumb);
+                bend = Quaternion.AngleAxis(SideBend, Vector3.right);
+                break;
             default: // Ready: 힘을 뺀 빈손 (느슨한 주먹, 손등이 바깥)
                 wrist = ReadyWrist;
                 rot = HandRig.Look(ReadyFingers, ReadyThumb);
                 break;
         }
+    }
+
+    // 옆에서 쥐기(GripKind.Edge / HoldPose.Side) 수치 — 플레이 중에 바꿔 보며 맞출 수 있게 밖에 둔다.
+    // 자세(화면 좌표): 손목 자리, 팔뚝 방향, 엄지 방향, 손목을 새끼 쪽으로 꺾는 각도(도)
+    public static Vector3 SideWrist = new Vector3(0.19f, -0.15f, 0.36f), SideForearm = new Vector3(-0.35f, 0.4f, 0.85f), SideThumb = new Vector3(-0.15f, 0.85f, -0.3f);
+    public static float SideBend = 40f;
+    // EdgeAt: 물건의 손바닥 쪽 옆면 윗모서리 자리 — x 손바닥에서 띄우는 거리, y 손목 기준 높이(화면), z 손목 기준 앞뒤(화면)
+    public static Vector3 EdgeAt = new Vector3(0.006f, -0.01f, 0.03f);
+    // 엄지 [벌림, 뿌리, 가운데, 끝]: 윗면에 닿을 때까지 굽힌다. 손가락 넷 [뿌리, 가운데, 끝]: 옆면·밑면에 닿을 때까지 감는다
+    public static Vector4 EdgeThumbStart = new Vector4(8, 5, 15, 15), EdgeThumbMax = new Vector4(8, 60, 70, 60);
+    public static Vector3 EdgeFingerStart = new Vector3(0, 0, 0), EdgeFingerMax = new Vector3(95, 105, 80);
+
+    static float[] EdgePose(Vector4 thumb, Vector3 finger)
+    {
+        var p = new float[HandRig.PoseLength];
+        System.Array.Copy(PalmStart, p, HandRig.PoseLength);
+        p[0] = thumb.x; p[1] = thumb.y; p[2] = thumb.z; p[3] = thumb.w;
+        for (int f = 1; f < 5; f++) { p[f * 4 + 1] = finger.x; p[f * 4 + 2] = finger.y; p[f * 4 + 3] = finger.z; }
+        return p;
     }
 
     // 단검 자세 (화면 좌표): 손목 자리, 손잡이 축 방향, 손가락 방향. 플레이 중에 바꿔 보며 맞출 수 있게 밖에 둔다
