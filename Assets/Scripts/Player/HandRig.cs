@@ -262,7 +262,8 @@ public class HandRig
         var frozen = new bool[3];
         for (int j = 0; j < 3; j++) start[j] = cur[j] = pose[o + 1 + j];
         ApplyFinger(f, pose[o], cur[0], cur[1], cur[2]);
-        int hit = FirstHit(f, shapes);
+        // 처음부터 닿아 있는 마디(와 그 안쪽)는 그대로 둔다 — 손바닥에 올린 납작한 물건 밑의 손가락
+        int hit = LastHit(f, shapes);
         for (int j = 0; j <= hit; j++) frozen[j] = true;
         for (int s = 1; s <= steps && !(frozen[0] && frozen[1] && frozen[2]); s++)
         {
@@ -273,7 +274,8 @@ public class HandRig
                 if (!frozen[j]) cur[j] = Mathf.Lerp(start[j], max[o + 1 + j], t);
             }
             ApplyFinger(f, pose[o], cur[0], cur[1], cur[2]);
-            hit = FirstHit(f, shapes);
+            // 가장 바깥쪽으로 닿은 마디까지 멈춘다: 그 안쪽 마디를 더 굽히면 닿은 마디가 물건 속으로 밀려 들어간다
+            hit = LastHit(f, shapes);
             if (hit < 0) continue;
             for (int j = 0; j <= hit; j++)
                 if (!frozen[j])
@@ -288,11 +290,11 @@ public class HandRig
 
     static readonly float[] Samples = { 0.3f, 0.65f, 1f };
 
-    // 손가락 f에서 물건에 닿은 가장 뿌리 쪽 마디 (없으면 -1)
-    int FirstHit(int f, List<Shape> shapes)
+    // 손가락 f에서 물건에 닿은 가장 끝 쪽 마디 (없으면 -1). 전에는 뿌리 쪽 마디만 보고 바깥 마디는 계속 감아 물건을 뚫었다
+    int LastHit(int f, List<Shape> shapes)
     {
         float margin = radii[f] * 0.85f;
-        for (int j = 0; j < 3; j++)
+        for (int j = 2; j >= 0; j--)
         {
             var t = joints[f][j];
             float len = lengths[f][j] + (j == 2 ? radii[f] * 0.35f : 0);

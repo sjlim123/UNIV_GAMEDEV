@@ -35,6 +35,8 @@ public class PlayerController : MonoBehaviour
     public bool IsRunning { get; private set; }
     public bool IsGrounded => cc != null && cc.isGrounded;
     public float HorizontalSpeed { get; private set; }
+    // 한 걸음 길이(m): 발소리 간격. 손 흔들림·팔 젓기(PlayerHands)가 같은 박자를 쓴다
+    public float Stride => IsRunning ? 1.9f : IsCrouching ? 0.9f : 1.45f;
     // 0 ~ GameBalance.staminaMax. 달리면 줄고, 달리기 키를 떼고 있으면 staminaRegenInterval초마다 찬다
     public float Stamina { get; private set; }
     // 0 = 조용함, 0.25 = 앉아서 이동, 1 = 걷기, 2 = 달리기. 좀비가 이 값으로 소리를 듣는다
@@ -271,7 +273,7 @@ public class PlayerController : MonoBehaviour
         {
             bobTimer += dt * HorizontalSpeed * 2.4f;
             stepDistance += HorizontalSpeed * dt;
-            float stride = IsRunning ? 1.9f : IsCrouching ? 0.9f : 1.45f;
+            float stride = Stride;
             if (stepDistance >= stride)
             {
                 stepDistance = 0;

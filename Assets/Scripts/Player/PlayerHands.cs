@@ -35,7 +35,8 @@ public class PlayerHands : MonoBehaviour
     bool flickPending;
 
     // 몸짓
-    enum Move { None, Punch, Stab, Swing, Shoot, Use, Flick }
+    enum Move { None, Punch, Stab, Swing, Shoot, Use, Flick, Toss, SlashLR, SlashRL }
+    bool slashRight; // 다음 베기는 오른쪽 위에서 시작하는가 (번갈아)
     Move move;
     float moveT = 1f, moveTime = 1f;
     UseGesture useKind;
@@ -136,6 +137,14 @@ public class PlayerHands : MonoBehaviour
     // 공격 키: 빈손이면 주먹, 무언가 들었으면 그것으로 찌르듯 내민다 (단검·라이터)
     public void PlayPunch() => StartMove(heldId == null ? Move.Punch : Move.Stab, heldId == null ? 0.3f : 0.34f);
     public void PlaySwing() => StartMove(Move.Swing, 0.5f);
+    // 단검: 왼쪽 위→오른쪽 아래, 오른쪽 위→왼쪽 아래 대각선 베기를 번갈아
+    public void PlaySlash()
+    {
+        StartMove(slashRight ? Move.SlashRL : Move.SlashLR, 0.42f);
+        slashRight = !slashRight;
+    }
+    // 버리기: 손을 앞·아래로 휙 내리며 놓는다
+    public void PlayToss() => StartMove(Move.Toss, 0.32f);
     public void PlayShoot() => StartMove(Move.Shoot, 0.35f);
 
     // 아이템을 쓴다: 그 아이템을 손에 들고(핫바에 없어도) 아이템마다 다른 몸짓을 한다
@@ -183,7 +192,8 @@ public class PlayerHands : MonoBehaviour
         // 마우스를 돌리면 손이 살짝 늦게 따라오고, 걸으면 흔들리고, 가만히 있으면 숨쉬듯 오르내린다
         var targetSway = Vector3.ClampMagnitude(new Vector3(-look.x, -look.y, 0) * 0.0004f, 0.03f);
         sway = Vector3.Lerp(sway, targetSway, dt * 8);
-        bobPhase += dt * speed * 2.4f;
+        // 발소리 박자에 맞춘다: 한 걸음(pc.Stride)마다 손이 한 번 내려앉고, 두 걸음에 팔이 한 번 왕복한다 (전에는 거리 2.6m마다라 달릴 때 발소리보다 느렸다)
+        bobPhase += dt * speed * (Mathf.PI / (pc != null ? pc.Stride : 1.45f));
         float moveAmount = Mathf.Clamp01(speed / 3f);
         var bob = new Vector3(Mathf.Cos(bobPhase * 0.5f) * 0.012f, -Mathf.Abs(Mathf.Sin(bobPhase * 0.5f)) * 0.014f, 0) * moveAmount;
         handsRoot.localPosition = sway + bob + new Vector3(0, Mathf.Sin(Time.time * 1.6f) * 0.003f, 0);
@@ -236,7 +246,7 @@ public class PlayerHands : MonoBehaviour
     void UpdateTrail()
     {
         if (trail == null) return;
-        bool swinging = (move == Move.Swing || move == Move.Stab) && moveT > 0.1f && moveT < 0.65f;
+        bool swinging = (move == Move.Swing || move == Move.Stab || move == Move.SlashLR || move == Move.SlashRL) && moveT > 0.1f && moveT < 0.65f;
         if (trail.emitting == swinging) return;
         if (swinging) trail.Clear();
         trail.emitting = swinging;
@@ -288,7 +298,7 @@ public class PlayerHands : MonoBehaviour
             ComputeGrip(right, model, heldSpec, gripPose);
             heldModel = model.gameObject;
             // 휘두르는 무기(세워 들거나 앞으로 겨누는 것)에는 끝에 궤적을 단다
-            if (heldSpec.Grip == GripKind.Power && (heldSpec.Pose == HoldPose.Upright || heldSpec.Pose == HoldPose.Forward)) AttachTrail(model, heldSpec);
+            if (heldSpec.Grip == GripKind.Power && (heldSpec.Pose == HoldPose.Upright || heldSpec.Pose == HoldPose.Forward || heldSpec.Pose == HoldPose.Knife)) AttachTrail(model, heldSpec);
             // 라이터는 들고 나서 엄지로 켠다
             if (id == ItemDatabase.LighterId)
             {
@@ -416,6 +426,11 @@ public class PlayerHands : MonoBehaviour
                 wrist = new Vector3(0.2f, -0.17f, 0.42f);
                 rot = Aim(new Vector3(-0.03f, 0.04f, 1f), new Vector3(-0.45f, 0.85f, 0.2f));
                 break;
+            case HoldPose.Knife:
+                // 단검: 손잡이를 주먹으로 쥐어 위·앞으로 세우고 칼날이 그 위로 뻗는다. 손가락은 앞을 보니 손등이 화면에 보인다
+                wrist = KnifeWrist;
+                rot = Aim(KnifeGrip, KnifeFingers);
+                break;
             case HoldPose.Palm:
                 // 손바닥을 위로, 조금 내 쪽으로 기울여 내민다
                 wrist = new Vector3(0.16f, -0.2f, 0.36f);
@@ -432,6 +447,9 @@ public class PlayerHands : MonoBehaviour
                 break;
         }
     }
+
+    // 단검 자세 (화면 좌표): 손목 자리, 손잡이 축 방향, 손가락 방향. 플레이 중에 바꿔 보며 맞출 수 있게 밖에 둔다
+    public static Vector3 KnifeWrist = new Vector3(0.21f, -0.2f, 0.4f), KnifeGrip = new Vector3(0.05f, 0.9f, 0.45f), KnifeFingers = new Vector3(-0.3f, 0.05f, 0.95f);
 
     // 빈손: 손끝이 화면 가운데 쪽 앞을 보고, 엄지가 위, 손등이 바깥 위로 보인다
     static readonly Vector3 ReadyWrist = new Vector3(0.21f, -0.21f, 0.36f), ReadyFingers = new Vector3(-0.2f, 0.22f, 0.95f), ReadyThumb = new Vector3(-0.3f, 0.92f, -0.1f);
@@ -576,6 +594,23 @@ public class PlayerHands : MonoBehaviour
                 float s = t < 0.3f ? 0 : Mathf.Sin((t - 0.3f) / 0.7f * Mathf.PI);
                 d = new Vector3(0.05f * w - 0.25f * s, 0.06f * w - 0.08f * s, -0.02f * w + 0.08f * s);
                 e = new Vector3(-20 * w + 45 * s, 0, -20 * w + 75 * s);
+                break;
+            }
+            case Move.Toss:
+                // 손을 앞·아래로 휙 내리며 손가락을 편다 (아이템은 PickupItem.Throw가 날린다)
+                d = new Vector3(-0.02f, -0.06f, 0.14f) * thrust;
+                e = new Vector3(38f, 0, 0) * thrust;
+                HandRig.Blend(target, HandRig.Open, Mathf.Clamp01((t - 0.2f) * 3f), target);
+                break;
+            case Move.SlashLR:
+            case Move.SlashRL:
+            {
+                // 반대쪽 위로 젖혔다가(w) 대각선으로 그어 내린다(c): 왼쪽 위→오른쪽 아래, 다음 번엔 오른쪽 위→왼쪽 아래
+                float sideSign = move == Move.SlashLR ? 1f : -1f;
+                float w = t < 0.22f ? Ease(t / 0.22f) : t < 0.55f ? 1f - Ease((t - 0.22f) / 0.33f) : 0f;
+                float c = t < 0.22f ? 0f : t < 0.55f ? Ease((t - 0.22f) / 0.33f) : 1f - Ease((t - 0.55f) / 0.45f);
+                d = new Vector3(-0.12f * sideSign * w + 0.14f * sideSign * c, 0.08f * w - 0.09f * c, -0.03f * w + 0.1f * c);
+                e = new Vector3(-15f * w + 20f * c, 30f * sideSign * w - 35f * sideSign * c, -25f * sideSign * w + 40f * sideSign * c);
                 break;
             }
             case Move.Shoot:

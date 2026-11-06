@@ -62,13 +62,21 @@ public class PlayerHotbar : MonoBehaviour
         else gm.UI.ShowMessage($"{def.Name}: {MaterialUse(def.Id)}다.");
     }
 
-    // 소지품에서 count개를 발 앞에 버린다 (한 덩어리로 떨어진다). 가방·방어구도 소지품에 있으면 똑같이 버린다
+    // 소지품에서 count개를 손에서 버린다 (한 덩어리로): 바라보는 쪽 앞·아래로 휙 던져 중력으로 떨어지고, 둥근 것은 조금 굴러간다 (창문 밖으로도 던질 수 있다).
+    // 가방·방어구도 소지품에 있으면 똑같이 버린다
     public void Drop(string id, int count = 1)
     {
         var s = GameManager.Instance.State;
         count = Mathf.Min(count, s.Carried.Count(id));
         if (count <= 0 || !s.Carried.Remove(id, count)) return;
-        PickupItem.Spawn(id, count, transform.position + transform.forward * 0.8f + Vector3.up * 0.3f);
+        var hands = PlayerHands.Instance;
+        var cam = Camera.main != null ? Camera.main.transform : transform;
+        // 든 손(오른손 손목) 조금 앞에서 놓는다. 벽에 바짝 붙어 있으면 벽 앞에서
+        Vector3 from = hands != null && hands.RightWrist != null ? hands.RightWrist.position + cam.forward * 0.12f : cam.position + cam.forward * 0.45f + Vector3.down * 0.2f;
+        if (Physics.Linecast(cam.position, from, out var block, ~0, QueryTriggerInteraction.Ignore)) from = block.point - cam.forward * 0.06f;
+        var dir = (cam.forward + Vector3.down * 0.35f).normalized;
+        PickupItem.Throw(id, count, from, dir * 3.2f + Vector3.down * 0.4f, GetComponent<Collider>());
+        if (hands != null) hands.PlayToss();
         ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.4f);
     }
 

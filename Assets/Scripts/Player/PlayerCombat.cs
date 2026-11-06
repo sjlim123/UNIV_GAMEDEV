@@ -40,7 +40,8 @@ public class PlayerCombat : MonoBehaviour
         if (PlayerHands.Instance != null)
         {
             if (weapon != null && weapon.Weapon == WeaponKind.Swing) PlayerHands.Instance.PlaySwing();
-            else PlayerHands.Instance.PlayPunch(); // 주먹·단검 찌르기
+            else if (weapon != null && weapon.Weapon == WeaponKind.Stab) PlayerHands.Instance.PlaySlash(); // 단검: 대각선 베기를 번갈아
+            else PlayerHands.Instance.PlayPunch(); // 주먹·라이터 들이대기
         }
         source.PlayOneShot(ProceduralAudio.Swoosh(), 0.5f);
         PlayerController.Instance.MakeNoise(1.2f);

@@ -18,6 +18,7 @@ public enum HoldPose
     Forward,    // 손잡이를 앞으로 겨눠 든다 (단검 날·손전등 빛이 앞)
     Palm,       // 손바닥을 위로 펴 내민다
     Hook,       // 가로로 누운 손잡이를 쥐고 앞으로 내민다 (물건은 주먹 아래로 매달린다)
+    Knife,      // 단검: 주먹으로 쥔 손잡이가 위·앞으로 서고 칼날이 그 위로 뻗는다 (손등이 보인다. 자세 수치는 PlayerHands.Knife*)
 }
 
 // 쓰는(우클릭) 몸짓
@@ -66,7 +67,7 @@ public static class HeldItems
         // 망치: 자루 아래쪽을 쥐고 때리는 면(-x)이 앞으로
         specs["hammer"] = Power(HoldPose.Upright, new Vector3(0, 0.025f, -0.09f), Vector3.forward, Vector3.left, 0.0175f);
         // 단검: 손잡이를 쥐고 날을 앞으로 겨눈다 (날 끝이 엄지 쪽, 칼날이 위아래)
-        specs["dagger"] = Power(HoldPose.Forward, new Vector3(0, 0.02f, -0.005f), Vector3.forward, Vector3.right, 0.016f);
+        specs["dagger"] = Power(HoldPose.Knife, new Vector3(0, 0.02f, -0.005f), Vector3.forward, Vector3.right, 0.016f);
         // 새총: 손잡이를 쥐고 갈래를 세운다. 가죽 주머니(+z)는 내 쪽으로
         specs["slingshot"] = Power(HoldPose.Upright, new Vector3(0, 0.06f, 0), Vector3.up, Vector3.back, 0.015f);
         specs["stick"] = Power(HoldPose.Upright, new Vector3(0.02f, 0.025f, 0), Vector3.right, Vector3.up, 0.025f);
