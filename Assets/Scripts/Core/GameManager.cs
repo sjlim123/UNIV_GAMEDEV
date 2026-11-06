@@ -516,7 +516,7 @@ public class GameManager : MonoBehaviour
         if (door) DoorClunk(1f);
         yield return UI.Fade(1, 0.7f);
         // 검은 화면 대신 로딩 화면 (적어도 1.2초는 보여 준다)
-        UI.ShowLoading(loadingTitle ?? (scene == ShelterScene ? "방공호로 돌아가는 중" : "도시로 나가는 중"));
+        UI.ShowLoading(loadingTitle ?? (scene == ShelterScene ? "방공호로 돌아가는 중" : scene == CityScene ? "도시로 나가는 중" : "메인 메뉴로 나가는 중"));
         float shownAt = Time.unscaledTime;
         var op = SceneManager.LoadSceneAsync(scene);
         while (!op.isDone) yield return null;

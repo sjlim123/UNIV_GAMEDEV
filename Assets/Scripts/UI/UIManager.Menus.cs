@@ -775,10 +775,17 @@ public partial class UIManager
             Line(c, "기획 · 개발 · 테스트: Team_31");
             Line(c, "");
             Line(c, "사용한 무료 에셋", 22, PaleDim);
-            Line(c, "· 텍스처: Poly Haven (CC0) — 콘크리트, 아스팔트, 녹슨 금속, 벽돌, 나무");
-            Line(c, "· 효과음: 코드로 합성한 소리 (외부 에셋 없음)");
-            Line(c, "· 폰트: Pretendard (SIL Open Font License 1.1) — Kil Hyung-jin");
+            Line(c, "· 텍스처 · 3D 모델: Poly Haven (CC0)");
+            Line(c, "· 감염자 목소리: ianzazz, Darsycho, saturn91 — OpenGameArt (CC0)");
+            Line(c, "· 발소리: Fantozzi, qubodup, Kenney, Ali_6868 (CC0)");
+            Line(c, "· 군화·물 발소리 (CC BY 3.0): 'footstep-concrete' — swuing,");
+            Line(c, "   'Water Footsteps' — EminYILDIRIM (Freesound 원본, OpenGameArt 묶음)");
+            Line(c, "· 폰트 (SIL OFL 1.1): Pretendard — 길형진, Do Hyeon — 우아한형제들,");
+            Line(c, "   Nanum Pen Script — 산돌커뮤니케이션, Share Tech Mono — Carrois Apostrophe");
+            Line(c, "· 나머지 효과음, 모델 대부분, UI 그림: 코드로 제작");
             Line(c, "· 엔진: Unity 6 (URP)");
+            Line(c, "");
+            Line(c, "전체 목록과 출처: github.com/sjlim123/UNIV_GAMEDEV 의 Credits 폴더", 22, PaleDim);
         }, "credits");
     }
 }

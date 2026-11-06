@@ -162,7 +162,7 @@ public partial class UIManager : MonoBehaviour
         BuildLoading();
     }
 
-    // ---------- 로딩 화면 (씬 전환 사이: 탐험 출발 · 방공호 귀환) ----------
+    // ---------- 로딩 화면 (씬 전환 사이: 탐험 출발 · 방공호 귀환 · 메인 메뉴로 나가기) ----------
     // 검은 판 위에 옅은 긁힘, 메인 메뉴 제목 묶음과 같은 꼴(핏빛 세로 막대 + 제목 + 영문 꼬리표 + 가는 선), 왼쪽에서 오른쪽으로 흐르는 붉은 막대 조각,
     // 낡은 형광등처럼 깜빡이는 한 줄 메모 (2026-11-05 저녁, 메인 메뉴와 통일)
 
@@ -245,7 +245,7 @@ public partial class UIManager : MonoBehaviour
     public void ShowLoading(string title)
     {
         loadingTitle.text = title;
-        loadingTag.text = title.Contains("방공호") ? "RETURNING  ·  SHELTER" : title.Contains("도시") ? "DEPARTING  ·  CITY" : "LOADING";
+        loadingTag.text = title.Contains("방공호") ? "RETURNING  ·  SHELTER" : title.Contains("도시") ? "DEPARTING  ·  CITY" : title.Contains("메뉴") ? "RETURNING  ·  MAIN MENU" : "LOADING";
         loadingRoot.transform.SetAsLastSibling(); // 검은 막보다 위에 (창·컷씬이 열릴 때마다 막이 맨 위로 가므로 보일 때마다 다시 올린다)
         loadingTip.text = LoadingTips[UnityEngine.Random.Range(0, LoadingTips.Length)];
         loadingT = 0;
