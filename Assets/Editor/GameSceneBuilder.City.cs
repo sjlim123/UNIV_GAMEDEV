@@ -27,6 +27,7 @@ public static partial class GameSceneBuilder
         KoreaShopMaterials(); // 간판·돌출 간판·현수막 그림, 셔터·새시·실외기·어닝 재질 (GameSceneBuilder.KoreaShops.cs)
         KoreaApartmentMaterials(); // 아파트 동 번호 띠·정문 표지·벽·난간 재질 (GameSceneBuilder.KoreaApartment.cs)
         KoreaRuinMaterials(); // 대피 안내문·검문소 표지·흙·모래주머니 재질 (GameSceneBuilder.KoreaRuin.cs)
+        KoreaBunkerMaterials(); // 방공호 정면(벗겨진 녹색 페인트)·명판·마른 풀·덩굴 재질 (GameSceneBuilder.KoreaBunker.cs)
 
         var root = new GameObject("City").transform;
         var geo = Group("Geometry", root, Vector3.zero);
@@ -91,16 +92,25 @@ public static partial class GameSceneBuilder
 
         // 내비메시 굽기 (좀비·들개가 다닐 길). 문짝(Leaf)은 굽는 동안 꺼 둔다: NavMeshModifier.ignoreFromBuild는 PhysicsColliders 수집에 적용되지 않아
         // 문짝이 그대로 구워져 경첩문 문간이 전부 메시에서 빠져 있었다. 닫힌 문은 런타임 NavMeshObstacle이 뚫고, 좀비는 두드려서 연다
+        // 문짝 서브트리는 끄는 것에 더해 Ignore Raycast 레이어로 옮기고 layerMask로 뺀다: 다른 씬이 열린 채 재생성하면 SetActive만으로는 문짝이 그대로 구워졌다
+        const int bakeSkipLayer = 2; // Ignore Raycast
         var doorLeaves = new List<GameObject>();
+        var leafParts = new List<GameObject>();
+        var leafLayers = new List<int>();
         foreach (var dr in geo.GetComponentsInChildren<Door>(true))
         {
             var leaf = dr.transform.Find("Leaf");
-            if (leaf != null && leaf.gameObject.activeSelf) { doorLeaves.Add(leaf.gameObject); leaf.gameObject.SetActive(false); }
+            if (leaf == null || !leaf.gameObject.activeSelf) continue;
+            doorLeaves.Add(leaf.gameObject);
+            foreach (var t in leaf.GetComponentsInChildren<Transform>(true)) { leafParts.Add(t.gameObject); leafLayers.Add(t.gameObject.layer); t.gameObject.layer = bakeSkipLayer; }
+            leaf.gameObject.SetActive(false);
         }
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+        surface.layerMask = ~(1 << bakeSkipLayer);
         surface.BuildNavMesh();
+        for (int i = 0; i < leafParts.Count; i++) leafParts[i].layer = leafLayers[i];
         foreach (var leaf in doorLeaves) leaf.SetActive(true);
         string navPath = GenDir + "/CityNavMesh.asset";
         AssetDatabase.DeleteAsset(navPath);
@@ -1003,9 +1013,7 @@ public static partial class GameSceneBuilder
     static void BuildHatch(Transform geo, Vector3 pos)
     {
         var g = Group("ShelterHatch", geo, pos);
-        HatchShell(g); // 겉은 예전 3.2×2.6×3 상자 그대로, 문 크기만큼 속이 빈 어두운 통로 (GameSceneBuilder.Ruins.cs)
-        Box("Roof", g, new Vector3(0, 2.7f, 0), new Vector3(3.5f, 0.2f, 3.3f), M["cracked"], 2f);
-        Prim(PrimitiveType.Cylinder, "Vent", g, new Vector3(0.9f, 3.2f, -0.6f), new Vector3(0.25f, 0.5f, 0.25f), M["metal"], null, true);
+        HatchShell(g); // 문 크기만큼 속이 빈 어두운 통로 (GameSceneBuilder.Ruins.cs). 겉은 흙 언덕에 묻힌 콘크리트 정면 (BuildHatchMound, GameSceneBuilder.KoreaBunker.cs)
         var door = Box("HatchDoor", g, new Vector3(0, 1.05f, 1.53f), new Vector3(1.1f, 2.1f, 0.08f), M["metal"], 1.2f);
         door.AddComponent<CityExit>();
         HandWheel(g, new Vector3(0, 1.1f, 1.6f), 1f); // 붉은 핸드휠 + 격벽식 철문 꾸밈 (GameSceneBuilder.Doors.cs)
@@ -1017,6 +1025,7 @@ public static partial class GameSceneBuilder
         Box("Sandbag1", g, new Vector3(1.9f, 0.25f, 1.2f), new Vector3(0.9f, 0.5f, 0.45f), M["cloth"], 1f, true, new Vector3(0, 15, 0));
         Box("Sandbag2", g, new Vector3(1.85f, 0.7f, 1.15f), new Vector3(0.8f, 0.4f, 0.42f), M["cloth"], 1f, true, new Vector3(0, -10, 0));
         HatchSurroundings(g); // 물웅덩이·젖은 아스팔트·잔해·탄 차 (GameSceneBuilder.Ruins.cs)
+        BuildHatchMound(g);   // 언덕·벽돌 아치 정면·명판·환기관·풀·덩굴 (GameSceneBuilder.KoreaBunker.cs)
     }
 
     static void BuildTrader(Transform parent, Vector3 pos)
