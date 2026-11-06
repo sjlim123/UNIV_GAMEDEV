@@ -601,6 +601,7 @@ public partial class UIManager
         if (!paused && IsPanelOpen && IsPaused) ClosePanel();
         IsPaused = paused;
         pauseRoot.SetActive(paused);
+        if (paused) RaisePauseLayer();
         Time.timeScale = paused ? 0f : 1f;
         AudioListener.pause = paused;
         if (!paused) return;
@@ -611,6 +612,24 @@ public partial class UIManager
         pauseInfo.text = s == null ? "" : $"턴 {s.Turn} / {GameState.MaxTurns}   ·   {(gm.InShelter ? "방공호" : "도시 탐험 중")}";
         UpdateTipSwitch(true);
         RefreshGlass();
+    }
+
+    // 일시정지 층을 맨 위로 (2026-11-06): 방공호 출입 연출의 레터박스 띠는 SetLetterbox가 맨 위로 올리므로, 그 뒤에 연 일시정지 창이
+    // 위아래가 잘려 보였다. 일시정지에서 연 설정·조작법 창은 그 위에, 검은 페이드 막은 늘 맨 위에 둔다
+    void RaisePauseLayer()
+    {
+        pauseRoot.transform.SetAsLastSibling();
+        if (IsPanelOpen) panel.transform.SetAsLastSibling();
+        if (fadeOverlay != null) fadeOverlay.transform.SetAsLastSibling();
+    }
+
+    // 일시정지가 열려 있는 동안 레터박스 띠가 다시 위로 올라오면(연출이 끝나며 SetLetterbox(false)) 또 올린다. UIManager.Update에서 매 프레임 부른다
+    void KeepPauseOnTop()
+    {
+        if (!IsPaused || pauseRoot == null) return;
+        int mine = pauseRoot.transform.GetSiblingIndex();
+        bool below = (boxTop != null && mine < boxTop.GetSiblingIndex()) || (boxBottom != null && mine < boxBottom.GetSiblingIndex());
+        if (below) RaisePauseLayer();
     }
 
     // ---------- 설정 ----------

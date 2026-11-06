@@ -273,7 +273,7 @@ public static partial class GameSceneBuilder
         for (int i = 0, n = 1 + r.Next(3); i < n; i++)
         {
             float x = KF(r, -width / 2f + 2f, Mathf.Min(width / 2f - 2f, cutX - 1f)), y = KF(r, 2f, h - 4f);
-            Stain("Scorch", g, new Vector3(x, y, depth / 2f + 0.04f), KF(r, 1.5f, 3f), KF(r, 2f, 4f), M["soot"], 4500 + i * 7 + numIndex, new Vector3(-90f, 0, 0));
+            Stain("Scorch", g, new Vector3(x, y, depth / 2f + 0.04f + 0.002f * i), KF(r, 1.5f, 3f), KF(r, 2f, 4f), M["soot"], 4500 + i * 7 + numIndex, new Vector3(-90f, 0, 0)); // 겹쳐도 같은 평면이 아니게 2mm씩
         }
         KDownpipeLocal(g, new Vector3(-width / 2f + 0.3f, 0, depth / 2f + 0.08f), h);
         KDownpipeLocal(g, new Vector3(width / 2f - 0.3f, 0, -depth / 2f - 0.08f), damaged ? endH : h);
@@ -322,7 +322,7 @@ public static partial class GameSceneBuilder
         }
         // 남은 몸체의 드러난 끝면: 그을음
         Stain("Scorch", dg, new Vector3(cutX + 0.03f, endH + KF(r, 3f, 8f), KF(r, -3f, 3f)), KF(r, 3f, 6f), KF(r, 2.5f, 4f), M["soot"], 4700, new Vector3(0, 0, -90f));
-        Stain("Scorch", dg, new Vector3(cutX + 0.03f, h - KF(r, 2f, 5f), KF(r, -3f, 3f)), KF(r, 2.5f, 5f), KF(r, 2f, 3.5f), M["soot"], 4701, new Vector3(0, 0, -90f));
+        Stain("Scorch", dg, new Vector3(cutX + 0.045f, h - KF(r, 2f, 5f), KF(r, -3f, 3f)), KF(r, 2.5f, 5f), KF(r, 2f, 3.5f), M["soot"], 4701, new Vector3(0, 0, -90f)); // 앞 그을음(+0.03)과 같은 평면이 아니게
         // 토막 옥상: 무너진 잔해 덩어리·철근·그을음·재
         float ex0 = cutX + 0.3f, ex1 = width / 2f - 0.3f;
         for (int i = 0, n = 7 + r.Next(5); i < n; i++)
