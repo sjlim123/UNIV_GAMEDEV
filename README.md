@@ -4,7 +4,7 @@
 
 - 엔진: Unity 6.3 (6000.3.x) · URP · Input System
 - 플랫폼: PC (Windows)
-- 현재 버전: **26.0.0.4** (베타) — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md), 게임 안에서는 메인 메뉴 맨 아래 **패치노트**
+- 현재 버전: **26.0.2.1** (BETA_VER) — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md), 게임 안에서는 메인 메뉴 맨 아래 **패치노트**
 
 ## 바로 플레이하기
 
