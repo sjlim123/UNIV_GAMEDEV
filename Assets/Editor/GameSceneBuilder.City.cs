@@ -105,6 +105,18 @@ public static partial class GameSceneBuilder
             foreach (var t in leaf.GetComponentsInChildren<Transform>(true)) { leafParts.Add(t.gameObject); leafLayers.Add(t.gameObject.layer); t.gameObject.layer = bakeSkipLayer; }
             leaf.gameObject.SetActive(false);
         }
+        // 경계벽 밖은 걷지 못하는 영역으로 덮어 메시가 생기지 않게 한다: 바깥 지면에 메시가 남으면 벽 안쪽 좀비의 배회 샘플(4m)이 벽 너머를 잡아
+        // 벽에 붙어 서성이고, 그 소리가 벽 밖에서 나는 것처럼 들린다 (보이지 않는 벽 x -78.2~124.2, z ±78.2 기준)
+        float navE = KCityEastEdge - 1.8f;
+        foreach (var cut in new[] { new Vector3(23f, 10f, 95f), new Vector3(23f, 10f, -95f), new Vector3(-95f, 10f, 0), new Vector3(navE + 16.8f, 10f, 0) })
+        {
+            var cutGo = new GameObject("NavCut");
+            cutGo.transform.SetParent(geo, false);
+            var vol = cutGo.AddComponent<NavMeshModifierVolume>();
+            vol.center = cut;
+            vol.size = Mathf.Abs(cut.z) > 50f ? new Vector3(300f, 40f, 33.6f) : new Vector3(33.6f, 40f, 300f);
+            vol.area = 1; // Not Walkable
+        }
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;

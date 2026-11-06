@@ -517,7 +517,7 @@ public static partial class GameSceneBuilder
             var p = FacePoint(side, along, sy * 0.9f, X0, Z0, W, D);
             var euler = side == 0 ? new Vector3(-90, 0, 0) : side == 1 ? new Vector3(90, 0, 0) : side == 2 ? new Vector3(0, 0, 90) : new Vector3(0, 0, -90);
             var outN = side == 0 ? Vector3.back : side == 1 ? Vector3.forward : side == 2 ? Vector3.left : Vector3.right;
-            Stain("Grime", g, p + outN * 0.006f, side < 2 ? sx : sy, side < 2 ? sy : sx, r.NextDouble() < 0.3 ? M["scorch"] : M["soot"], 200 + r.Next(300), euler);
+            Stain("Grime", g, p + outN * (0.006f + 0.002f * i), side < 2 ? sx : sy, side < 2 ? sy : sx, r.NextDouble() < 0.3 ? M["scorch"] : M["soot"], 200 + r.Next(300), euler); // 얼룩끼리 겹쳐도 같은 평면이 아니게 1.5mm씩 엇갈림
         }
     }
 

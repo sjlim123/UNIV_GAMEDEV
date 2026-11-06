@@ -217,12 +217,25 @@ public class CityDirector : MonoBehaviour
         if (distantSoundTimer <= 0 && player != null)
         {
             distantSoundTimer = Random.Range(10f, 25f) * Mathf.Lerp(1f, 0.5f, Danger);
-            Vector2 r = Random.insideUnitCircle.normalized * Random.Range(25f, 45f);
-            var pos = player.transform.position + new Vector3(r.x, 1, r.y);
+            // 소리 자리는 도시 내비메시 위(경계벽 안)에서만 고른다 — 맵 끝에서 벽 바깥에서 신음이 들리던 것을 막는다
+            Vector3 pos;
+            if (!DistantSoundSpot(player.transform.position, out pos)) return;
             // 녹음한 좀비 목소리 (예전 합성음 Groan/Scream은 더 쓰지 않는다)
             var clip = Random.value < 0.25f ? ProceduralAudio.ZombieScream() : ProceduralAudio.ZombieGroan();
-            ProceduralAudio.PlayAt(clip, pos, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f, SoundCategory.Ambient);
+            ProceduralAudio.PlayAt(clip, pos + Vector3.up, 0.8f, Random.Range(0.8f, 0.98f), 1f, 60f, SoundCategory.Ambient);
         }
+    }
+
+    // 플레이어에서 25~45m 떨어진 무작위 방향 가운데 내비메시(도시 안)에 있는 자리. 여섯 번 안에 못 찾으면 false (이번에는 소리를 내지 않는다)
+    static bool DistantSoundSpot(Vector3 from, out Vector3 pos)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            Vector2 r = Random.insideUnitCircle.normalized * Random.Range(25f, 45f);
+            if (NavMesh.SamplePosition(from + new Vector3(r.x, 0, r.y), out var hit, 6f, NavMesh.AllAreas)) { pos = hit.position; return true; }
+        }
+        pos = from;
+        return false;
     }
 
     static float Threat(List<Zombie> list, Vector3 playerPos)

@@ -712,6 +712,7 @@ public partial class UIManager : MonoBehaviour
 
         UpdateSleepText();
         UpdateLetterbox();
+        KeepPauseOnTop(); // 레터박스 띠가 일시정지 창을 가리지 않게 (UIManager.Menus)
         UpdateJournal();
         if (IsPanelOpen) UpdatePanel();
         if (IsWorkbenchOpen) UpdateWorkbench();

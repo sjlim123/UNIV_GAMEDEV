@@ -34,16 +34,19 @@ public class CutsceneActor : MonoBehaviour
         }
     }
 
-    // 소파에 기대 앉아 왼팔은 등받이에 걸치고 오른손은 무릎 위 (리모컨)
+    // 소파에 기대 앉아 왼팔은 등받이에 걸치고 오른손은 무릎 위 (리모컨).
+    // 왼팔: 팔꿈치가 등받이 윗면(높이 약 1.0m, 어깨보다 조금 위)에 얹히고 아래팔이 등받이를 따라 바깥쪽으로 눕는다.
+    // 팔꿈치 목표를 위쪽(y 1.25)에 두어 팔꿈치가 들리고, 손목은 등받이 뒤쪽 모서리 위에서 40° 굽혀 손이 등받이 뒤로 늘어진다
+    // (예전 값은 팔꿈치가 아래로 처져 아래팔이 위를 향했고, 손만 등받이 위로 솟아 꺾여 보였다)
     public static readonly Pose Sit = new Pose
     {
         Drop = 0.43f,
         Body = new Vector3(-10, -6, 0), Head = new Vector3(5, -10, 0),
-        HandL = new Vector3(-0.5f, 1.0f, -0.22f), ElbowL = new Vector3(-0.75f, 0.7f, -0.55f),
+        HandL = new Vector3(-0.673f, 1.025f, -0.292f), ElbowL = new Vector3(-0.41f, 1.25f, -0.25f),
         HandR = new Vector3(0.16f, 0.6f, 0.3f), ElbowR = new Vector3(0.5f, 0.55f, -0.05f),
         FootL = new Vector3(-0.15f, 0.07f, 0.42f), KneeL = new Vector3(-0.15f, 0.95f, 0.7f),
         FootR = new Vector3(0.17f, 0.07f, 0.37f), KneeR = new Vector3(0.19f, 0.95f, 0.7f),
-        HandRotL = new Vector3(0, 0, 0), HandRotR = new Vector3(-20, 0, 0),
+        HandRotL = new Vector3(0, 0, 40), HandRotR = new Vector3(-20, 0, 0),
     };
 
     // 똑바로 선 자세, 팔은 힘을 빼고 내린다 (팔꿈치가 살짝 굽고 손은 허벅지 조금 앞에 느슨하게)

@@ -316,7 +316,7 @@ public static partial class GameSceneBuilder
         Box("Base", g, new Vector3(0, bottom / 2f, face + outSign * 0.012f), new Vector3(w + 0.3f, bottom, 0.024f), M["tileStone"], 1f, false);
         // 창틀: 위·아래 가로대, 양 끝 세로대, 1.5m마다 중간 세로대, 2.1m 높이 가로대
         var bars = new List<CombineInstance>();
-        float fz = outSign * (t / 2f - 0.06f);
+        float fz = outSign * Mathf.Max(t / 2f - 0.06f, 0.025f); // 얇은 가짜 벽(상가 빌딩 0.12)에서는 유리 앞면이 외벽 때 얼룩(+6~12mm)과 겹치지 않게 2.5cm 앞으로
         KPart(bars, new Vector3(w, 0.08f, 0.1f), 1f, new Vector3(0, bottom + 0.04f, fz), Quaternion.identity);
         KPart(bars, new Vector3(w, 0.08f, 0.1f), 1f, new Vector3(0, top - 0.04f, fz), Quaternion.identity);
         int cols = Mathf.Max(1, Mathf.RoundToInt(w / 1.5f));

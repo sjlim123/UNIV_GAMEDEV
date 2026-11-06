@@ -147,7 +147,7 @@ public static partial class GameSceneBuilder
         }
         CombineInto(g, "Vines", vines, M["vine"]);
         // 명판 (철문 위), 환기관 (언덕 위, 갓 씌움)
-        var plaque = Prim(PrimitiveType.Quad, "Plaque", g, new Vector3(0, 2.75f, 1.556f), new Vector3(1.4f, 0.35f, 1f), M["plaque"], new Vector3(0, 180f, 0));
+        var plaque = Prim(PrimitiveType.Quad, "Plaque", g, new Vector3(0, 2.75f, 1.562f), new Vector3(1.4f, 0.35f, 1f), M["plaque"], new Vector3(0, 180f, 0)); // 틀 앞면(1.556)보다 6mm 앞 (같은 평면이면 떨린다)
         plaque.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
         Box("PlaqueFrame", g, new Vector3(0, 2.75f, 1.552f), new Vector3(1.46f, 0.41f, 0.008f), M["tire"], 1f, false);
         float vy = KBunkerStyle == 1 ? 0.6f : 0f; // 블록하우스는 옥상(3.3)이 토루 등(3.0)보다 높다
