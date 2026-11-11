@@ -109,7 +109,7 @@
 
 ## 사용한 에셋
 
-3D 모델 대부분과 UI 그림, 나머지 효과음은 코드로 직접 만들었습니다. 외부 에셋은 자유 라이선스만 썼고, 제작자와 출처 전체 목록은 [Credits/외부_에셋_목록.md](Credits/외부_에셋_목록.md)에 있습니다.
+3D 모델 대부분과 UI 그림, 나머지 효과음은 코드로 직접 만들었습니다. 외부 에셋은 자유 라이선스(CC0 등등)만 썼고, 제작자와 출처 전체 목록은 [Credits/외부_에셋_목록.md](Credits/외부_에셋_목록.md)에 있습니다.
 
 - 텍스처 · 3D 모델: [Poly Haven](https://polyhaven.com) (CC0)
 - 감염자 목소리: ianzazz, Darsycho, saturn91 (OpenGameArt, CC0)
