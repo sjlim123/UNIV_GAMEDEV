@@ -1,7 +1,7 @@
 using UnityEngine;
 
-// 감염자·들개의 추격 속도 성장 (난이도 밸런스): 초반에는 아주 느리게 달려오고, GameBalance.paceStageTurns의 턴(25/45/75/105/135/155/170)이
-// 될 때마다 한 단계씩 빨라져 마지막 턴부터는 원래 속도(GameBalance의 EnemyStats.speed)로 달린다. 그 뒤(170~200턴)는 변하지 않는다.
+// 감염자·들개의 추격 속도 성장 (난이도 밸런스): 초반에는 아주 느리게 달려오고, GameBalance.paceStageTurns의 턴(12/22/37/52/67/77/85)이
+// 될 때마다 한 단계씩 빨라져 마지막 턴부터는 원래 속도(GameBalance의 EnemyStats.speed)로 달린다. 그 뒤(85~100턴)는 변하지 않는다.
 // 시작 배율은 몸집 순으로 다르다: 들개(가장 작음)가 가장 덜 느리고, 약탈자 > 감염자 > 원거리 > 가죽 > 거대(가장 둔함) 순.
 // Zombie·Animal이 추격 속도에 Multiplier를 곱한다. 배회·수색 속도는 그대로다.
 // 단계가 오르기 paceWarnTurns턴 전부터 방공호 출입구·침대 창과 돌아왔을 때 문구(Warning)로 알린다.
@@ -65,7 +65,7 @@ public static class EnemyPace
         int left = TurnsToNextStage(turn);
         if (left < 0 || left > b.paceWarnTurns) return null;
         bool last = Stage(turn) + 1 >= b.paceStageTurns.Length;
-        string when = left <= 1 ? "다음 턴부터" : $"{left}턴 뒤부터";
+        string when = left <= 1 ? "내일부터" : $"{left}일 뒤부터";
         return last
             ? $"! {when} 감염자들이 원래 속도로 달려든다. 밖은 가장 위험해진다."
             : $"! {when} 감염자들이 더 빨리 달려든다. 서두르자.";

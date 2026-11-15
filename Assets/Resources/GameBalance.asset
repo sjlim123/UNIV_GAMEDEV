@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a716aaeac21132241a08cdfc68810f72, type: 3}
   m_Name: GameBalance
   m_EditorClassIdentifier: Assembly-CSharp::GameBalance
-  maxTurns: 200
+  maxTurns: 100
   hungerPerTurn: 3
   thirstPerTurn: 4
   powerPerTurn: 3
@@ -36,10 +36,23 @@ MonoBehaviour:
   staminaRegenAmount: 5
   staminaRegenInterval: 0.3
   staminaMinToRun: 15
+  heavyLoadRatio: 0.9
+  heavyStaminaMultiplier: 1.6
+  jumpHeight: 0.9
+  jumpStaminaCost: 8
+  burnSeconds: 5
+  burnDamage: 10
+  enemyHitStun: 0.15
+  enemyHitSlow: 0.85
+  enemyHitSlowSeconds: 0.5
   carryCapacity: 5
+  slowLoadRatio: 0.8
+  fullLoadSpeedMultiplier: 0.6
   flashlightSecondsPerBattery: 300
   fuelPower: 35
   expeditionSeconds: 300
+  redNightDamage: 3
+  redNightInterval: 3
   itemSpawnChance: 0.45
   startZombies: 3
   maxZombies: 10
@@ -62,21 +75,21 @@ MonoBehaviour:
     damage: 20
     speed: 10
     attackDelay: 1.6
-    fromTurn: 10
+    fromTurn: 5
   rangedZombie:
     displayName: "\uC6D0\uAC70\uB9AC \uAC10\uC5FC\uC790"
     health: 150
     damage: 10
     speed: 8
     attackDelay: 3
-    fromTurn: 15
+    fromTurn: 8
   heavyZombie:
     displayName: "\uAC70\uB300 \uAC10\uC5FC\uC790"
     health: 300
     damage: 30
     speed: 8
     attackDelay: 3
-    fromTurn: 30
+    fromTurn: 15
   dog:
     displayName: "\uB4E4\uAC1C"
     health: 80
@@ -90,10 +103,18 @@ MonoBehaviour:
     damage: 15
     speed: 10
     attackDelay: 1
-    fromTurn: 5
+    fromTurn: 3
   zombieWanderSpeed: 0.7
   zombieSightRange: 11
   zombieHearingRange: 8
   flashlightVisibility: 1.5
   rangedAttackRange: 12
+  paceStageTurns: 0c000000160000002500000034000000430000004d00000055000000
+  paceStartDog: 0.5
+  paceStartRaider: 0.42
+  paceStartZombie: 0.36
+  paceStartRanged: 0.34
+  paceStartLeather: 0.28
+  paceStartHeavy: 0.2
+  paceWarnTurns: 3
   outageZombieInterval: 20

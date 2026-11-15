@@ -16,7 +16,7 @@ public static class Tutorial
         new Step { Title = "해치로 나가 도시를 탐색한다", Why = "방공호엔 아무것도 없다. 재료는 밖에 있다", Target = "ShelterExit", Event = "expedition" },
         new Step { Title = "쓸 만한 물건을 3개 줍는다", Why = "건물 안을 뒤져라. 길바닥엔 돌뿐이다", Target = "", Event = "pickup" },
         new Step { Title = "붉은 밤이 오기 전에 해치로 돌아온다", Why = "화면 위 나침반의 집 표식이 해치. 남은 시간이 0이면 체력이 계속 준다", Target = "CityExit", Event = "return" },
-        new Step { Title = "침대에서 잠을 자 하루를 넘긴다", Why = "잠을 자야 턴이 넘어가고 체력이 조금 돈다", Target = "Bed", Event = "rest" },
+        new Step { Title = "침대에서 잠을 자 하루를 넘긴다", Why = "잠을 자야 날이 바뀌고 체력이 조금 돈다", Target = "Bed", Event = "rest" },
         new Step { Title = "트럭 정비소를 살펴본다", Why = "트럭이 완성되면 이 도시를 탈출한다", Target = "TruckSite", Event = "truck" },
     };
 
@@ -46,7 +46,7 @@ public static class Tutorial
                 need += kv.Value;
                 have += Mathf.Min(s.Truck.Count(kv.Key), kv.Value);
             }
-            return $"트럭 부품 {have} / {need}   ·   남은 턴 {Mathf.Max(0, GameState.MaxTurns - s.Turn)}";
+            return $"트럭 부품 {have} / {need}   ·   남은 날 {s.DaysLeft}";
         }
     }
 

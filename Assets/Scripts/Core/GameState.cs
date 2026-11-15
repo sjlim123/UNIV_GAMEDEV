@@ -6,7 +6,13 @@ public class GameState
 {
     public static int MaxTurns => GameBalance.Data.maxTurns;
 
-    public int Turn;
+    // 지금 며칠차인가 (화면의 'N일차'와 같은 숫자). 새 게임은 1일차에서 시작하고, 하루가 지날 때마다(나가기·돌아오기·잠자기) 1씩 는다.
+    // MaxTurns일차를 넘기면 끝난다 (GameManager.AdvanceTurn)
+    public int Turn = 1;
+    // 끝까지 넘긴 날 수 (1일차에는 0). 죽었을 때 '버틴 날'로 보여 준다
+    public int DaysSurvived => Mathf.Max(0, Turn - 1);
+    // 오늘을 넣어 남은 날 수 (1일차에는 MaxTurns, 마지막 날에는 1)
+    public int DaysLeft => Mathf.Max(0, MaxTurns - Turn + 1);
     public float Health;
     public float Hunger;  // 0이 되면 턴마다 체력 감소
     public float Thirst;
@@ -237,7 +243,7 @@ public class GameState
     {
         var s = new GameState(false)
         {
-            Turn = d.turn,
+            Turn = d.Day,
             Health = d.health,
             Hunger = d.hunger,
             Thirst = d.thirst,
@@ -247,8 +253,8 @@ public class GameState
             InExpedition = d.inExpedition,
             ShelterInvaders = d.shelterInvaders,
             FurnaceBuilt = d.furnaceBuilt,
-            // 안내가 없던 옛 저장(턴 2 이상)은 안내를 건너뛴다
-            TutorialStep = d.tutorialStep == 0 && d.turn >= 2 ? Tutorial.Steps.Length : d.tutorialStep,
+            // 안내가 없던 옛 저장(이틀 넘게 지난 것 = 3일차 이후)은 안내를 건너뛴다
+            TutorialStep = d.tutorialStep == 0 && d.Day >= 3 ? Tutorial.Steps.Length : d.tutorialStep,
             TutorialCount = d.tutorialCount,
             HintsSeen = d.hintsSeen,
             SlingShots = d.slingShots,
@@ -305,10 +311,12 @@ public class ItemCount
 [System.Serializable]
 public class SaveData
 {
-    public int saveFormat = 3; // 2: 장비 칸·트럭 추가 / 3: 새 조합법 (아이템 이름 바뀜)·화로 설치·새총
+    public int saveFormat = 4; // 2: 장비 칸·트럭 추가 / 3: 새 조합법 (아이템 이름 바뀜)·화로 설치·새총 / 4: 날짜(turn)를 1부터 센다
     public string gameVersion;
     public string savedAt;
     public int turn;
+    // 며칠차인가 (1부터). saveFormat 3까지는 turn을 0부터 셌으므로 하루를 더해 읽는다
+    public int Day => saveFormat < 4 ? turn + 1 : turn;
     public float health, hunger, thirst, power, flashlightCharge;
     public bool flashlightOut;
     public bool inExpedition;

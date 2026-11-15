@@ -122,7 +122,7 @@ public class GameManager : MonoBehaviour
         if (InShelter && !IsTransitioning) SaveGame();
     }
 
-    // 1턴 진행. 죽거나 마지막 턴이 끝나면 false
+    // 하루 진행 (State.Turn = 며칠차, 1부터). 죽거나 마지막 날(MaxTurns일차)을 넘기면 false
     public bool AdvanceTurn()
     {
         var s = State;
@@ -143,9 +143,10 @@ public class GameManager : MonoBehaviour
             GameOver("사망", "굶주림과 갈증을 끝내 견디지 못했다.");
             return false;
         }
-        if (s.Turn >= GameState.MaxTurns)
+        if (s.Turn > GameState.MaxTurns)
         {
-            Ending($"{GameState.MaxTurns}턴 생존", $"방공호에서 {GameState.MaxTurns}턴을 버텨냈다.\n(엔딩은 스토리와 함께 정해질 예정)");
+            s.Turn = GameState.MaxTurns; // 마지막 날을 넘겼다. 화면에 '101일차'가 보이지 않게 마지막 날에 둔다
+            Ending($"{GameState.MaxTurns}일 생존", $"방공호에서 {GameState.MaxTurns}일을 버텨냈다.\n(엔딩은 스토리와 함께 정해질 예정)");
             return false;
         }
         return true;
@@ -358,7 +359,7 @@ public class GameManager : MonoBehaviour
         {
             State.Health = Mathf.Min(State.MaxHealth, State.Health + RestHeal);
             SaveGame();
-            UI.ShowSleepText($"턴 {State.Turn} / {GameState.MaxTurns}");
+            UI.ShowSleepText($"{State.Turn}일차 / {GameState.MaxTurns}일");
         }
         yield return new WaitForSecondsRealtime(1.1f);
         UI.ShowSleepText(null);
@@ -379,7 +380,7 @@ public class GameManager : MonoBehaviour
                 yield return null;
             }
         if (pc != null) pc.SetSleep(null, 0);
-        UI.ShowMessage($"잘 잤다. 체력 +{RestHeal:0}  (턴 {State.Turn}/{GameState.MaxTurns})", 3f);
+        UI.ShowMessage($"잘 잤다. 체력 +{RestHeal:0}  ({State.Turn}일차 / {GameState.MaxTurns}일)", 3f);
         IsTransitioning = false;
     }
 
@@ -396,7 +397,7 @@ public class GameManager : MonoBehaviour
     public void TruckEscape()
     {
         if (IsGameOver || IsTransitioning || !State.TruckComplete) return;
-        Ending("탈출", $"트럭에 시동을 걸었다. 낡은 엔진이 으르렁거리며 깨어난다.\n폐허가 된 도시를 뒤로하고, 라디오가 말한 서울시 ○○으로 향한다.\n\n탈출까지 걸린 턴: {State.Turn} / {GameState.MaxTurns}");
+        Ending("탈출", $"트럭에 시동을 걸었다. 낡은 엔진이 으르렁거리며 깨어난다.\n폐허가 된 도시를 뒤로하고, 라디오가 말한 서울시 ○○으로 향한다.\n\n탈출한 날: {State.Turn}일차 / {GameState.MaxTurns}일");
     }
 
     // 엔딩: 저장을 지우고 엔딩 화면을 보여 준 뒤 메인 메뉴로 돌아간다
@@ -432,7 +433,7 @@ public class GameManager : MonoBehaviour
         if (IsGameOver) return;
         IsGameOver = true;
         SaveSystem.Delete(); // 죽으면 저장도 사라진다
-        StartCoroutine(DeathRoutine(title, $"{reason}\n\n버틴 턴: {State.Turn} / {GameState.MaxTurns}"));
+        StartCoroutine(DeathRoutine(title, $"{reason}\n\n버틴 날: {State.DaysSurvived}일 / {GameState.MaxTurns}일"));
     }
 
     // 죽음: 쓰러지며(카메라가 바닥으로 기울고, 색이 빠지고, 소리가 먹먹해진다) 화면이 검어진 뒤 끝 화면이 천천히 나타난다.

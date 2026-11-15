@@ -35,9 +35,9 @@ public class ShelterLights : MonoBehaviour
         seed = Random.value * 50;
 
         var s = GameManager.Instance.State;
-        GameManager.Instance.UI.ShowMessage(s.Turn == 0
-            ? "핵폭발 이후, 방공호. 북쪽 복도 끝 출입구로 나가 물자를 모아 200턴을 버텨라."
-            : $"방공호로 돌아왔다. (턴 {s.Turn} / {GameState.MaxTurns})" + EnemyPace.ArrivalNote(s.Turn), 5f);
+        GameManager.Instance.UI.ShowMessage(s.Turn <= 1 // 첫날(새 게임)에는 목표를, 그 뒤로는 며칠차인지를 알린다
+            ? $"핵폭발 이후, 방공호. 북쪽 복도 끝 출입구로 나가 물자를 모아 {GameState.MaxTurns}일을 버텨라."
+            : $"방공호로 돌아왔다. ({s.Turn}일차 / {GameState.MaxTurns}일)" + EnemyPace.ArrivalNote(s.Turn), 5f);
     }
 
     void Update()

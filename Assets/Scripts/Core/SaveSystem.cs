@@ -132,6 +132,6 @@ public static class SaveSystem
     {
         if (!Exists(slot)) return "";
         var d = LoadData(slot);
-        return d == null ? "저장 파일이 손상됨" : $"턴 {d.turn} · {d.savedAt}";
+        return d == null ? "저장 파일이 손상됨" : $"{d.Day}일차 · {d.savedAt}";
     }
 }

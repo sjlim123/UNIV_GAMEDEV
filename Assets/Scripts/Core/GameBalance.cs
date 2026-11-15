@@ -27,11 +27,14 @@ public class EnemyStats
 }
 
 // 밸런스 수치 모음. Assets/Resources/GameBalance.asset 을 선택하면 인스펙터에서 바로 고칠 수 있다.
+// 게임은 에셋에 저장된 값을 쓴다. 아래 기본값만 바꾸면 이미 에셋을 불러온 에디터(와 거기서 만든 빌드)는 예전 값을 그대로 쓰니,
+// 수치를 바꾸거나 항목을 새로 넣을 때는 에셋에도 같은 값을 적는다 (인스펙터에서 저장하거나 EditorUtility.SetDirty + AssetDatabase.SaveAssetIfDirty).
+// 코드와 인스펙터의 '턴'은 게임 화면에서 '일'로 보인다: 1턴 = 하루, 턴 N = 'N일차', maxTurns = '100일'. 새 게임은 1(1일차)에서 시작한다.
 [CreateAssetMenu(menuName = "벙커랩/밸런스 설정", fileName = "GameBalance")]
 public class GameBalance : ScriptableObject
 {
-    [Header("턴")]
-    public int maxTurns = 200;
+    [Header("턴 (게임 화면에는 '일'로 보인다: 1턴 = 하루)")]
+    public int maxTurns = 100;
     public float hungerPerTurn = 3f;
     public float thirstPerTurn = 4f;
     public float powerPerTurn = 3f;
@@ -133,11 +136,11 @@ public class GameBalance : ScriptableObject
 
     [Header("적 (피 / 데미지 / 속도 / 딜레이 / 등장 턴)")]
     public EnemyStats zombie = new EnemyStats("감염자", 100, 12, 8, 1.6f, 1);
-    public EnemyStats leatherZombie = new EnemyStats("가죽 감염자", 200, 20, 10, 1.6f, 10);
-    public EnemyStats rangedZombie = new EnemyStats("원거리 감염자", 150, 10, 8, 3f, 15);
-    public EnemyStats heavyZombie = new EnemyStats("거대 감염자", 300, 30, 8, 3f, 30);
+    public EnemyStats leatherZombie = new EnemyStats("가죽 감염자", 200, 20, 10, 1.6f, 5);
+    public EnemyStats rangedZombie = new EnemyStats("원거리 감염자", 150, 10, 8, 3f, 8);
+    public EnemyStats heavyZombie = new EnemyStats("거대 감염자", 300, 30, 8, 3f, 15);
     public EnemyStats dog = new EnemyStats("들개", 80, 8, 13, 2f, 1);
-    public EnemyStats raider = new EnemyStats("약탈자", 100, 15, 10, 1f, 5);
+    public EnemyStats raider = new EnemyStats("약탈자", 100, 15, 10, 1f, 3);
     [Tooltip("좀비가 배회할 때 속도(m/s)")]
     public float zombieWanderSpeed = 0.7f;
     public float zombieSightRange = 11f;
@@ -150,7 +153,7 @@ public class GameBalance : ScriptableObject
 
     [Header("추격 속도 성장 (EnemyPace: 턴이 지날수록 원래 속도에 가까워진다)")]
     [Tooltip("이 턴이 될 때마다 추격 속도가 한 단계 오른다. 마지막 턴부터는 원래 속도(위 EnemyStats.speed)")]
-    public int[] paceStageTurns = { 25, 45, 75, 105, 135, 155, 170 };
+    public int[] paceStageTurns = { 12, 22, 37, 52, 67, 77, 85 };
     [Tooltip("첫 단계 전까지의 추격 속도 배율. 작은 놈일수록 덜 느리고 큰 놈일수록 훨씬 둔하다 (들개 > 약탈자 > 감염자 > 원거리 > 가죽 > 거대)")]
     [Range(0.05f, 1f)] public float paceStartDog = 0.5f;
     [Range(0.05f, 1f)] public float paceStartRaider = 0.42f;

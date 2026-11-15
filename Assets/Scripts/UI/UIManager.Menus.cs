@@ -514,7 +514,7 @@ public partial class UIManager
         else if (data == null) SlotText(info, "저장 파일이 손상됨", 20, Danger, null);
         else
         {
-            SlotText(info, $"턴 {data.turn} / {GameState.MaxTurns}   ·   체력 {Mathf.CeilToInt(data.health)}", 20, Text, null);
+            SlotText(info, $"{data.Day}일차 / {GameState.MaxTurns}일   ·   체력 {Mathf.CeilToInt(data.health)}", 20, Text, null);
             SlotText(info, data.savedAt + (string.IsNullOrEmpty(data.gameVersion) ? "" : $"   ·   Ver {data.gameVersion}"), 17, Dim, null);
         }
         return card;
@@ -609,7 +609,7 @@ public partial class UIManager
         // 지금 어디서 몇 턴째인지 제목 아래에 보여 주고, 멈춘 화면을 한 번 찍어 흐리게 깐다
         var gm = GameManager.Instance;
         var s = gm.State;
-        pauseInfo.text = s == null ? "" : $"턴 {s.Turn} / {GameState.MaxTurns}   ·   {(gm.InShelter ? "방공호" : "도시 탐험 중")}";
+        pauseInfo.text = s == null ? "" : $"{s.Turn}일차 / {GameState.MaxTurns}일   ·   {(gm.InShelter ? "방공호" : "도시 탐험 중")}";
         UpdateTipSwitch(true);
         RefreshGlass();
     }

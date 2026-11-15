@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class ShelterExit : Interactable
 {
-    public override string Prompt => ShelterInvasion.ZombiesInside ? "출입구 - 감염자를 먼저 처치해야 한다" : "출입구 - 탐험 출발 (1턴)";
+    public override string Prompt => ShelterInvasion.ZombiesInside ? "출입구 - 감염자를 먼저 처치해야 한다" : "출입구 - 탐험 출발 (하루)";
 
     static bool HasWeapon(GameState s)
     {
@@ -20,7 +20,7 @@ public class ShelterExit : Interactable
         var s = gm.State;
         ui.OpenPanel("탐험 출발", c =>
         {
-            ui.Line(c, $"현재 턴 {s.Turn} / {GameState.MaxTurns}. 나가는 데 1턴, 돌아오는 데 1턴이 지난다.");
+            ui.Line(c, $"지금은 {s.Turn}일차 / {GameState.MaxTurns}일. 나가는 데 하루, 돌아오는 데 하루가 지난다.");
             ui.Line(c, $"{CityDirector.DefaultTimeLimit / 60:0}분이 지나면 붉은 밤이 와서 {GameBalance.Data.redNightInterval:0}초마다 체력이 {GameBalance.Data.redNightDamage:0}씩 준다. 시간이 갈수록 놈들이 늘어난다.");
             ui.Line(c, $"소지 무게 {s.Carried.Weight:0.0} / {s.CarryCapacity:0.0} kg", 22, UIManager.Dim);
             if (s.Carried.Count("flashlight") == 0) ui.Line(c, "! 손전등이 없다. 바깥은 칠흑같이 어둡다.", 22, UIManager.Danger);

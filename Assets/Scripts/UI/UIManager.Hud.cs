@@ -228,6 +228,8 @@ public partial class UIManager
         Place(timeLabel.rectTransform, new Vector2(0, 1), new Vector2(60, -15), new Vector2(150, 24));
         timeValue = NewText(timePanel, "", 42, TextAnchor.UpperRight, Pale, FontMono);
         Place(timeValue.rectTransform, new Vector2(1, 1), new Vector2(-16, -6), new Vector2(200, 50));
+        // 마지막 날의 '100 / 100'(너비 202.5)은 상자(200)보다 길다. 두 줄로 꺾이지 않고 왼쪽으로 넘치게 둔다 (머리글 '일차'는 85.5에서 끝나 닿지 않는다)
+        timeValue.horizontalOverflow = HorizontalWrapMode.Overflow;
         timeValue.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
         // 20칸 눈금
         const float segW = 12.4f, segGap = 2.5f;
@@ -397,11 +399,11 @@ public partial class UIManager
             bool show = true;
             if (Tutorial.Done)
             {
-                // 안내가 끝나면: 트럭 부품 진행도 + 남은 턴
+                // 안내가 끝나면: 트럭 부품 진행도 + 남은 날 (Tutorial.Line의 '남은 날 N'에서 숫자를 읽는다)
                 var parts = Regex.Match(line, @"(\d+) / (\d+)");
-                var turns = Regex.Match(line, @"남은 턴 (\d+)");
+                var turns = Regex.Match(line, @"남은 날 (\d+)");
                 if (i == 0) { title = "트럭 부품을 만들어 정비소에 넣는다"; progress = parts.Success ? parts.Groups[1].Value + "/" + parts.Groups[2].Value : ""; state = 1; }
-                else if (i == 1) { title = "남은 턴"; progress = turns.Success ? turns.Groups[1].Value : ""; }
+                else if (i == 1) { title = "남은 날"; progress = turns.Success ? turns.Groups[1].Value : ""; }
                 else show = false;
             }
             else
@@ -564,7 +566,7 @@ public partial class UIManager
             if (hurry) Tutorial.Hint(Tutorial.HintRedNight, "남은 시간이 1분이다. 화면 위 나침반의 집 표식을 따라 해치로 돌아가자.");
             float pulse = hurry ? 0.5f + 0.5f * Mathf.Sin(now * 6f) : 0;
             int danger = Mathf.Clamp(Mathf.FloorToInt(city.Danger * DangerNames.Length), 0, DangerNames.Length - 1);
-            SetTimeTexts("hourglass", "남은 시간", $"{t / 60:00}:{t % 60:00}", $"위험도 {DangerNames[danger]}   ·   턴 {s.Turn} / {GameState.MaxTurns}");
+            SetTimeTexts("hourglass", "남은 시간", $"{t / 60:00}:{t % 60:00}", $"위험도 {DangerNames[danger]}   ·   {s.Turn}일차 / {GameState.MaxTurns}일");
             timeLabel.color = hurry ? Alert : PaleDim;
             timeValue.color = hurry ? Color.Lerp(Alert, Pale, pulse * 0.35f) : Pale;
             timeIcon.color = hurry ? Alert : Accent;
@@ -582,9 +584,10 @@ public partial class UIManager
         }
         else
         {
-            // 방공호: 턴과 발전기 전력
+            // 방공호: 며칠차인지와 발전기 전력. 큰 숫자는 영문 글꼴이라 '일차'는 머리글에 적는다.
+            // 머리글은 짧게 둔다: 오른쪽 큰 숫자('10 / 100')가 왼쪽으로 122까지 오므로 '방공호 · 일차'(139.5에서 끝남)처럼 길면 끝 글자가 숫자에 가려진다
             float power = Mathf.Clamp(s.Power, 0, 100);
-            SetTimeTexts("home", "방공호 · 턴", $"{s.Turn} / {GameState.MaxTurns}", power <= 0 ? "전력 0% · 정전! 방폭문이 열렸다" : $"발전기 전력 {power:0}%");
+            SetTimeTexts("home", "일차", $"{s.Turn} / {GameState.MaxTurns}", power <= 0 ? "전력 0% · 정전! 방폭문이 열렸다" : $"발전기 전력 {power:0}%");
             timeLabel.color = PaleDim;
             timeValue.color = Pale;
             timeIcon.color = Accent;

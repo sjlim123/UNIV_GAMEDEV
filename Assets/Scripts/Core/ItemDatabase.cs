@@ -119,7 +119,7 @@ public static class ItemDatabase
     };
 
     // 도시에 무작위로 놓이는 아이템과 확률 가중치.
-    // 일반(회색) 필드 드랍 + 드물게 나오는 배터리. 가죽·고기는 들개를 잡을 때만 나온다.
+    // 일반(회색) 필드 드랍 + 드물게 나오는 배터리. 가죽은 들개·약탈자, 고기는 들개를 잡을 때만 나온다 (적이 떨어뜨리는 것은 Zombie.LootFor · Animal.Die).
     public static readonly Dictionary<string, int> LootWeights = new Dictionary<string, int>
     {
         { "metal", 10 }, { "cloth", 12 }, { "stick", 10 }, { "rope", 7 }, { "flashlight", 2 },
@@ -170,7 +170,7 @@ public static class ItemDatabase
 
         // 고급 (초록)
         AddWeapon("spiked_bat", "나사 두른 야구 배트", ItemRarity.Advanced, 1.3f, WeaponKind.Swing, 18, 1f, "공격력 18. 나사를 박아 넣은 야구 배트");
-        AddWeapon("dagger", "단검", ItemRarity.Advanced, 0.4f, WeaponKind.Stab, 13, 0.5f, "공격력 13 · 공격 속도 2배 (0.5초마다)");
+        AddWeapon("dagger", "단검", ItemRarity.Advanced, 0.4f, WeaponKind.Stab, 13, 0.8f, "공격력 13 · 0.8초마다 벤다 (방망이보다 조금 빠르다)");
         AddBackpack("backpack", "일반 가방", ItemRarity.Advanced, 4);
         AddArmor("iron_armor", "철 방어구", ItemRarity.Advanced, 40);
         Add("hammer", "망치", ItemCategory.Material, ItemRarity.Advanced, 1.0f, "단단한 쇠망치. 합금 갑옷 재료");
@@ -200,19 +200,19 @@ public static class ItemDatabase
         AddRecipe("screw", 5, ("metal", 2));
         AddRecipe("slingshot", 1, ("stick", 2), ("rubber", 2), ("rope", 1));
         AddRecipe("leather_armor", 1, ("leather", 15));
-        AddRecipe("circuit_board", 1, ("iron_ingot", 5), ("copper_wire", 10), ("battery", 2));
+        AddRecipe("circuit_board", 1, ("iron_ingot", 2), ("copper_wire", 4), ("battery", 2));
         AddRecipe("medkit", 1, ("bandage", 3));
         AddRecipe(StonePouchId, 1, ("rope", 3), ("cloth", 2));
 
         AddRecipe("spiked_bat", 1, ("screw", 15), ("baseball_bat", 1), ("rope", 4));
         AddRecipe("dagger", 1, ("iron_ingot", 2), ("stick", 3), ("rope", 2));
         AddRecipe("backpack", 1, ("old_backpack", 1), ("cloth", 5), ("rope", 3), ("iron_ingot", 2));
-        AddRecipe("iron_armor", 1, ("leather_armor", 1), ("iron_ingot", 10));
+        AddRecipe("iron_armor", 1, ("leather_armor", 1), ("iron_ingot", 5));
         AddRecipe("hammer", 1, ("iron_ingot", 5), ("stick", 5), ("rope", 3));
-        AddRecipe("semiconductor", 1, ("circuit_board", 3), ("iron_ingot", 3), ("copper_wire", 10), ("screw", 4), ("battery", 2));
+        AddRecipe("semiconductor", 1, ("circuit_board", 3), ("iron_ingot", 2), ("copper_wire", 5), ("battery", 2));
 
-        AddRecipe("wheel", 1, ("rubber", 10), ("iron_ingot", 8));
-        AddRecipe("alloy_plate", 1, ("iron_ingot", 5), ("copper_wire", 5));
+        AddRecipe("wheel", 1, ("rubber", 10), ("iron_ingot", 6));
+        AddRecipe("alloy_plate", 1, ("iron_ingot", 2), ("copper_wire", 2));
         AddRecipe("large_backpack", 1, ("backpack", 1), ("iron_ingot", 10), ("rope", 10));
         AddRecipe("alloy_armor", 1, ("iron_armor", 1), ("alloy_plate", 5), ("hammer", 1));
         AddRecipe("motor", 1, ("circuit_board", 5), ("copper_wire", 10), ("screw", 8), ("iron_ingot", 4), ("battery", 3));
@@ -220,7 +220,7 @@ public static class ItemDatabase
 
         AddRecipe("engine", 1, ("circuit_board", 1), ("copper_wire", 10), ("screw", 20), ("iron_ingot", 15));
 
-        AddRecipe("navigation", 1, ("semiconductor", 5), ("copper_wire", 10), ("screw", 4), ("iron_ingot", 10), ("battery", 10));
+        AddRecipe("navigation", 1, ("semiconductor", 3), ("copper_wire", 10), ("screw", 4), ("iron_ingot", 10), ("battery", 10));
 
         // 화로 (부싯돌과 라이터 필요)
         AddSmelt("iron_ingot", 1, ("metal", 3));
