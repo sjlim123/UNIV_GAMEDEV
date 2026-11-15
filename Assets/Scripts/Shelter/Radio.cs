@@ -132,7 +132,7 @@ public class Radio : Interactable
         lines.Clear();
         durations.Clear();
         var s = GameManager.Instance.State;
-        int left = Mathf.Max(0, GameState.MaxTurns - s.Turn);
+        int left = s.DaysLeft; // 오늘을 넣어 남은 날
         bool emergency = broadcastTurn++ % 2 == 0;
         Add("치지직…", 2f);
         if (emergency)
@@ -146,10 +146,10 @@ public class Radio : Interactable
             return;
         }
         Add("…들리는 사람… 있나…", 2.5f);
-        Add($"…{GameState.MaxTurns}턴 안에… 트럭을… 만들어서…", 3f);
+        Add($"…{GameState.MaxTurns}일 안에… 트럭을… 만들어서…", 3f);
         Add("…서울시 ○○으로… 와라… 치직…", 3f);
-        if (s.Turn > 0)
-            Add(left > 20 ? $"…남은 시간… {left}턴… 치지직…" : $"…{left}턴… 치직… 더는… 기다릴 수 없다…", 2.5f);
+        if (s.Turn > 1) // 첫날에는 남은 시간을 말하지 않는다
+            Add(left > 20 ? $"…남은 시간… {left}일… 치지직…" : $"…{left}일… 치직… 더는… 기다릴 수 없다…", 2.5f);
         Add("…반복한다… 치지직…", 2.5f);
     }
 

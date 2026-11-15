@@ -45,8 +45,8 @@ public partial class UIManager
         journalTexts.Clear();
         journalFull.Clear();
 
-        // 제목·날짜
-        AddJournalLine($"탐색 결과  —  {r.Turn}번째 날", 40, Ink, FontBold, 6, -1.2f);
+        // 제목·날짜 (며칠차인지)
+        AddJournalLine($"탐색 결과  —  {r.Turn}일차", 40, Ink, FontBold, 6, -1.2f);
         string back = r.RedNight ? $"시간을 {Mathf.CeilToInt(r.RedNightSeconds)}초나 넘기고 겨우 해치로 돌아왔다."
             : $"{(int)r.TimeLeft / 60}분 {(int)r.TimeLeft % 60}초를 남기고 살아 돌아왔다.";
         AddJournalLine(back, 23, r.RedNight ? InkRed : InkFaded, Font, 18, 0.6f);
@@ -91,7 +91,7 @@ public partial class UIManager
         else if (r.ZombiesKilled + r.DogsKilled >= 5) closing = "놈들이 점점 늘어난다. 무기를 손봐 두자.";
         else closing = "오늘도 살아서 돌아왔다. 창고에 물건을 정리하자.";
         AddJournalLine(closing, 24, Ink, Font, 6, -0.8f);
-        AddJournalLine($"(턴 {r.Turn} / {GameState.MaxTurns}  ·  {r.TurnsSpent}턴 지남)", 18, InkFaded, Font, 0, 0.2f);
+        AddJournalLine($"({r.Turn}일차 / {GameState.MaxTurns}일  ·  이번 탐색에 {r.TurnsSpent}일)", 18, InkFaded, Font, 0, 0.2f);
 
         journalLine = 0;
         journalChars = 0;

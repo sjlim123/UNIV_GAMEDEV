@@ -675,14 +675,27 @@ public class Zombie : MonoBehaviour, IDamageable
         yield return Gore.FadeAway(gameObject, rig != null ? rig.Model : transform, rig != null ? rig.Renderers : new Renderer[0], parts, 7f, 5f, 3.5f);
     }
 
-    // 일반·가죽·원거리 좀비는 쓰러진 자리에 밧줄·천·고철 중 하나를 떨어뜨린다
-    static readonly string[] ZombieLoot = { "rope", "cloth", "metal" };
+    // 쓰러진 자리에 종류마다 정해진 목록에서 하나를 골라 1개 떨어뜨린다 (고르는 확률은 모두 같다. 들개는 Animal.Die: 가죽 2 · 생고기 1)
+    // 같은 아이템을 목록에 두 번 적으면 그만큼 더 자주 나온다
+    static readonly string[] ZombieLoot = { "cloth", "metal", "stick", "rope", "rubber" }; // 감염자·가죽 감염자·원거리 감염자: 천·고철·막대기·밧줄·고무
+    static readonly string[] HeavyLoot = { "rubber", "iron_ingot", "circuit_board" };       // 거대 감염자: 고무·철주괴·전자기판
+    static readonly string[] RaiderLoot = { "leather", "metal", "rubber" };                 // 약탈자: 가죽·고철·고무
+
+    public static string[] LootFor(ZombieKind kind)
+    {
+        switch (kind)
+        {
+            case ZombieKind.Heavy: return HeavyLoot;
+            case ZombieKind.Raider: return RaiderLoot;
+            default: return ZombieLoot;
+        }
+    }
 
     void DropLoot()
     {
-        if (Kind != ZombieKind.Normal && Kind != ZombieKind.Leather && Kind != ZombieKind.Ranged) return;
+        var loot = LootFor(Kind);
         var side = transform.right * Random.Range(-0.4f, 0.4f) + Vector3.up * 0.5f;
-        PickupItem.Spawn(ZombieLoot[Random.Range(0, ZombieLoot.Length)], 1, transform.position + side);
+        PickupItem.Spawn(loot[Random.Range(0, loot.Length)], 1, transform.position + side);
     }
 
     // ---------- 움직임 ----------
