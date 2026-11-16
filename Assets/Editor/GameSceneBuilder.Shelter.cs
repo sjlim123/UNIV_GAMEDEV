@@ -634,6 +634,7 @@ public static partial class GameSceneBuilder
     static Material TransparentMat(string name, Color color, float smoothness)
     {
         var m = TexMat(name, null, color, smoothness);
+        if (KKeep(m)) return m;
         m.SetFloat("_Surface", 1);
         m.SetFloat("_Blend", 0);
         m.SetFloat("_BlendModePreserveSpecular", 1);

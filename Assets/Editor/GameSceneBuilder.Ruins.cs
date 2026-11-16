@@ -16,16 +16,7 @@ public static partial class GameSceneBuilder
         if (M.ContainsKey("gold") && M["gold"] != null) return;
         // 황금 문: 매끈한 금빛 (녹슨 쇠의 요철만 빌린다)
         M["gold"] = TexMat("M_GoldPaint", null, new Color(0.95f, 0.74f, 0.24f), 0.72f, 0.9f);
-        M["gold"].SetTexture("_BaseMap", null); // 예전에 넣었던 녹 그림은 뺀다
-        M["gold"].SetTexture("_MainTex", null);
-        var goldNormal = AssetDatabase.LoadAssetAtPath<Texture2D>($"{TexDir}/rusty_metal_02_nor_gl_1k.jpg");
-        if (goldNormal != null)
-        {
-            M["gold"].SetTexture("_BumpMap", goldNormal);
-            M["gold"].SetFloat("_BumpScale", 0.5f);
-            M["gold"].EnableKeyword("_NORMALMAP");
-            EditorUtility.SetDirty(M["gold"]);
-        }
+        if (!KKeep(M["gold"])) GoldExtras(); // 도시 씬만 생성: 있는 M_GoldPaint는 그대로
         M["rebar"] = TexMat("M_Rebar", "rusty_metal_02", new Color(0.48f, 0.26f, 0.12f), 0.2f, 0.3f);
         M["soot"] = TexMat("M_Soot", "dirty_concrete", new Color(0.11f, 0.1f, 0.095f), 0.06f);
         M["scorch"] = TexMat("M_Scorch", "dirty_concrete", new Color(0.07f, 0.065f, 0.06f), 0.05f);
@@ -38,13 +29,31 @@ public static partial class GameSceneBuilder
         WallCrackDetail();
     }
 
+    static void GoldExtras()
+    {
+        M["gold"].SetTexture("_BaseMap", null); // 예전에 넣었던 녹 그림은 뺀다
+        M["gold"].SetTexture("_MainTex", null);
+        var goldNormal = AssetDatabase.LoadAssetAtPath<Texture2D>($"{TexDir}/rusty_metal_02_nor_gl_1k.jpg");
+        if (goldNormal != null)
+        {
+            M["gold"].SetTexture("_BumpMap", goldNormal);
+            M["gold"].SetFloat("_BumpScale", 0.5f);
+            M["gold"].EnableKeyword("_NORMALMAP");
+            EditorUtility.SetDirty(M["gold"]);
+        }
+    }
+
     // 벽 재질(콘크리트·벽돌·금 간 벽·때 묻은 콘크리트)에 금·구멍 디테일 맵을 얹는다. 한 장이 벽 약 7.5m를 덮어 금이 크고 드문드문 간다
     static void WallCrackDetail()
     {
+        bool any = false;
+        foreach (var key in new[] { "wall", "brick", "cracked", "dirty" })
+            if (M.TryGetValue(key, out var w) && w != null && !KKeep(w)) any = true;
+        if (!any) return; // 도시 씬만 생성: 네 재질을 모두 그대로 두면 금 그림도 다시 그리지 않는다
         CrackTextures(out var albedo, out var normal);
         foreach (var key in new[] { "wall", "brick", "cracked", "dirty" })
         {
-            if (!M.TryGetValue(key, out var m) || m == null) continue;
+            if (!M.TryGetValue(key, out var m) || m == null || KKeep(m)) continue;
             m.SetTexture("_DetailAlbedoMap", albedo);
             m.SetTexture("_DetailNormalMap", normal);
             m.SetFloat("_DetailAlbedoMapScale", 1f);
@@ -654,6 +663,7 @@ public static partial class GameSceneBuilder
     {
         var shader = Shader.Find("BunkerLab/Puddle");
         var m = LoadOrCreate("M_Puddle", shader != null ? shader : Shader.Find("Universal Render Pipeline/Lit"));
+        if (KKeep(m)) return m;
         m.SetColor("_BaseColor", new Color(0.1f, 0.11f, 0.13f, shader != null ? 0.85f : 1f)); // 살짝 투명: 젖은 바닥이 비친다
         m.SetFloat("_Smoothness", 0.95f);
         if (shader != null)
@@ -710,9 +720,6 @@ public static partial class GameSceneBuilder
             Debug.LogWarning("[GameSceneBuilder] 프리팹이 없습니다. 게임 씬 전체 생성을 먼저 하세요.");
             return;
         }
-        CreateMaterials();
-        BuildCityScene(player, zombie, dog);
-        AssetDatabase.SaveAssets();
-        Debug.Log("[GameSceneBuilder] City 씬만 다시 생성 완료");
+        BuildCityOnlyGuarded(player, zombie, dog); // 재질은 불러 쓰기만, 도시 결과물만 저장, 지킴 검사 (GameSceneBuilder.CityGuard.cs)
     }
 }
