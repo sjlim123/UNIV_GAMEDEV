@@ -5,7 +5,10 @@ public class CityExit : Interactable
 {
     public override string Prompt => "방공호 해치 - 돌아가기 (하루)";
 
-    public override void Interact(PlayerInteractor player)
+    public override void Interact(PlayerInteractor player) => OpenReturnPanel();
+
+    // 돌아가기 창. 해치가 없는 맵의 돌아가는 길(ExpeditionExit)도 같은 창을 띄운다
+    public static void OpenReturnPanel()
     {
         var gm = GameManager.Instance;
         var ui = gm.UI;

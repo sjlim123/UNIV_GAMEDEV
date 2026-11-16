@@ -84,6 +84,15 @@ public static class Tutorial
     // ---------- 한 번만 보여 주는 상황 힌트 ----------
 
     public const int HintInventory = 1, HintWorkbench = 2, HintBattery = 4, HintZombie = 8, HintHeavy = 16, HintRedNight = 32;
+    public const int HintGlass = 64, HintEcho = 128, HintFall = 256; // 탐험 목적지의 함정 (유리 조각·울림·추락)
+
+    // evt 사건으로 끝나는 할 일의 바로 다음 번호 (없으면 0). TutorialStep이 이 값 이상이면 그 일을 마친 것이다
+    public static int StepAfter(string evt)
+    {
+        for (int i = 0; i < Steps.Length; i++)
+            if (Steps[i].Event == evt) return i + 1;
+        return 0;
+    }
 
     public static void Hint(int bit, string text)
     {

@@ -41,12 +41,12 @@ public static class Footsteps
         return arr[i];
     }
 
-    // 발밑 바닥. 웅덩이 → 물. 도시 씬이 아니면(방공호·터널) 돌. 도시에서는 발밑 물체의 이름·재질로:
+    // 발밑 바닥. 웅덩이 → 물. 탐험 씬이 아니면(방공호·터널: CityDirector가 없다) 돌. 탐험 씬(도시·102동)에서는 발밑 물체의 이름·재질로:
     // Ground(아스팔트) → 군화, Sidewalk·콘크리트 바닥 → 돌, 건물 Floor → 건물 안, 잔해·자갈 조각 → 자갈, 흙·재·모래 → 모래
     public static Surface SurfaceUnder(Vector3 pos, Transform self = null)
     {
         if (PuddleFx.Inside(pos)) return Surface.Water;
-        if (SceneManager.GetActiveScene().name != "City") return Surface.Stone;
+        if (CityDirector.Instance == null) return Surface.Stone;
         int n = Physics.RaycastNonAlloc(pos + Vector3.up * 0.3f, Vector3.down, hits, 1.3f, ~0, QueryTriggerInteraction.Ignore);
         Collider ground = null;
         float best = float.MaxValue;

@@ -185,6 +185,22 @@ public class GameState
         return true;
     }
 
+    // ---------- 탐험 목적지 ----------
+
+    // 목적지마다의 기록 (가 본 횟수, 보상 상자를 연 횟수, 열렸다고 알렸는지). 저장에 들어간다
+    public readonly List<DestinationRecord> DestinationLog = new List<DestinationRecord>();
+
+    // id 목적지의 기록. 없으면 새로 만들어 돌려준다 (create가 false면 null)
+    public DestinationRecord Record(string id, bool create = true)
+    {
+        foreach (var r in DestinationLog)
+            if (r.id == id) return r;
+        if (!create) return null;
+        var made = new DestinationRecord { id = id };
+        DestinationLog.Add(made);
+        return made;
+    }
+
     public GameState() : this(true) { }
 
     GameState(bool startingKit)
@@ -236,6 +252,7 @@ public class GameState
         foreach (var kv in Storage.Sorted()) d.storage.Add(new ItemCount { id = kv.Key, count = kv.Value });
         foreach (var kv in Truck.Sorted()) d.truck.Add(new ItemCount { id = kv.Key, count = kv.Value });
         foreach (var id in Hotbar) d.hotbar.Add(id ?? "");
+        foreach (var r in DestinationLog) d.destinations.Add(new DestinationRecord { id = r.id, visits = r.visits, clears = r.clears, announced = r.announced });
         return d;
     }
 
@@ -277,6 +294,11 @@ public class GameState
             }
         if (d.hotbar != null && d.hotbar.Count > 0)
             foreach (var kv in s.Carried.Sorted()) s.hotbarKnown.Add(kv.Key);
+        // 탐험 목적지 기록 (예전 저장에는 없다: 아무 데도 가 보지 않은 것으로 시작한다). id가 빈 줄과 겹치는 줄은 버린다
+        if (d.destinations != null)
+            foreach (var r in d.destinations)
+                if (r != null && !string.IsNullOrEmpty(r.id) && s.Record(r.id, false) == null)
+                    s.DestinationLog.Add(new DestinationRecord { id = r.id, visits = r.visits, clears = r.clears, announced = r.announced });
         if (s.Carried.Count("flashlight") == 0) s.FlashlightOut = false;
         s.SyncHotbar();
         return s;
@@ -308,6 +330,15 @@ public class ItemCount
     public int count;
 }
 
+// 탐험 목적지 한 곳의 기록 (저장 파일에 그대로 들어간다)
+[System.Serializable]
+public class DestinationRecord
+{
+    public string id;
+    public int visits, clears; // 가 본 횟수, 보상 상자를 연 횟수
+    public bool announced;     // 열렸다는 안내를 이미 보여 줬다
+}
+
 [System.Serializable]
 public class SaveData
 {
@@ -328,5 +359,6 @@ public class SaveData
     public List<ItemCount> truck = new List<ItemCount>();
     public List<ItemCount> carried = new List<ItemCount>();
     public List<ItemCount> storage = new List<ItemCount>();
+    public List<DestinationRecord> destinations = new List<DestinationRecord>(); // 탐험 목적지 기록 (옛 저장에는 없다: 빈 목록으로 읽힌다)
     public List<string> hotbar = new List<string>(); // 핫바 1~8번 칸 아이템 id ("" = 빈 칸)
 }

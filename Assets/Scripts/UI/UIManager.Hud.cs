@@ -384,11 +384,12 @@ public partial class UIManager
         if (!GameSettings.Tips) return;
         objectivePanel.anchoredPosition = new Vector2(24, weatherPanel != null && weatherPanel.gameObject.activeSelf ? -92f : -24f);
         bool shelter = GameManager.Instance != null && GameManager.Instance.InShelter;
-        string key = Tutorial.StepIndex + "|" + Tutorial.Line + "|" + shelter;
+        var here = Destinations.Current ?? Destinations.Default; // 지금 있는 탐험 목적지 (목적지가 아닌 씬에서는 도시 줄)
+        string key = Tutorial.StepIndex + "|" + Tutorial.Line + "|" + shelter + "|" + here.Id;
         if (key == objectiveShown) return;
         objectiveShown = key;
 
-        objArea.text = shelter ? "방공호" : "도시 탐색";
+        objArea.text = shelter ? "방공호" : here.AreaLabel;
         int idx = Tutorial.StepIndex, n = Tutorial.Steps.Length;
         string line = Tutorial.Line;
         float y = -78f;
@@ -453,7 +454,6 @@ public partial class UIManager
     RectTransform compass, compassMark;
     Image compassIcon;
     UnityEngine.UI.Text compassText;
-    CityExit cityExit;
 
     void BuildCompass(Transform h)
     {
@@ -491,10 +491,10 @@ public partial class UIManager
         bool show = GameSettings.Tips && CityDirector.Instance != null && Camera.main != null;
         if (compass.gameObject.activeSelf != show) compass.gameObject.SetActive(show);
         if (!show) return;
-        if (cityExit == null) cityExit = FindFirstObjectByType<CityExit>();
-        if (cityExit == null) return;
+        var exit = CityDirector.Instance.ExitPoint; // 돌아갈 곳: 해치, 해치가 없는 맵은 씬이 정해 둔 자리
+        if (exit == null) return;
         var cam = Camera.main.transform;
-        var to = cityExit.transform.position - cam.position;
+        var to = exit.position - cam.position;
         float dist = to.magnitude;
         to.y = 0;
         var fwd = cam.forward;
@@ -545,12 +545,13 @@ public partial class UIManager
         var city = CityDirector.Instance;
         float now = Time.unscaledTime;
         Color frame = Color.clear; // 유리판 테두리는 경고 때만 붉게 켜진다
+        string exitTo = (Destinations.Current ?? Destinations.Default).ExitTo; // 돌아갈 곳을 가리키는 말 ("해치로" / "골목으로")
         if (city != null && city.IsRedNight)
         {
             // 붉은 밤: 지난 시간을 세고 계속 붉게 고동친다
             float pulse = 0.5f + 0.5f * Mathf.Sin(now * 5f);
             int t = (int)city.RedNightElapsed;
-            SetTimeTexts("moon", "시간 초과", $"+{t / 60}:{t % 60:00}", $"체력 -{GameBalance.Data.redNightDamage:0} / {GameBalance.Data.redNightInterval:0}초 · 해치로 돌아가자!");
+            SetTimeTexts("moon", "시간 초과", $"+{t / 60}:{t % 60:00}", $"체력 -{GameBalance.Data.redNightDamage:0} / {GameBalance.Data.redNightInterval:0}초 · {exitTo} 돌아가자!");
             timeLabel.color = timeValue.color = Color.Lerp(Alert, new Color(1f, 0.6f, 0.5f), pulse * 0.5f);
             timeIcon.color = Alert;
             for (int i = 0; i < timeSegs.Length; i++)
@@ -563,7 +564,7 @@ public partial class UIManager
             int t = Mathf.CeilToInt(left);
             float ratio = left / total;
             bool hurry = left <= 60;
-            if (hurry) Tutorial.Hint(Tutorial.HintRedNight, "남은 시간이 1분이다. 화면 위 나침반의 집 표식을 따라 해치로 돌아가자.");
+            if (hurry) Tutorial.Hint(Tutorial.HintRedNight, $"남은 시간이 1분이다. 화면 위 나침반의 집 표식을 따라 {exitTo} 돌아가자.");
             float pulse = hurry ? 0.5f + 0.5f * Mathf.Sin(now * 6f) : 0;
             int danger = Mathf.Clamp(Mathf.FloorToInt(city.Danger * DangerNames.Length), 0, DangerNames.Length - 1);
             SetTimeTexts("hourglass", "남은 시간", $"{t / 60:00}:{t % 60:00}", $"위험도 {DangerNames[danger]}   ·   {s.Turn}일차 / {GameState.MaxTurns}일");
