@@ -5,6 +5,11 @@ using UnityEngine;
 public class ItemSpawnPoint : MonoBehaviour
 {
     public bool outdoor;
+    // 아래 넷은 자리마다 나올 것을 정해 둘 때 쓴다. 기본값이면 도시와 똑같이 움직인다
+    public bool guaranteed;            // 확률을 굴리지 않고 반드시 놓는다
+    public string[] items;             // 비어 있지 않으면 이 가운데 하나 (같은 id를 여러 번 적으면 그만큼 잘 나온다). 모르는 id면 RollLoot
+    public int amount;                 // 0 = 예전 규칙 (천·막대기만 가끔 2개)
+    [Range(0, 1)] public float chance; // 0 = GameBalance.itemSpawnChance
 
     void OnDrawGizmos()
     {

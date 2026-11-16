@@ -54,6 +54,7 @@ public static partial class GameSceneBuilder
             new EditorBuildSettingsScene(SceneDir + "/Shelter.unity", true),
             new EditorBuildSettingsScene(SceneDir + "/City.unity", true),
         };
+        AddApt102ToBuildList(); // 보스 건물 씬은 따로 생성한다. 목록에서만 빠지지 않게 다시 넣는다
         AssetDatabase.SaveAssets();
         EditorSceneManager.OpenScene(SceneDir + "/MainMenu.unity");
         Debug.Log("[GameSceneBuilder] MainMenu / Cutscene / Shelter / City 씬 생성 완료");

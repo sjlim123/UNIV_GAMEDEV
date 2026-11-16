@@ -23,3 +23,4 @@
 *.ttf binary
 *.otf binary
 Assets/Generated/*Meshes.asset binary
+Assets/Generated/*NavMesh.asset binary

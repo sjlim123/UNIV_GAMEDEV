@@ -242,10 +242,11 @@ public partial class UIManager : MonoBehaviour
         loadingRoot.SetActive(false);
     }
 
-    public void ShowLoading(string title)
+    // tag: 제목 아래 작은 영문 줄. 넘기지 않으면 제목을 보고 고른다 (새 목적지는 자기 줄을 넘긴다)
+    public void ShowLoading(string title, string tag = null)
     {
         loadingTitle.text = title;
-        loadingTag.text = title.Contains("방공호") ? "RETURNING  ·  SHELTER" : title.Contains("도시") ? "DEPARTING  ·  CITY" : title.Contains("메뉴") ? "RETURNING  ·  MAIN MENU" : "LOADING";
+        loadingTag.text = tag ?? (title.Contains("방공호") ? "RETURNING  ·  SHELTER" : title.Contains("도시") ? "DEPARTING  ·  CITY" : title.Contains("메뉴") ? "RETURNING  ·  MAIN MENU" : "LOADING");
         loadingRoot.transform.SetAsLastSibling(); // 검은 막보다 위에 (창·컷씬이 열릴 때마다 막이 맨 위로 가므로 보일 때마다 다시 올린다)
         loadingTip.text = LoadingTips[UnityEngine.Random.Range(0, LoadingTips.Length)];
         loadingT = 0;

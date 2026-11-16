@@ -269,9 +269,20 @@ public class GameManager : MonoBehaviour
         StartCoroutine(LoadRoutine(MenuScene, false));
     }
 
-    public void StartExpedition()
+    public void StartExpedition() => StartExpedition(null);
+
+    // 목적지를 받아 탐험을 떠난다 (null이면 도시). 잠긴 목적지나 빌드 목록에 없는 씬이면 하루를 쓰지 않고 그만둔다
+    public void StartExpedition(Destination dest)
     {
         if (IsTransitioning || IsGameOver) return;
+        dest = dest ?? Destinations.Default;
+        if (!Destinations.Unlocked(dest, State)) return;
+        if (!Destinations.InBuild(dest))
+        {
+            Debug.LogError($"[GameManager] {dest.Scene} 씬이 빌드 목록에 없어 출발을 취소합니다.");
+            UI.ShowMessage("그쪽 길은 지금 막혀 있다.", 3f);
+            return;
+        }
         expeditionStartItems = State.Carried.Snapshot();
         expeditionStartTurn = State.Turn;
         expeditionStartHealth = State.Health;
@@ -280,18 +291,19 @@ public class GameManager : MonoBehaviour
         Tutorial.Notify("expedition");
         // 출발 직후 상태를 저장한다. 탐험 도중 게임을 끄면 이어하기 때 가져간 물건을 잃고 방공호에서 다시 시작한다
         State.InExpedition = true;
+        State.Record(dest.Id).visits++;
         SaveGame();
-        StartCoroutine(DepartRoutine());
+        StartCoroutine(DepartRoutine(dest));
     }
 
-    // 철문을 손으로 열고 나가는 1인칭 연출 뒤에 도시 씬을 연다
-    IEnumerator DepartRoutine()
+    // 철문을 손으로 열고 나가는 1인칭 연출 뒤에 목적지 씬을 연다
+    IEnumerator DepartRoutine(Destination dest)
     {
         IsTransitioning = true;
         UI.ClosePanel();
         UI.SetPaused(false);
         yield return ShelterDeparture.Play();
-        yield return LoadRoutine(CityScene, false, true);
+        yield return LoadRoutine(dest.Scene, false, true, dest.LoadingTitle, dest.LoadingTag);
     }
 
     // 탐험 중 쓰러뜨린 적 (탐험 일지에 적는다)
@@ -320,6 +332,7 @@ public class GameManager : MonoBehaviour
         UI.ClosePanel();
         UI.SetPaused(false);
         yield return HatchArrival.Play();
+        if (FindAnyObjectByType<CityExit>() == null) yield return ExpeditionExit.Leave(); // 해치가 없는 맵: 발소리 뒤 어두워진다
         yield return LoadRoutine(ShelterScene, true, true);
     }
 
@@ -508,8 +521,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때). loadingTitle: 로딩 화면 제목 (없으면 씬에 맞게)
-    IEnumerator LoadRoutine(string scene, bool showResult, bool door = false, string loadingTitle = null)
+    // door: 방공호를 나서거나 돌아올 때 문이 덜컥 열리고(떠날 때) 덜컥 닫힌다(도착했을 때). loadingTitle: 로딩 화면 제목 (없으면 씬에 맞게). loadingTag: 그 아래 영문 줄 (없으면 제목에 맞게)
+    IEnumerator LoadRoutine(string scene, bool showResult, bool door = false, string loadingTitle = null, string loadingTag = null)
     {
         IsTransitioning = true;
         UI.ClosePanel();
@@ -517,9 +530,16 @@ public class GameManager : MonoBehaviour
         if (door) DoorClunk(1f);
         yield return UI.Fade(1, 0.7f);
         // 검은 화면 대신 로딩 화면 (적어도 1.2초는 보여 준다)
-        UI.ShowLoading(loadingTitle ?? (scene == ShelterScene ? "방공호로 돌아가는 중" : scene == CityScene ? "도시로 나가는 중" : "메인 메뉴로 나가는 중"));
+        UI.ShowLoading(loadingTitle ?? (scene == ShelterScene ? "방공호로 돌아가는 중" : scene == CityScene ? "도시로 나가는 중" : "메인 메뉴로 나가는 중"), loadingTag);
         float shownAt = Time.unscaledTime;
         var op = SceneManager.LoadSceneAsync(scene);
+        if (op == null)
+        {
+            // 빌드 목록에 없는 씬: 로딩 화면에 갇히지 않게 방공호로 되돌린다 (탐험 표시는 방공호 도착 때 지워진다)
+            Debug.LogError($"[GameManager] {scene} 씬을 열 수 없습니다. 방공호로 돌아갑니다.");
+            if (scene != ShelterScene) op = SceneManager.LoadSceneAsync(ShelterScene);
+            if (op == null) { UI.HideLoading(); IsTransitioning = false; yield return UI.Fade(0, 1f); yield break; }
+        }
         while (!op.isDone) yield return null;
         yield return null;
         while (Time.unscaledTime - shownAt < 1.2f) yield return null;

@@ -609,7 +609,7 @@ public partial class UIManager
         // 지금 어디서 몇 턴째인지 제목 아래에 보여 주고, 멈춘 화면을 한 번 찍어 흐리게 깐다
         var gm = GameManager.Instance;
         var s = gm.State;
-        pauseInfo.text = s == null ? "" : $"{s.Turn}일차 / {GameState.MaxTurns}일   ·   {(gm.InShelter ? "방공호" : "도시 탐험 중")}";
+        pauseInfo.text = s == null ? "" : $"{s.Turn}일차 / {GameState.MaxTurns}일   ·   {(gm.InShelter ? "방공호" : (Destinations.Current ?? Destinations.Default).PauseLabel)}";
         UpdateTipSwitch(true);
         RefreshGlass();
     }

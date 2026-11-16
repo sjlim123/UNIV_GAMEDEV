@@ -23,6 +23,40 @@ public class CityDirector : MonoBehaviour
     [Tooltip("2층 좀비 자리 중 탐험 시작 때 좀비를 세워 둘 비율")]
     [Range(0, 1)] public float upstairsFill = 0.25f;
 
+    public enum WeatherMode { Random, Clear, Fog, Rain, None } // None = 날씨를 만들지 않는다 (실내 위주 맵)
+
+    [Header("씬별 설정 (기본값이면 도시와 똑같다)")]
+    public WeatherMode weatherMode = WeatherMode.Random;
+    public float safeRadius = 0f;      // 0 이하 = GameBalance.safeRadius
+    public int startZombies = -1;      // 음수 = GameBalance.startZombies
+    public int maxZombies = -1;        // 음수 = GameBalance.maxZombies
+    public int dogCount = -1;          // 음수 = GameBalance.dogCount
+    public Transform exitPoint;        // 돌아갈 곳. 비우면 이 씬의 해치(CityExit)
+
+    // 돌아갈 곳 (HUD 나침반이 가리킨다). exitPoint가 없으면 씬의 해치를 한 번 찾아 기억해 둔다. 둘 다 없으면 null
+    Transform cachedExit;
+    public Transform ExitPoint
+    {
+        get
+        {
+            if (exitPoint != null) return exitPoint;
+            if (cachedExit == null)
+            {
+                var hatch = FindAnyObjectByType<CityExit>();
+                if (hatch != null) cachedExit = hatch.transform;
+            }
+            return cachedExit;
+        }
+    }
+
+    // 씬이 정해 둔 값이 있으면 그 값, 비워 두었으면 GameBalance 에셋의 값
+    float SafeRadius => safeRadius > 0 ? safeRadius : balance.safeRadius;
+    int StartZombies => startZombies >= 0 ? startZombies : balance.startZombies;
+    int MaxZombies => maxZombies >= 0 ? maxZombies : balance.maxZombies;
+    int DogCount => dogCount >= 0 ? dogCount : balance.dogCount;
+
+    Destination dest; // 이 씬의 목적지 줄 (안내문, 늦게 서는 지킴이의 날짜). 표에 없는 씬이면 도시 줄을 쓴다
+
     GameBalance balance;
     float timeLimit;
 
@@ -55,7 +89,14 @@ public class CityDirector : MonoBehaviour
     void Start()
     {
         balance = GameBalance.Data;
-        Weather.Begin(); // 이번 탐험의 날씨 (붉은 밤보다 먼저 적용된다)
+        dest = Destinations.Current ?? Destinations.Default;
+        if (weatherMode == WeatherMode.Random) Weather.Begin(); // 이번 탐험의 날씨 (붉은 밤보다 먼저 적용된다)
+        else if (weatherMode != WeatherMode.None)
+        {
+            // 씬이 날씨를 정해 두었다 (None이면 날씨를 아예 만들지 않는다)
+            Weather.Force(weatherMode == WeatherMode.Fog ? WeatherKind.Fog : weatherMode == WeatherMode.Rain ? WeatherKind.Rain : WeatherKind.Clear);
+            Weather.Begin();
+        }
         timeLimit = balance.expeditionSeconds;
         TimeLeft = timeLimit;
         zombiePoints = FindObjectsByType<ZombieSpawnPoint>(FindObjectsSortMode.None);
@@ -63,15 +104,18 @@ public class CityDirector : MonoBehaviour
 
         foreach (var p in FindObjectsByType<ItemSpawnPoint>(FindObjectsSortMode.None))
         {
-            if (Random.value > balance.itemSpawnChance) continue;
-            string id = ItemDatabase.RollLoot(p.outdoor);
-            int n = (id == "cloth" || id == "stick") && Random.value < 0.4f ? 2 : 1;
+            if (!p.guaranteed && Random.value > (p.chance > 0 ? p.chance : balance.itemSpawnChance)) continue;
+            // 자리가 나올 것을 정해 두었으면 그 가운데 하나 (모르는 id면 예전처럼 뽑는다)
+            bool listed = p.items != null && p.items.Length > 0;
+            string id = listed ? p.items[Random.Range(0, p.items.Length)] : ItemDatabase.RollLoot(p.outdoor);
+            if (listed && (string.IsNullOrEmpty(id) || !ItemDatabase.Items.ContainsKey(id))) id = ItemDatabase.RollLoot(p.outdoor);
+            int n = p.amount > 0 ? p.amount : (id == "cloth" || id == "stick") && Random.value < 0.4f ? 2 : 1;
             PickupItem.Spawn(id, n, p.transform.position);
         }
 
-        for (int i = 0; i < balance.startZombies; i++) SpawnZombie();
+        for (int i = 0; i < StartZombies; i++) SpawnZombie();
         SpawnUpstairsZombies(turn);
-        for (int i = 0; i < balance.dogCount; i++) Spawn(dogPrefab);
+        for (int i = 0; i < DogCount; i++) Spawn(dogPrefab);
 
         // 약탈자: raider.fromTurn 턴부터, 탐험마다 raiderChance 확률로 1~2명
         if (turn >= balance.raider.fromTurn && Random.value < balance.raiderChance)
@@ -94,7 +138,7 @@ public class CityDirector : MonoBehaviour
 
         wind = MakeLoop(ProceduralAudio.Wind(), 0.35f);
         heartbeat = MakeLoop(ProceduralAudio.Heartbeat(), 0f);
-        GameManager.Instance.UI.ShowMessage("폐허가 된 도시. 붉은 등이 켜진 해치가 돌아갈 곳이다.", 5f);
+        GameManager.Instance.UI.ShowMessage(dest.Arrival, 5f);
     }
 
     void StartRedNight(GameManager gm)
@@ -110,7 +154,7 @@ public class CityDirector : MonoBehaviour
         foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
             if (l.type == LightType.Directional) { sunLights.Add(l); sunColors.Add(l.color); }
         ProceduralAudio.Play2D(ProceduralAudio.Siren(), 0.5f, 0.8f);
-        gm.UI.ShowMessage("붉은 밤이 왔다! 체력이 계속 줄어든다. 어서 해치로 돌아가자!", 5f);
+        gm.UI.ShowMessage($"붉은 밤이 왔다! 체력이 계속 줄어든다. 어서 {dest.ExitTo} 돌아가자!", 5f);
         heartbeatVolume = 0.7f;
     }
 
@@ -166,7 +210,7 @@ public class CityDirector : MonoBehaviour
         {
             warned = true;
             ProceduralAudio.Play2D(ProceduralAudio.Siren(), 0.35f);
-            gm.UI.ShowMessage("1분 남았다. 서둘러 해치로 돌아가야 한다!", 4f);
+            gm.UI.ShowMessage($"1분 남았다. 서둘러 {dest.ExitTo} 돌아가야 한다!", 4f);
         }
         if (TimeLeft <= 0 && !ended)
         {
@@ -194,7 +238,7 @@ public class CityDirector : MonoBehaviour
             spawnTimer = Mathf.Lerp(balance.zombieSpawnIntervalStart, balance.zombieSpawnIntervalEnd, Danger);
             zombies.RemoveAll(z => z == null || z.IsDead);
             others.RemoveAll(z => z == null || z.IsDead);
-            if (zombies.Count < Mathf.RoundToInt(Mathf.Lerp(balance.startZombies, balance.maxZombies, Danger))) SpawnZombie();
+            if (zombies.Count < Mathf.RoundToInt(Mathf.Lerp(StartZombies, MaxZombies, Danger))) SpawnZombie();
         }
 
         // 쫓아오는 적이 가까울수록 심장 소리가 커진다
@@ -296,17 +340,38 @@ public class CityDirector : MonoBehaviour
         var player = PlayerController.Instance;
         foreach (var point in points)
         {
-            if (Random.value >= upstairsFill) continue;
+            if (point.tier > 0 && turn < dest.LateTierTurn) continue; // 늦게 서는 지킴이 (도시에는 tier 0뿐이라 그대로다)
+            // 반드시 서는 자리(guaranteed)는 비율도 안전 거리도 따지지 않고, 자리가 보는 쪽을 보고 선다
+            if (!point.guaranteed && Random.value >= upstairsFill) continue;
             var pos = point.transform.position;
-            if (player != null && Vector3.Distance(pos, player.transform.position) < balance.safeRadius * 0.5f) continue;
+            if (!point.guaranteed && player != null && Vector3.Distance(pos, player.transform.position) < SafeRadius * 0.5f) continue;
             // 반경을 작게 잡아야 아래층 바닥에 붙지 않는다
             if (!NavMesh.SamplePosition(pos, out var hit, 1f, NavMesh.AllAreas)) continue;
-            var go = Instantiate(zombiePrefab, hit.position, Quaternion.Euler(0, Random.Range(0, 360f), 0));
+            var rot = point.guaranteed ? Quaternion.Euler(0, point.transform.eulerAngles.y, 0) : Quaternion.Euler(0, Random.Range(0, 360f), 0);
+            if (point.kind == SpawnKind.Dog)
+            {
+                if (dogPrefab != null) Instantiate(dogPrefab, hit.position, rot);
+                continue;
+            }
+            var go = Instantiate(zombiePrefab, hit.position, rot);
             var z = go.GetComponent<Zombie>();
             if (z == null) continue;
-            z.Configure(PickKind(turn));
+            z.Configure(point.kind == SpawnKind.Any ? PickKind(turn) : Forced(point.kind));
             z.SetGuardPoint(hit.position);
             others.Add(z);
+        }
+    }
+
+    // 자리가 정해 둔 종류 (Any·Dog는 여기까지 오지 않는다)
+    static ZombieKind Forced(SpawnKind kind)
+    {
+        switch (kind)
+        {
+            case SpawnKind.Leather: return ZombieKind.Leather;
+            case SpawnKind.Ranged: return ZombieKind.Ranged;
+            case SpawnKind.Heavy: return ZombieKind.Heavy;
+            case SpawnKind.Raider: return ZombieKind.Raider;
+            default: return ZombieKind.Normal;
         }
     }
 
@@ -314,13 +379,16 @@ public class CityDirector : MonoBehaviour
     {
         if (prefab == null || zombiePoints.Length == 0) return null;
         var player = PlayerController.Instance;
-        for (int attempt = 0; attempt < 12; attempt++)
+        // 도시가 아닌 맵은 자리 대부분이 지킴이 몫이라 (102동은 21곳 중 15곳) 열두 번으로는 바깥 자리를 한 번도 못 뽑을 때가 있다.
+        // 그런 맵에서만 더 여러 번 뽑는다. 도시는 열두 번 그대로다 (난수를 뽑는 횟수가 달라지면 안 된다)
+        int tries = dest != null && dest != Destinations.City ? 48 : 12;
+        for (int attempt = 0; attempt < tries; attempt++)
         {
             var point = zombiePoints[Random.Range(0, zombiePoints.Length)];
             // 2층 자리는 지킴이 좀비 몫이다 (거리 좀비·들개는 바깥에서 나온다)
             if (point.upstairs) continue;
             var p = point.transform.position;
-            if (player != null && Vector3.Distance(p, player.transform.position) < balance.safeRadius) continue;
+            if (player != null && Vector3.Distance(p, player.transform.position) < SafeRadius) continue;
             if (!NavMesh.SamplePosition(p, out var hit, 3f, NavMesh.AllAreas)) continue;
             return Instantiate(prefab, hit.position, Quaternion.Euler(0, Random.Range(0, 360f), 0));
         }
