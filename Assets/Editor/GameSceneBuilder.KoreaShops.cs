@@ -40,6 +40,13 @@ public static partial class GameSceneBuilder
         new KShop("삼일만물상", "뭐든지 삽니다 · 팝니다", new Color(0.55f, 0.42f, 0.14f), new Color(0.98f, 0.92f, 0.7f), 0), // 잡상인 건물 (마지막 칸, 무작위 선택에서는 뺀다)
     };
     const int KTraderShop = 16;
+    // 켜 둔 간판(M_SignLit_*) 가운데 글자가 실제로 빛나는 상호 번호: 사용자가 고른 26.0.2.1 배포판 모습 (11-06 결정, 11-16 재확인, 커밋 231df5b).
+    // 1 삼일약국 · 3 삼일커피 · 4 삼일학원 · 10 삼일미용실 · 13 31은행. KShops 순서를 바꾸면 이 번호도 함께 옮긴다. 난수와 무관한 상수다
+    static readonly int[] KGlowingSigns = { 1, 3, 4, 10, 13 };
+    // 빛나는 간판 재질의 전역 조명 표시(m_LightmapFlags). None(0)이면 커밋 231df5b와 바이트까지 같다. URP는 재질을 불러오거나 들여올 때
+    // 이 표시가 0이면 _EMISSION을 끈다 (BaseShaderGUI.SetMaterialKeywords). RealtimeEmissive(1)로 바꾸면 그 다섯 재질이 어디서 불려도
+    // 켜진 채로 남는다 — 재질 파일 다섯 개가 한 번 바뀌므로 사용자가 정한 뒤에만 바꾼다 (도시 씬만 생성이 어긋난 파일을 되돌려 저장한다)
+    const MaterialGlobalIlluminationFlags KGlowingSignGi = MaterialGlobalIlluminationFlags.None;
 
     // 돌출 간판 (세로): 글자와 층
     static readonly string[] KSideSigns = { "학원", "노래방", "PC방", "치과", "당구장", "헬스" };
@@ -81,11 +88,20 @@ public static partial class GameSceneBuilder
             var tex = KSaveTex("sign_" + i, signPx[i], 1024, 256, KTexKind.Color, false);
             M["sign" + i] = KLitMat("M_Sign_" + i, tex, null, Color.white, 0.3f, 0f);
             var lit = KLitMat("M_SignLit_" + i, tex, null, Color.white, 0.3f, 0f);
-            lit.EnableKeyword("_EMISSION");
-            lit.SetTexture("_EmissionMap", tex);
-            lit.SetColor("_EmissionColor", new Color(1.1f, 1.05f, 0.95f));
-            lit.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-            EditorUtility.SetDirty(lit);
+            bool glow = System.Array.IndexOf(KGlowingSigns, i) >= 0; // 배포판 모습: KGlowingSigns 번호만 글자가 빛난다
+            var gi = glow ? KGlowingSignGi : MaterialGlobalIlluminationFlags.None;
+            if (!KKeep(lit))
+            {
+                // 새로 만들 때·게임 씬 전체 생성·컷씬 대체 경로: 나머지는 발광 그림·색은 두고 키워드만 끈다 (파일이 231df5b와 바이트까지 같게)
+                if (glow) lit.EnableKeyword("_EMISSION");
+                else lit.DisableKeyword("_EMISSION");
+                lit.SetTexture("_EmissionMap", tex);
+                lit.SetColor("_EmissionColor", new Color(1.1f, 1.05f, 0.95f));
+                lit.globalIlluminationFlags = gi;
+                EditorUtility.SetDirty(lit);
+            }
+            else if (lit.IsKeywordEnabled("_EMISSION") != glow || lit.globalIlluminationFlags != gi)
+                KRepairSignGlow(lit, glow, gi); // 도시 씬만 생성: 있는 파일이 배포판 모습과 어긋날 때만 그 둘을 되돌려 저장한다 (지금 파일은 모두 맞다)
             M["signLit" + i] = lit;
         }
         for (int i = 0; i < KSideSigns.Length; i++)
@@ -120,7 +136,7 @@ public static partial class GameSceneBuilder
         if (shop.logo == 1)
         {
             KFillRect(px, w, h, 50, 48, 210, 208, new Color(0.96f, 0.96f, 0.94f));
-            KText(px, w, h, big, "31", 128, 130f, 128f, shop.bg * 0.9f, 0.5f);
+            KText(px, w, h, big, "31", 128, 130f, 128f, shop.bg * 0.9f, 0.5f, KTextMaxRequest);
             textX = 250f;
         }
         else if (shop.logo == 2)
@@ -143,7 +159,7 @@ public static partial class GameSceneBuilder
         }
         float align = shop.logo == 0 ? 0.5f : 0f;
         float tx = shop.logo == 0 ? w * 0.5f : textX;
-        KText(px, w, h, big, shop.name, shop.name.Length > 5 ? 112 : 128, tx, 150f, shop.fg, align);
+        KText(px, w, h, big, shop.name, shop.name.Length > 5 ? 112 : 128, tx, 150f, shop.fg, align, KTextMaxRequest);
         KText(px, w, h, small, shop.sub, 32, tx, 54f, Color.Lerp(shop.fg, shop.bg, 0.25f), align);
         KWear(px, w, h, r, 0.55f);
         var res = new Color32[w * h];
@@ -171,7 +187,7 @@ public static partial class GameSceneBuilder
         KText(px, w, h, big, (2 + index % 3) + "F", 64, w * 0.5f, h - 90f, fg, 0.5f);
         float top = h - 200f, step = (h - 300f) / Mathf.Max(1, text.Length);
         for (int k = 0; k < text.Length; k++)
-            KText(px, w, h, big, text[k].ToString(), 150, w * 0.5f, top - k * step - step * 0.25f, fg, 0.5f);
+            KText(px, w, h, big, text[k].ToString(), 150, w * 0.5f, top - k * step - step * 0.25f, fg, 0.5f, KTextMaxRequest);
         KWear(px, w, h, r, 0.5f);
         var res = new Color32[w * h];
         for (int k = 0; k < res.Length; k++) { px[k].a = 1f; res[k] = KC(px[k]); }
@@ -195,7 +211,7 @@ public static partial class GameSceneBuilder
                 c.a = 1f;
                 px[j * w + i] = c;
             }
-        KText(px, w, h, big, lines[0], 96, w * 0.5f, h * 0.62f, fg, 0.5f);
+        KText(px, w, h, big, lines[0], 96, w * 0.5f, h * 0.62f, fg, 0.5f, KTextMaxRequest);
         KText(px, w, h, small, lines[1], 32, w * 0.5f, h * 0.2f, Color.Lerp(fg, bg, 0.2f), 0.5f);
         KWear(px, w, h, r, 0.4f);
         // 찢김: 오른쪽 아래가 너덜너덜, 가운데 구멍 하나, 가장자리 들쭉날쭉
@@ -378,7 +394,9 @@ public static partial class GameSceneBuilder
                     Box("Torn", aw, new Vector3(x, -0.5f, outSign * 0.3f), new Vector3(sw - 0.04f, 0.015f, 0.9f), cloth, 1f, false, new Vector3(outSign * 70f, 0, KF(r, -6f, 6f)));
                     continue;
                 }
-                Box("Cloth", aw, new Vector3(x, -0.17f, outSign * 0.52f), new Vector3(sw - 0.04f, 0.015f, 1.1f), cloth, 1f, false, new Vector3(outSign * -18f, 0, 0));
+                // 천은 틀(벽에서 0 → 1.05m 밖에서 -0.35)을 따라 바깥으로 내려간다: Euler(a)는 로컬 +z를 (0, -sin a, cos a)로 보내므로 a = outSign·18
+                // (예전 -18은 바깥 끝이 들려 틀과 X자로 엇갈렸다). 콜라이더 없음, 난수 없음
+                Box("Cloth", aw, new Vector3(x, -0.17f, outSign * 0.52f), new Vector3(sw - 0.04f, 0.015f, 1.1f), cloth, 1f, false, new Vector3(outSign * 18f, 0, 0));
             }
         }
     }
@@ -452,7 +470,12 @@ public static partial class GameSceneBuilder
         float mid = (a0 + a1) / 2f;
         var outN = KSideOut(side);
         var center = FacePoint(side, mid, (y0 + y1) / 2f, X0, Z0, W, D) + outN * 0.12f;
-        float yaw = side == 0 ? 0f : side == 1 ? 180f : side == 2 ? -90f : 90f; // 로컬 -z가 바깥을 보게 (면 쿼드가 -z를 본다)
+        // 로컬 -z(얼굴 쿼드가 보는 쪽)가 바깥 outN을 보게: Euler(0, t)는 -z를 (-sin t, 0, -cos t)로 보낸다 → 남 0, 북 180, 서 +90, 동 -90
+        // (City.cs의 선반 backYaw와 같은 규칙. 예전 값은 서·동이 거꾸로라 그 벽의 간판 얼굴·걸이·등·스파크가 모두 벽 쪽을 봤다)
+        float yaw = side == 0 ? 0f : side == 1 ? 180f : side == 2 ? 90f : -90f;
+        // 떨어진 간판(kind 2)은 서·동에서도 예전 방향 그대로 둔다: 얼굴이 땅을 보고 누워 방향이 보이지 않는데, 몸통 판정이
+        // 내비메시 굽기와 잔해·아이템·시체 배치의 물리 검사에 들어간다 (돌리면 판정 상자의 높낮이가 뒤집힌다)
+        if (kind == 2 && side >= 2) yaw = -yaw;
         var sg = Group("Sign", g, center, yaw);
         float h = y1 - y0, dep = 0.22f;
         var mat = lit ? M["signLit" + shop] : M["sign" + shop];
@@ -475,8 +498,9 @@ public static partial class GameSceneBuilder
         }
         else if (kind == 1)
         {
-            // 한쪽 걸이가 빠져 기운 간판
-            sg.localRotation *= Quaternion.Euler(0, 0, KF(r, 7f, 14f) * (r.NextDouble() < 0.5 ? 1f : -1f));
+            // 한쪽 걸이가 빠져 기운 간판. 서·동은 위에서 방향을 180° 고쳤으므로 기울기 부호를 뒤집어 몸통이 예전 자리 그대로(같은 끝이 처지게) 남는다:
+            // Ry(yaw+180)·Rz(-φ) = Ry(yaw)·Rz(φ)·Ry(180) — 얼굴·걸이·등·스파크만 길 쪽으로 돈다. 뽑는 수와 순서는 예전과 같다 (KF, NextDouble)
+            sg.localRotation *= Quaternion.Euler(0, 0, KF(r, 7f, 14f) * (r.NextDouble() < 0.5 ? 1f : -1f) * (side >= 2 ? -1f : 1f));
             sg.localPosition += Vector3.up * -0.1f;
         }
         Box("Body", sg, new Vector3(0, 0, 0), new Vector3(len - 0.2f, h, dep), M["tire"], 1f, kind == 2);
@@ -575,7 +599,21 @@ public static partial class GameSceneBuilder
             KRod(bits, new Vector3(x, -0.29f, outSign * 0.14f), new Vector3(x, -0.6f, -outSign * 0.16f), 0.015f);
         }
         KRod(bits, new Vector3(0.3f, 0.1f, -outSign * 0.16f), new Vector3(0.3f, 0.9f, -outSign * 0.17f), 0.02f);
-        CombineInto(g, "Bracket", bits, M["steelGrey"]);
+        // 브래킷은 실외기마다 모양이 같다 (위 조각은 모두 상수): 묶음에 한 번만 넣고 같은 메시를 같이 쓴다 (예전에는 실외기마다 62정점 메시를 새로 만들었다).
+        // 이름·자리·재질·정적 표시·그림자는 CombineInto와 같고 메시 이름만 다르다. 난수를 쓰지 않는다
+        if (!meshCache.TryGetValue("ac_bracket", out var bracket))
+        {
+            bracket = new Mesh { name = "ac_bracket" };
+            bracket.CombineMeshes(bits.ToArray(), true, true);
+            bracket.RecalculateBounds();
+            AssetDatabase.AddObjectToAsset(bracket, meshContainer);
+            meshCache["ac_bracket"] = bracket;
+        }
+        var bgo = new GameObject("Bracket");
+        bgo.transform.SetParent(g, false);
+        bgo.AddComponent<MeshFilter>().sharedMesh = bracket;
+        bgo.AddComponent<MeshRenderer>().sharedMaterial = M["steelGrey"];
+        GameObjectUtility.SetStaticEditorFlags(bgo, StaticEditorFlags.BatchingStatic);
     }
 
     // 위층 겉모습 창문 (들어갈 수 없는 층): 흰 틀 + 어두운 유리, 실외기 더러, 깨진 창 조금. FacadeWindows와 같은 자리·같은 수

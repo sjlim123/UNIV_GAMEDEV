@@ -134,7 +134,7 @@ public static partial class GameSceneBuilder
         M["metal"] = TexMat("M_RustyMetal", "rusty_metal_02", new Color(0.8f, 0.76f, 0.72f), 0.35f, 0.4f);
         // 밝은 강철판 (제작대): 녹슨 쇠의 요철(노멀)만 빌리고 색은 밝은 회색으로. 금속성을 낮게 둬야 어두운 방에서도 전구 빛을 받아 보인다
         M["steel"] = TexMat("M_Steel", "rusty_metal_02", new Color(0.45f, 0.45f, 0.44f), 0.5f, 0.3f);
-        SteelGrime(M["steel"]); // 색과 금속성은 때 묻은 그림으로 바꿔 끼운다 (GameSceneBuilder.Grime.cs). 요철(노멀)은 녹슨 쇠 것을 그대로 쓴다
+        if (!KKeep(M["steel"])) SteelGrime(M["steel"]); // 도시 씬만 생성: 있는 M_Steel은 그대로 둔다 (방공호 그림도 다시 쓰지 않는다). 색과 금속성은 때 묻은 그림으로 바꿔 끼운다 (GameSceneBuilder.Grime.cs). 요철(노멀)은 녹슨 쇠 것을 그대로 쓴다
         M["brick"] = TexMat("M_Brick", "brick_wall_10", new Color(0.62f, 0.56f, 0.52f));
         M["floor"] = TexMat("M_ConcreteFloor", "concrete_floor_worn_001", new Color(0.68f, 0.68f, 0.66f), 0.2f);
         M["wood"] = TexMat("M_WoodPlanks", "wood_planks_dirt", new Color(0.66f, 0.6f, 0.55f));
@@ -177,6 +177,7 @@ public static partial class GameSceneBuilder
     static Material PolyMat(string id, float smoothness, float metallic)
     {
         var m = LoadOrCreate("M_PH_" + id, Shader.Find("Universal Render Pipeline/Lit"));
+        if (KKeep(m)) return m; // 도시 씬만 생성: 있는 재질은 그대로 (도시 0.35·메뉴/방공호 0.45가 같은 파일을 번갈아 덮어썼다)
         var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>($"{PolyModelDir}/{id}/textures/{id}_diff_1k.jpg");
         var normal = AssetDatabase.LoadAssetAtPath<Texture2D>($"{PolyModelDir}/{id}/textures/{id}_nor_gl_1k.jpg");
         m.SetTexture("_BaseMap", albedo);
@@ -286,6 +287,12 @@ public static partial class GameSceneBuilder
         {
             m = new Material(shader);
             AssetDatabase.CreateAsset(m, path);
+            kCreated.Add(m); // 이번 실행에서 새로 만든 재질: 값을 쓰고, 지킴 검사가 새 파일로 받아들인다 (GameSceneBuilder.CityGuard.cs)
+        }
+        else if (KKeep(m))
+        {
+            KSyncKept(m); // 도시 씬만 생성: 있는 재질은 셰이더·값·키워드 모두 그대로 둔다. 불러올 때 URP 검증이 바꾼 _EMISSION만 파일에 맞추고 저장 안 됨 표시를 지운다
+            return m;
         }
         m.shader = shader;
         return m;
@@ -294,6 +301,7 @@ public static partial class GameSceneBuilder
     static Material TexMat(string name, string tex, Color tint, float smoothness = 0.15f, float metallic = 0f)
     {
         var m = LoadOrCreate(name, Shader.Find("Universal Render Pipeline/Lit"));
+        if (KKeep(m)) return m;
         if (tex != null)
         {
             var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>($"{TexDir}/{tex}_diff_1k.jpg");
@@ -318,6 +326,7 @@ public static partial class GameSceneBuilder
     static Material Emissive(string name, Color color, Color emission)
     {
         var m = TexMat(name, null, color, 0.5f);
+        if (KKeep(m)) return m;
         m.EnableKeyword("_EMISSION");
         m.SetColor("_EmissionColor", emission);
         m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
@@ -329,6 +338,7 @@ public static partial class GameSceneBuilder
     {
         var src = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
         var m = LoadOrCreate(name, Shader.Find("Universal Render Pipeline/Particles/Unlit"), dir);
+        if (KKeep(m)) return m;
         if (src != null) m.CopyPropertiesFromMaterial(src);
         m.SetColor("_BaseColor", color);
         m.SetFloat("_Surface", 1);
@@ -782,5 +792,37 @@ public static partial class GameSceneBuilder
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         go.AddComponent<MeshRenderer>().sharedMaterial = mat;
         GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic);
+    }
+
+    // 메시 묶음에서 씬이 참조하지 않는 메시를 뺀다: 합치기용 원본 상자(BoxMesh/KPart)와 지운 자리(트럭 정비소·폭격 건물)의 합친 메시. 모양 변화 없음.
+    // 씬 저장 직전, 메시를 더 만들 코드가 없을 때만 부른다 (meshCache를 비운다). 뺀 수를 돌려준다.
+    // 후보 = 메모리에 올라와 있고 이 묶음 경로에 속한 메시. 막 만든 묶음은 저장 전이라 LoadAllAssetRepresentationsAtPath가 비어 있다
+    // (11-16 1차 실행에서 0개를 뺐다) — 그래도 후보가 없으면 한 번 저장한 뒤 그 목록으로 다시 찾는다
+    static int KDropUnusedMeshes()
+    {
+        string path = AssetDatabase.GetAssetPath(meshContainer);
+        var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+        var used = new HashSet<Object>(EditorUtility.CollectDependencies(roots));
+        var candidates = new HashSet<Mesh>();
+        foreach (var m in Resources.FindObjectsOfTypeAll<Mesh>())
+            if (m != null && AssetDatabase.GetAssetPath(m) == path) candidates.Add(m);
+        if (candidates.Count == 0)
+        {
+            EditorUtility.SetDirty(meshContainer);
+            AssetDatabase.SaveAssetIfDirty(meshContainer);
+            foreach (var o in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+                if (o is Mesh m) candidates.Add(m);
+        }
+        int n = 0;
+        foreach (var m in candidates)
+        {
+            if (used.Contains(m)) continue;
+            AssetDatabase.RemoveObjectFromAsset(m);
+            Object.DestroyImmediate(m, true);
+            n++;
+        }
+        meshCache.Clear();
+        Debug.Log($"[GameSceneBuilder] 메시 묶음 정리: 후보 {candidates.Count}개 중 씬이 쓰는 것 {candidates.Count - n}개");
+        return n;
     }
 }

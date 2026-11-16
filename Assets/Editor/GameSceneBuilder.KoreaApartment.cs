@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -27,7 +28,8 @@ public static partial class GameSceneBuilder
             Box("YardAsphalt", yard, new Vector3(0, 0.004f, 0), new Vector3(13.4f, 0.008f, 26.9f), M["asphalt"], 5f, false);
             BuildAptYard(yard, 13.4f, 26.9f, Vector3.left, r, points);
             Spawn<ZombieSpawnPoint>(points, yard.TransformPoint(new Vector3(2f, 0, KF(r, -8f, 8f))));
-            BuildApartment(b, new Vector3(7.0f, KSideY, 0), -90f, 26f, 11f, 14, num, r, num == 1); // 102동은 폭격 파손 동
+            BuildApartment(b, new Vector3(7.0f, KSideY, 0), -90f, 26f, 11f, 14, num, r, num == 1, KAptCardFrom); // 102동은 폭격 파손 동. 4층부터 창틀·난간은 카드 (GameSceneBuilder.KoreaWindows.cs)
+            KAptSolidCuts(b.Find("Apartment_" + (101 + num))); // 몸통 속 외딴 내비메시를 뺀다 (도시만: BuildApartment는 Apt102·컷씬도 쓴다). 난수를 쓰지 않는다
             num++;
             foreach (var x in new[] { -16.3f, 16.3f })
                 foreach (var z in new[] { -16.3f, 16.3f })
@@ -40,9 +42,9 @@ public static partial class GameSceneBuilder
     static void KoreaApartmentMaterials()
     {
         var aptNum = new List<Color32[]>();
-        var aptSizes = new[] { 36, 48, 56, 96, 128 }; // 정문 영문 36, 표지 48, 띠 56·96, 정문 128
-        var dohyeon = KFontFor("Fonts/DoHyeon-Regular", "삼일아파트동SAMILPT", aptSizes);
-        var pretendard = KFontFor("Fonts/Pretendard-Bold", "삼일아파트동SAMILPT", aptSizes);
+        // 글자·크기는 KText가 그릴 때마다 스스로 요청한다 (미리 큰 크기로 요청하면 글꼴 텍스처만 찬다)
+        var dohyeon = KFontFor("Fonts/DoHyeon-Regular", "삼일아파트동SAMILPT");
+        var pretendard = KFontFor("Fonts/Pretendard-Bold", "삼일아파트동SAMILPT");
         var aptPlate = new List<Color32[]>();
         foreach (int n in new[] { 101, 102, 103 }) { aptNum.Add(AptStripePixels(n, dohyeon)); aptPlate.Add(AptPlatePixels(n, dohyeon)); }
         var gate = AptGatePixels(dohyeon, pretendard);
@@ -87,8 +89,8 @@ public static partial class GameSceneBuilder
             }
         var ink = new Color(0.1f, 0.08f, 0.07f);
         KText(px, w, h, big, "삼일", 56, w * 0.5f, h * 0.905f, new Color(0.96f, 0.92f, 0.84f), 0.5f);
-        KText(px, w, h, big, number.ToString(), 96, w * 0.5f, h * 0.855f, ink, 0.5f);
-        KText(px, w, h, big, number.ToString(), 96, w * 0.5f, h * 0.175f, ink, 0.5f);
+        KText(px, w, h, big, number.ToString(), 96, w * 0.5f, h * 0.855f, ink, 0.5f, KTextMaxRequest);
+        KText(px, w, h, big, number.ToString(), 96, w * 0.5f, h * 0.175f, ink, 0.5f, KTextMaxRequest);
         var res = new Color32[w * h];
         for (int k = 0; k < res.Length; k++) { px[k].a = 1f; res[k] = KC(px[k]); }
         return res;
@@ -125,15 +127,18 @@ public static partial class GameSceneBuilder
                 if (GrimeNoise(i, j, 1024, 256, 4400) > 0.9f) c *= 1.4f;
                 px[j * w + i] = c;
             }
-        KText(px, w, h, big, "삼일아파트", 128, w * 0.5f, h * 0.58f, new Color(0.9f, 0.86f, 0.78f), 0.5f);
+        KText(px, w, h, big, "삼일아파트", 128, w * 0.5f, h * 0.58f, new Color(0.9f, 0.86f, 0.78f), 0.5f, KTextMaxRequest);
         KText(px, w, h, small, "SAMIL APT · 101 - 103", 36, w * 0.5f, h * 0.2f, new Color(0.75f, 0.72f, 0.66f), 0.5f);
         var res = new Color32[w * h];
         for (int k = 0; k < res.Length; k++) { px[k].a = 1f; res[k] = KC(px[k]); }
         return res;
     }
 
-    // 아파트 한 동: 원점 = 바닥 가운데, 로컬 +z = 앞(발코니 창 면, 길 쪽), 가로 width(x)·깊이 depth(z)·floors 층. numIndex 0~2 → 101~103동
-    static void BuildApartment(Transform parent, Vector3 pos, float yaw, float width, float depth, int floors, int numIndex, System.Random r, bool damaged = false)
+    // 아파트 한 동: 원점 = 바닥 가운데, 로컬 +z = 앞(발코니 창 면, 길 쪽), 가로 width(x)·깊이 depth(z)·floors 층. numIndex 0~2 → 101~103동.
+    // cardFrom: 이 층(0부터)부터 창틀·유리·구멍·가운데 새시·발코니 난간을 두 벌 만든다 — 예전 막대 메시(그래픽 품질 중간·높음)와 알파 클립 카드(낮음).
+    // FacadeDetail이 품질에 맞춰 하나만 켠다 (GameSceneBuilder.KoreaWindows.cs, Assets/Scripts/City/FacadeDetail.cs). 기본은 카드 없음 (102동 보스 씬·컷씬).
+    // 막대 벌은 예전과 같은 함수로 만들고, 카드는 그 결과(깨졌는지)로 난수 없이 더한다: 난수는 예전과 같은 수를 같은 차례로 쓴다 (뒤의 실외기·그을음·파손·102동 탑 안 배치가 그대로)
+    static void BuildApartment(Transform parent, Vector3 pos, float yaw, float width, float depth, int floors, int numIndex, System.Random r, bool damaged = false, int cardFrom = int.MaxValue)
     {
         var g = Group("Apartment_" + (101 + numIndex), parent, pos, yaw);
         float h = floors * AptFloorH;
@@ -168,6 +173,14 @@ public static partial class GameSceneBuilder
         var rails = new List<CombineInstance>();
         var shards = new List<CombineInstance>();
         var holes = new List<CombineInstance>();
+        // 카드 층(cardFrom 이상): 높은 품질 벌 = 예전 막대 메시 (유리 조각은 두 벌이 같이 쓰므로 위의 shards에), 낮은 품질 벌 = 카드
+        var glassHi = new List<CombineInstance>();
+        var framesHi = new List<CombineInstance>();
+        var railsHi = new List<CombineInstance>();
+        var holesHi = new List<CombineInstance>();
+        var cardQ = new KQuads();  // 틀·난간 카드 (M_WinFrame)
+        var glassQ = new KQuads(); // 유리 사각형 (M_DarkWindow)
+        var holeQ = new KQuads();  // 깨진 창 구멍 사각형 (M_Soot)
         foreach (float s in new[] { 1f, -1f })
             for (int f = 0; f < floors; f++)
             {
@@ -186,7 +199,13 @@ public static partial class GameSceneBuilder
                     {
                         if ((s > 0 && f == 0) || (x > cutX && f >= cutFloor)) continue; // 앞면 1층은 현관 자리, 파손 구간 위층은 없다
                         float z = s > 0 ? depth / 2f + bayOut + 0.03f : -(depth / 2f + 0.03f);
-                        KAptWindow(glass, frames, shards, holes, new Vector3(x, f * AptFloorH + 2.1f, z), 0.9f, 1.0f, r);
+                        var at = new Vector3(x, f * AptFloorH + 2.1f, z);
+                        if (f >= cardFrom)
+                        {
+                            bool broken = KAptWindow(glassHi, framesHi, shards, holesHi, at, 0.9f, 1.0f, r);
+                            KAptCard(cardQ, glassQ, holeQ, g, at, s, KWinStair, 0.9f, 1.0f, broken);
+                        }
+                        else KAptWindow(glass, frames, shards, holes, at, 0.9f, 1.0f, r);
                     }
                 continue;
             }
@@ -199,12 +218,21 @@ public static partial class GameSceneBuilder
                     float z = s * (depth / 2f + 0.03f);
                     bool front = s > 0;
                     float ww = front ? bayW - 0.5f : 1.1f, wh = front ? 1.6f : 1.2f, wy = y0 + (front ? 1.35f : 1.5f);
-                    KAptWindow(glass, frames, shards, holes, new Vector3(x, wy, z), ww, wh, r);
+                    bool card = f >= cardFrom;
+                    if (card)
+                    {
+                        bool broken = KAptWindow(glassHi, framesHi, shards, holesHi, new Vector3(x, wy, z), ww, wh, r);
+                        KAptCard(cardQ, glassQ, holeQ, g, new Vector3(x, wy, z), s, front ? KWinFront : KWinBack, ww, wh, broken); // 앞 창의 가운데 새시는 그림 안에
+                    }
+                    else KAptWindow(glass, frames, shards, holes, new Vector3(x, wy, z), ww, wh, r);
                     if (!front) continue;
-                    KBar(frames, new Vector3(0.05f, wh, 0.08f), new Vector3(x, wy, z), Quaternion.identity); // 가운데 새시 기둥
+                    var fr = card ? framesHi : frames;
+                    var rl = card ? railsHi : rails;
+                    KBar(fr, new Vector3(0.05f, wh, 0.08f), new Vector3(x, wy, z), Quaternion.identity); // 가운데 새시 기둥
                     // 앞면 발코니 난간 (창 아래)
-                    KBar(rails, new Vector3(ww, 0.04f, 0.04f), new Vector3(x, y0 + 0.5f, z + 0.1f), Quaternion.identity);
-                    for (int q = 0; q < 4; q++) KBar(rails, new Vector3(0.02f, 0.3f, 0.02f), new Vector3(x - ww / 2f + (q + 0.5f) * ww / 4f, y0 + 0.35f, z + 0.1f), Quaternion.identity); // 난간 살 6 → 4, 뚜껑 없는 막대 (메시 용량)
+                    KBar(rl, new Vector3(ww, 0.04f, 0.04f), new Vector3(x, y0 + 0.5f, z + 0.1f), Quaternion.identity);
+                    for (int q = 0; q < 4; q++) KBar(rl, new Vector3(0.02f, 0.3f, 0.02f), new Vector3(x - ww / 2f + (q + 0.5f) * ww / 4f, y0 + 0.35f, z + 0.1f), Quaternion.identity); // 난간 살 6 → 4, 뚜껑 없는 막대 (메시 용량)
+                    if (card) cardQ.Add(new Vector3(x, y0 + 0.36f, z + 0.12f), Vector3.forward, ww, 0.32f, KWinUV(KWinRail)); // 낮은 품질의 발코니 난간 카드 (예전 가로대 앞면 z+0.12, 높이 y0+0.20~0.52)
                     if (r.NextDouble() < 0.3) KAcUnit(g, new Vector3(x + KF(r, -0.5f, 0.5f), y0 + 0.62f, z + 0.25f), Quaternion.identity, r);
                 }
             }
@@ -215,6 +243,7 @@ public static partial class GameSceneBuilder
         CombineInto(g, "Rails", rails, M["aptRail"]);
         CombineInto(g, "Shards", shards, M["glass"]);
         CombineInto(g, "Holes", holes, M["soot"]);
+        if (cardQ.v.Count > 0) KAptWindowSets(g, glassHi, framesHi, railsHi, holesHi, cardQ, glassQ, holeQ); // 카드 층이 없으면(102동 보스 씬·컷씬) 만들지도, 재질을 찾지도 않는다
         // 옆면 동 번호 띠 (양 옆): 폭 3.6m, 바닥 0.3m부터 옥상 아래까지 한 장 (192×2048). 번호는 꼭대기와 7m 높이 두 곳
         foreach (float s in new[] { -1f, 1f })
         {
@@ -280,10 +309,38 @@ public static partial class GameSceneBuilder
         if (damaged) KAptDamage(g, width, depth, cutX, endH, h, floors, cutFloor, r);
     }
 
-    // 아파트 창 한 짝 (원점 가운데, 앞을 본다): 새시 틀 네 변 + 유리. 18%는 깨져 조각 둘만 남고 뒤에 검은 구멍
-    static void KAptWindow(List<CombineInstance> glass, List<CombineInstance> frames, List<CombineInstance> shards, List<CombineInstance> holes, Vector3 at, float ww, float wh, System.Random r)
+    // 내비메시에서 빼는 영역 (NavMeshModifierVolume, area 1 = Not Walkable). centre/size = parent 로컬. 이름은 도시 경계(City.cs)·Apt102와 같은 "NavCut"
+    static void KNavCut(Transform parent, Vector3 centre, Vector3 size)
     {
-        if (r.NextDouble() < 0.18)
+        var go = new GameObject("NavCut");
+        go.transform.SetParent(parent, false);
+        var vol = go.AddComponent<NavMeshModifierVolume>();
+        vol.center = centre;
+        vol.size = size;
+        vol.area = 1;
+    }
+
+    // 아파트 몸통(Mass, 파손 동은 MassEnd도) 속. 굽기는 상자 콜라이더를 속이 빈 껍데기로 봐서 몸통 밑면(인도 판 윗면 KSideY)에 아무도 못 가는 메시가 생긴다
+    // (CityNavMesh: 101·103동 245.8㎡, 102동 177.0 + 51.9㎡). 영역 = 옆면 0.2 안쪽, 밑면 0.3 아래 ~ 2.3 위 (AptTwSolidCuts와 같은 규칙: 밑면이 바닥 면과 같으면 안 지워진다)
+    static void KAptSolidCuts(Transform apt)
+    {
+        if (apt == null) return;
+        foreach (string n in new[] { "Mass", "MassEnd" })
+        {
+            var t = apt.Find(n);
+            var bc = t != null ? t.GetComponent<BoxCollider>() : null;
+            if (bc == null) continue;
+            var c = t.localPosition;              // 아파트 로컬 (상자는 회전·크기 없음: FixCoplanarFaces는 굽기 뒤에 돈다)
+            float floorY = c.y - bc.size.y / 2f; // 몸통 밑면 = 속 바닥
+            KNavCut(apt, new Vector3(c.x, floorY + 1.0f, c.z), new Vector3(bc.size.x - 0.4f, 2.6f, bc.size.z - 0.4f));
+        }
+    }
+
+    // 아파트 창 한 짝 (원점 가운데, 앞을 본다): 새시 틀 네 변 + 유리. 18%는 깨져 조각 둘만 남고 뒤에 검은 구멍. 깨졌으면 true (카드 벌이 같은 결과를 쓴다)
+    static bool KAptWindow(List<CombineInstance> glass, List<CombineInstance> frames, List<CombineInstance> shards, List<CombineInstance> holes, Vector3 at, float ww, float wh, System.Random r)
+    {
+        bool broken = r.NextDouble() < 0.18;
+        if (broken)
         {
             holes.Add(new CombineInstance { mesh = BoxMesh(new Vector3(ww, wh, 0.01f), 1f), transform = Matrix4x4.TRS(at, Quaternion.identity, Vector3.one) });
             for (int k = 0; k < 2; k++)
@@ -294,6 +351,7 @@ public static partial class GameSceneBuilder
         KBar(frames, new Vector3(ww + 0.08f, 0.05f, 0.08f), at - Vector3.up * (wh / 2f), Quaternion.identity);
         KBar(frames, new Vector3(0.05f, wh, 0.08f), at - Vector3.right * (ww / 2f), Quaternion.identity);
         KBar(frames, new Vector3(0.05f, wh, 0.08f), at + Vector3.right * (ww / 2f), Quaternion.identity);
+        return broken;
     }
 
 
@@ -397,15 +455,20 @@ public static partial class GameSceneBuilder
         KPart(sw, new Vector3(0.45f, 0.04f, 0.2f), 1f, new Vector3(0.5f, 0.6f, 0.7f), Quaternion.identity);
         CombineInto(play, "Swing", sw, M["aptRail"]);
         ColliderBox("SwingCollider", play, new Vector3(0, 1.2f, 0), new Vector3(3.2f, 2.4f, 2.4f), Vector3.zero);
+        KNavCut(play, new Vector3(0, 0.95f, 0), new Vector3(2.8f, 2.5f, 2.0f)); // 그네 판정 상자 속: x -1.4..1.4, y -0.3..2.2, z -1..1 (Apt102.cs:819와 같은 값)
+        KNavCut(play, new Vector3(0, 2.9f, 0), new Vector3(3.6f, 1.4f, 2.8f)); // 그네 판정 상자 윗면(2.4) 위: y 2.2..3.6 (Apt102.cs:812와 같은 값)
         var slide = Group("Slide", play, new Vector3(2.5f, 0, 1.5f), KF(r, 0, 360));
         Box("Platform", slide, new Vector3(0, 1.4f, 0), new Vector3(1.0f, 0.08f, 1.0f), M["paintBlue"], 1f);
         foreach (float px in new[] { -0.45f, 0.45f }) foreach (float pz in new[] { -0.45f, 0.45f }) Box("Leg", slide, new Vector3(px, 0.7f, pz), new Vector3(0.06f, 1.4f, 0.06f), M["aptRail"], 1f, false);
-        Box("Chute", slide, new Vector3(0, 0.8f, 1.5f), new Vector3(0.8f, 0.05f, 2.6f), M["paintRed"], 1f, true, new Vector3(-33f, 0, 0));
+        // 발판 쪽에서 땅 쪽으로 내려간다 (-33은 거꾸로였다. 기울기는 Apt102.cs:758과 같다). 가운데 높이 0.75: 위 끝 밑면이 발판 윗면(1.44)에 닿는다 (0.8이면 4.7cm 뜬다)
+        Box("Chute", slide, new Vector3(0, 0.75f, 1.5f), new Vector3(0.8f, 0.05f, 2.6f), M["paintRed"], 1f, true, new Vector3(33f, 0, 0));
         Box("Ladder", slide, new Vector3(0, 0.75f, -0.7f), new Vector3(0.5f, 1.4f, 0.05f), M["aptRail"], 1f, true, new Vector3(20f, 0, 0));
         // 경비실: 정문 옆 작은 부스 (ext = 정문 방향의 반폭)
         float ext = Mathf.Abs(gateSide.x) > 0.5f ? w / 2f : d / 2f;
         var booth = Group("GuardBooth", g, gateSide * (ext - 3f) + Vector3.Cross(gateSide, Vector3.up) * 3.5f, Mathf.Atan2(gateSide.x, gateSide.z) * Mathf.Rad2Deg);
         Box("Body", booth, new Vector3(0, 1.3f, 0), new Vector3(2.4f, 2.6f, 2.0f), M["aptWall"], 2f);
+        KNavCut(booth, new Vector3(0, 1.0f, 0), new Vector3(2.0f, 2.6f, 1.6f)); // 경비실 속: x -1..1, y -0.3..2.3, z -0.8..0.8 (Apt102.cs:820과 같은 값)
+        KNavCut(booth, new Vector3(0, 2.85f, 0), new Vector3(2.4f, 1.0f, 2.0f)); // 경비실 몸통 윗면(2.6) 위: y 2.35..3.35 (밑면이 윗면보다 0.25 아래)
         Box("Roof", booth, new Vector3(0, 2.68f, 0), new Vector3(2.8f, 0.16f, 2.4f), M["dirty"], 2f, false);
         Box("Window", booth, new Vector3(0, 1.5f, 1.01f), new Vector3(1.6f, 0.9f, 0.02f), M["glass"], 1f, false);
         Box("Window", booth, new Vector3(1.21f, 1.5f, 0), new Vector3(0.02f, 0.9f, 1.2f), M["glass"], 1f, false);
@@ -421,6 +484,9 @@ public static partial class GameSceneBuilder
         KRod(bar, new Vector3(3.4f, 1.0f, 0.5f), new Vector3(-0.6f, 1.3f, 0.5f), 0.04f);
         KPart(bar, new Vector3(0.3f, 1.0f, 0.3f), 1f, new Vector3(3.4f, 0.5f, 0.5f), Quaternion.identity);
         CombineInto(gate, "Barrier", bar, M["blastStripe"]);
+        // 차단기 판정: 막대 (3.4,1.0,0.5)→(-0.6,1.3,0.5) 지름 8cm, 밑이 땅에서 1m라 서서도 에이전트(2m)도 못 지나간다. 남쪽 기둥과 막대 끝 사이 2.96m는 열려 있다 (내비메시 폭 약 1.8~2.0m)
+        ColliderBox("BarrierArm", gate, new Vector3(1.4f, 1.15f, 0.5f), new Vector3(4.011f, 0.08f, 0.08f), new Vector3(0, 0, -4.29f));
+        ColliderBox("BarrierPost", gate, new Vector3(3.4f, 0.5f, 0.5f), new Vector3(0.3f, 1.0f, 0.3f), Vector3.zero);
         // 둘레 울타리 (정문 쪽 가운데는 비운다)
         var fence = new List<CombineInstance>();
         var fenceRot = Quaternion.identity;

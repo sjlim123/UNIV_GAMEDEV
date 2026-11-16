@@ -183,6 +183,7 @@ public static class GameSettings
             var em = kv.Key.emission;
             em.rateOverTimeMultiplier = kv.Value * particleScale;
         }
+        FacadeDetail.ApplyAll(Quality); // 낮음: 도시 아파트 4층부터 창틀·유리·난간을 카드로 (중간·높음은 원래 메시)
 
         var cam = Camera.main;
         if (cam != null)

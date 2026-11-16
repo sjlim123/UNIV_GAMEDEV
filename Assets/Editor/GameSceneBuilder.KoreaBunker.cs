@@ -80,7 +80,7 @@ public static partial class GameSceneBuilder
                 if (i < 12 || i >= w - 12 || j < 12 || j >= h - 12) c *= 1.3f;
                 px[j * w + i] = c;
             }
-        KText(px, w, h, big, "민방위 대피소", 128, w * 0.5f, h * 0.62f, new Color(0.9f, 0.85f, 0.7f), 0.5f);
+        KText(px, w, h, big, "민방위 대피소", 128, w * 0.5f, h * 0.62f, new Color(0.9f, 0.85f, 0.7f), 0.5f, KTextMaxRequest);
         KText(px, w, h, small, "CIVIL DEFENSE SHELTER", 40, w * 0.5f, h * 0.2f, new Color(0.7f, 0.66f, 0.55f), 0.5f);
         var res = new Color32[w * h];
         for (int k = 0; k < res.Length; k++) { px[k].a = 1f; res[k] = KC(px[k]); }

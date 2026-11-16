@@ -11,9 +11,8 @@ public static partial class GameSceneBuilder
     {
         // 안내문·검문소에 쓰는 글자와 크기만 요청한다 (상호 전체×큰 크기를 요청하면 글꼴 텍스처가 넘쳐 에디터가 죽는다)
         const string ruinChars = "민방위대피안내소→삼일동주민센터검문통행금지군창에서떨어십시오물식량손전등참제구역허가차외진입m";
-        var ruinSizes = new[] { 24, 26, 32, 34, 40, 112 };
-        var pretendard = KFontFor("Fonts/Pretendard-Bold", ruinChars, ruinSizes);
-        var dohyeon = KFontFor("Fonts/DoHyeon-Regular", ruinChars, ruinSizes);
+        var pretendard = KFontFor("Fonts/Pretendard-Bold", ruinChars); // 글자·크기는 KText가 그릴 때마다 스스로 요청한다
+        var dohyeon = KFontFor("Fonts/DoHyeon-Regular", ruinChars);
         var notice = NoticePixels(dohyeon, pretendard);
         var check = CheckpointSignPixels(dohyeon, pretendard);
         KReleaseFonts();
@@ -67,7 +66,7 @@ public static partial class GameSceneBuilder
                 if (i < 10 || i >= w - 10 || j < 10 || j >= h - 10) c = new Color(0.15f, 0.15f, 0.15f);
                 px[j * w + i] = c;
             }
-        KText(px, w, h, big, "검문소 · 통행 금지", 112, w * 0.5f, h * 0.76f, Color.white, 0.5f);
+        KText(px, w, h, big, "검문소 · 통행 금지", 112, w * 0.5f, h * 0.76f, Color.white, 0.5f, KTextMaxRequest);
         KText(px, w, h, small, "민방위 통제 구역 · 허가 차량 외 진입 금지 · 삼일동", 40, w * 0.5f, h * 0.26f, new Color(0.15f, 0.15f, 0.15f), 0.5f);
         var r = new System.Random(5203);
         KWear(px, w, h, r, 0.5f);

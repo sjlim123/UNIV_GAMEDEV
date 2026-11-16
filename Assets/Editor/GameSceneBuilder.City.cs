@@ -26,6 +26,7 @@ public static partial class GameSceneBuilder
         KoreaMaterials(); // 보도블록·화강석 연석·점자블록·차선 페인트·전봇대·울타리 재질과 그림 (GameSceneBuilder.Korea.cs)
         KoreaShopMaterials(); // 간판·돌출 간판·현수막 그림, 셔터·새시·실외기·어닝 재질 (GameSceneBuilder.KoreaShops.cs)
         KoreaApartmentMaterials(); // 아파트 동 번호 띠·정문 표지·벽·난간 재질 (GameSceneBuilder.KoreaApartment.cs)
+        KWindowMaterials(); // 아파트 4층부터의 창틀 카드 그림(win_frame)·재질 M_WinFrame (GameSceneBuilder.KoreaWindows.cs)
         KoreaRuinMaterials(); // 대피 안내문·검문소 표지·흙·모래주머니 재질 (GameSceneBuilder.KoreaRuin.cs)
         KoreaBunkerMaterials(); // 방공호 정면(벗겨진 녹색 페인트)·명판·마른 풀·덩굴 재질 (GameSceneBuilder.KoreaBunker.cs)
 
@@ -130,7 +131,8 @@ public static partial class GameSceneBuilder
 
         UnbatchInteractables();
         Debug.Log($"[GameSceneBuilder] City: 같은 면에 겹친 상자 {FixCoplanarFaces()}곳을 고침");
-        AssetDatabase.SaveAssets();
+        Debug.Log($"[GameSceneBuilder] City: 씬이 쓰지 않는 메시 {KDropUnusedMeshes()}개를 묶음에서 뺌"); // 합치기용 원본 상자·지운 자리의 메시 (모양 변화 없음)
+        KSaveCityAssets(); // 도시 씬만 생성: 전체 저장 대신 메시 묶음·프로파일·이번에 쓴 재질만 (GameSceneBuilder.CityGuard.cs). 게임 씬 전체 생성은 예전처럼 전체 저장
         EditorSceneManager.SaveScene(scene, SceneDir + "/City.unity");
 
         // 오클루전 컬링: 건물에 가려 안 보이는 것은 그리지 않는다 (저사양 PC 최적화)
@@ -742,6 +744,7 @@ public static partial class GameSceneBuilder
         float h = R(10f, 24f);
         var mat = Pick(M["wall"], M["brick"], M["cracked"]);
         Box("Mass", g, new Vector3(x0 + w / 2, h / 2, z0 + d / 2), new Vector3(w, h, d), mat, 3f);
+        KNavCut(g, new Vector3(x0 + w / 2, 1.0f, z0 + d / 2), new Vector3(w - 0.4f, 2.6f, d - 0.4f)); // 상가 빌딩 몸통 속 외딴 내비메시 (밑면 0.3 아래 ~ 2.3 위, 옆면 0.2 안쪽). 이미 뽑은 w·d만 쓴다
         int floors = Mathf.FloorToInt((h - 3.5f) / 3.2f);
         KBurnDraws(floors * 2 * (Mathf.Max(1, Mathf.FloorToInt(w / 3f)) + Mathf.Max(1, Mathf.FloorToInt(d / 3f)))); // 예전 FacadeWindows가 쓰던 난수
         var towerRng = KRandom(block.localPosition + new Vector3(x0, 0, z0), 33);
@@ -1540,6 +1543,9 @@ public static partial class GameSceneBuilder
         m.SetColor("_BaseColor", Color.white);
         m.SetColor("_Color", Color.white);
         m.SetFloat("_Smoothness", 0.12f);
+        // URP가 재질을 불러올 때 덧붙이는 값을 처음부터 넣어 둔다: 넣지 않으면 다음에 불러올 때 메시 묶음(44MB) 전체가 저장 안 됨이 되어 통째로 다시 저장된다
+        m.SetOverrideTag("RenderType", "Opaque");
+        m.SetShaderPassEnabled("MotionVectors", false);
         AssetDatabase.AddObjectToAsset(m, meshContainer);
         return m;
     }

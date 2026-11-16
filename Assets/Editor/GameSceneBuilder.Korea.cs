@@ -35,7 +35,7 @@ public static partial class GameSceneBuilder
         M["lampHead"] = TexMat("M_LampHead", null, new Color(0.3f, 0.3f, 0.3f), 0.4f, 0.4f);
         M["shopGlass"] = TransparentMat("M_ShopGlass", new Color(0.55f, 0.65f, 0.72f, 0.3f), 0.92f); // 비치는 유리 (상점·버스 정류장, GameSceneBuilder.Shelter.cs의 TransparentMat)
         // 아스팔트에도 금 디테일 맵을 얹는다 (벽과 같은 그림, 더 넓게)
-        if (M.TryGetValue("asphalt", out var asphalt) && asphalt != null)
+        if (M.TryGetValue("asphalt", out var asphalt) && asphalt != null && !KKeep(asphalt)) // 도시 씬만 생성: 있는 M_Asphalt는 그대로
         {
             var detail = AssetDatabase.LoadAssetAtPath<Texture2D>(CityGenDir + "/wall_cracks_detail.png");
             var detailN = AssetDatabase.LoadAssetAtPath<Texture2D>(CityGenDir + "/wall_cracks_normal.png");
@@ -56,6 +56,7 @@ public static partial class GameSceneBuilder
     static Material KLitMat(string name, Texture2D albedo, Texture2D normal, Color tint, float smoothness, float metallic, float bumpScale = 1f)
     {
         var m = LoadOrCreate(name, Shader.Find("Universal Render Pipeline/Lit"));
+        if (KKeep(m)) return m;
         m.SetTexture("_BaseMap", albedo);
         m.SetTexture("_MainTex", albedo);
         if (normal != null)
@@ -81,6 +82,7 @@ public static partial class GameSceneBuilder
     static Material KPaintMat(string name, Texture2D tex, Color tint)
     {
         var m = KLitMat(name, tex, null, tint, 0.2f, 0f);
+        if (KKeep(m)) return m;
         m.SetFloat("_AlphaClip", 1f);
         m.SetFloat("_Cutoff", 0.5f);
         m.EnableKeyword("_ALPHATEST_ON");
@@ -115,7 +117,8 @@ public static partial class GameSceneBuilder
 
     enum KTexKind { Color, ColorAlpha, Normal, Linear }
 
-    static Texture2D KSaveTex(string name, Color32[] px, int w, int h, KTexKind kind, bool repeat = true)
+    // coverage: 알파 클립 그림 (창틀 카드). 밉맵에서도 알파 0.5를 넘는 픽셀 비율을 지켜 가는 막대가 멀리서 사라지지 않게 한다
+    static Texture2D KSaveTex(string name, Color32[] px, int w, int h, KTexKind kind, bool repeat = true, bool coverage = false)
     {
         if (!AssetDatabase.IsValidFolder("Assets/Generated")) AssetDatabase.CreateFolder("Assets", "Generated");
         if (!AssetDatabase.IsValidFolder(CityGenDir)) AssetDatabase.CreateFolder("Assets/Generated", "City");
@@ -123,9 +126,9 @@ public static partial class GameSceneBuilder
         var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
         tex.SetPixels32(px);
         tex.Apply();
-        File.WriteAllBytes(path, tex.EncodeToPNG());
+        var png = tex.EncodeToPNG();
         Object.DestroyImmediate(tex);
-        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        if (KWriteIfChanged(path, png)) AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate); // 같은 그림이면 다시 쓰지도 들여오지도 않는다
         if (AssetImporter.GetAtPath(path) is TextureImporter imp)
         {
             imp.textureType = kind == KTexKind.Normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
@@ -138,6 +141,11 @@ public static partial class GameSceneBuilder
             imp.anisoLevel = 6;
             imp.maxTextureSize = 1024;
             imp.textureCompression = kind == KTexKind.Linear ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
+            if (coverage)
+            {
+                imp.mipMapsPreserveCoverage = true;
+                imp.alphaTestReferenceValue = 0.5f;
+            }
             imp.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -386,10 +394,16 @@ public static partial class GameSceneBuilder
         public Texture2D atlas;
         public bool red;
         public HashSet<int> inCopy = new HashSet<int>(); // 복사본에 들어 있는 (글자, 크기) 조합: ch * 1000 + size
+        public Color32[] pix; // 복사본의 픽셀 (KText가 텍셀을 정수 자리로 바로 읽는다)
+        public int pw, ph;
     }
 
     static readonly Dictionary<string, KFont> kFonts = new Dictionary<string, KFont>();
-    static readonly int[] KTextSizes = { 24, 32, 40, 48, 56, 64, 72, 80, 96, 112, 128 }; // 기본 요청 크기. KText에 넘기는 크기는 요청 목록에 있어야 글자가 그려진다 (글자 수×크기²이 글꼴 텍스처 한계를 넘으면 에디터가 죽으니 큰 크기는 KFontFor의 sizes로 따로)
+    // 글자판(동적 글꼴 텍스처)에 올리는 가장 큰 글자 크기 (px). 도시 간판처럼 더 큰 글자는 이 크기로 올린 모양을 KText가 늘려 그린다.
+    // 글꼴 텍스처 상한은 4096×4096이고, 넘치면 에디터가 죽는다 (2026-11-06 00:47 크래시 로그: "do not fit onto a single texture (max size 4096)")
+    const int KTextMaxRequest = 72;
+    // 늘려 그린 글자의 가장자리 기울기 배율 (× 늘린 배율 k). 1.5면 큰 크기로 바로 요청한 글자와 화면의 가장자리 폭이 거의 같다 (오프라인 비교)
+    const float KTextEdgeGain = 1.5f;
 
     // 글꼴을 읽는다. 글자판 요청은 KText가 그리기 직전에 필요한 글자·크기만 하고(동적 글꼴 텍스처 상한 4096 — 상호 전체를 큰 크기로 미리 요청하면 넘쳐 에디터가 죽는다),
     // 글꼴 텍스처가 다시 만들어지면(Font.textureRebuilt) 그 글꼴의 읽을 수 있는 복사본만 새로 뜬다. sizes가 주어지면 그 크기로 chars를 미리 올려 둔다
@@ -409,11 +423,11 @@ public static partial class GameSceneBuilder
         }
         if (sizes != null)
             foreach (int size in sizes)
-                kf.font.RequestCharactersInTexture(chars + " 0123456789.·-:/()", size, FontStyle.Normal);
+                kf.font.RequestCharactersInTexture(chars + " 0123456789.·-:/()", Mathf.Min(size, KTextMaxRequest), FontStyle.Normal); // 미리 요청도 상한까지만
         KCopyAtlas(kf);
         if (sizes != null)
             foreach (int size in sizes)
-                foreach (char ch in chars + " 0123456789.·-:/()") kf.inCopy.Add(ch * 1000 + size);
+                foreach (char ch in chars + " 0123456789.·-:/()") kf.inCopy.Add(ch * 1000 + Mathf.Min(size, KTextMaxRequest));
         return kf;
     }
 
@@ -421,6 +435,7 @@ public static partial class GameSceneBuilder
     static void KCopyAtlas(KFont kf)
     {
         if (kf.atlas != null) { Object.DestroyImmediate(kf.atlas); kf.atlas = null; }
+        kf.pix = null;
         if (kRebuiltFonts.Contains(kf.font)) kf.inCopy.Clear(); // 다시 만들어진 글자판은 옛 글자를 버렸을 수 있다
         kRebuiltFonts.Remove(kf.font);
         var src = kf.font != null && kf.font.material != null ? kf.font.material.mainTexture : null;
@@ -438,6 +453,18 @@ public static partial class GameSceneBuilder
         double sumA = 0, sumR = 0;
         foreach (var p in all32) { sumA += p.a; sumR += p.r; }
         kf.red = sumA / all32.Length > 150 && sumR < sumA;
+        kf.pix = all32; kf.pw = src.width; kf.ph = src.height;
+    }
+
+    // 글자 칸 (gw×gh) 안의 텍셀 (u, v)의 덮임 값. 칸 밖은 0 (글자판의 1px 여백과 같다).
+    // (ox, oy) = 칸 왼쪽 아래 텍셀, (exx, exy)·(eyx, eyy) = 글자의 x·y 한 칸이 글자판에서 움직이는 방향 (90° 돌려 넣은 글자도 된다)
+    static float KGlyphTexel(KFont kf, int gw, int gh, int ox, int oy, int exx, int exy, int eyx, int eyy, int u, int v)
+    {
+        if (kf.pix == null || u < 0 || v < 0 || u >= gw || v >= gh) return 0f;
+        int x = ox + u * exx + v * eyx, y = oy + u * exy + v * eyy;
+        if (x < 0 || y < 0 || x >= kf.pw || y >= kf.ph) return 0f;
+        var p = kf.pix[y * kf.pw + x];
+        return (kf.red ? p.r : p.a) / 255f;
     }
 
     static void KReleaseFonts()
@@ -447,51 +474,70 @@ public static partial class GameSceneBuilder
         kFonts.Clear();
     }
 
-    // 글자를 픽셀에 직접 그린다. (x, cy): 기준점, align 0 왼쪽 · 0.5 가운데 · 1 오른쪽. 세로는 글자 높이의 가운데. 폭을 돌려준다
-    static float KText(Color[] px, int w, int h, KFont kf, string text, int size, float x, float cy, Color color, float align)
+    // 글자를 픽셀에 직접 그린다. (x, cy): 기준점, align 0 왼쪽 · 0.5 가운데 · 1 오른쪽. 세로는 글자 높이의 가운데. 폭을 돌려준다.
+    // maxRequest > 0이고 size가 그보다 크면 글자판에는 maxRequest 크기로만 올리고(동적 글꼴 텍스처를 작게 유지), 그 모양을 k = size/req배로
+    // 늘려(쌍선형) 그린 뒤 가장자리 기울기를 KTextEdgeGain·k배로 다시 세운다. 도시의 큰 간판 글자는 KTextMaxRequest를 넘긴다.
+    // maxRequest를 주지 않거나 size가 그 이하이면 k = 1이라 계산이 예전과 비트까지 같다 (방공호 시계·달력은 그대로)
+    static float KText(Color[] px, int w, int h, KFont kf, string text, int size, float x, float cy, Color color, float align, int maxRequest = 0)
     {
         if (kf == null || kf.font == null) return 0f;
-        kf.font.RequestCharactersInTexture(text, size, FontStyle.Normal); // 이 글자·크기만 글자판에 올린다
+        int req = maxRequest > 0 ? Mathf.Min(size, maxRequest) : size; // 글자판에 올리는 크기
+        float k = size / (float)req;                                       // 그릴 때 늘리는 배율 (1이면 예전과 같다)
+        kf.font.RequestCharactersInTexture(text, req, FontStyle.Normal); // 이 글자·크기만 글자판에 올린다
         // 새 글자가 빈자리에 들어가면 textureRebuilt가 오지 않으므로, 복사본에 없는 (글자,크기)가 하나라도 있으면 다시 뜬다
         bool fresh = kf.atlas != null && !kRebuiltFonts.Contains(kf.font);
-        if (fresh) foreach (char ch in text) if (!kf.inCopy.Contains(ch * 1000 + size)) { fresh = false; break; }
+        if (fresh) foreach (char ch in text) if (!kf.inCopy.Contains(ch * 1000 + req)) { fresh = false; break; }
         if (!fresh) KCopyAtlas(kf);
         if (kf.atlas == null) return 0f;
-        foreach (char ch in text) kf.inCopy.Add(ch * 1000 + size);
+        foreach (char ch in text) kf.inCopy.Add(ch * 1000 + req);
         float width = 0, top = float.MinValue, bottom = float.MaxValue;
         foreach (char ch in text)
         {
-            if (!kf.font.GetCharacterInfo(ch, out CharacterInfo ci, size, FontStyle.Normal)) continue;
-            width += ci.advance;
+            if (!kf.font.GetCharacterInfo(ch, out CharacterInfo ci, req, FontStyle.Normal)) continue;
+            width += ci.advance * k;
             if (ci.maxY > ci.minY)
             {
-                top = Mathf.Max(top, ci.maxY);
-                bottom = Mathf.Min(bottom, ci.minY);
+                top = Mathf.Max(top, ci.maxY * k);
+                bottom = Mathf.Min(bottom, ci.minY * k);
             }
         }
         if (top < bottom) return 0f;
         float pen = Mathf.Round(x - width * align), baseline = Mathf.Round(cy - (top + bottom) / 2f);
+        float gain = KTextEdgeGain * k; // 늘린 글자는 가장자리가 k배 넓게 번진다 → 기울기를 그만큼 세운다
         foreach (char ch in text)
         {
-            if (!kf.font.GetCharacterInfo(ch, out CharacterInfo ci, size, FontStyle.Normal)) continue;
-            float gx0 = pen + ci.minX, gx1 = pen + ci.maxX, gy0 = baseline + ci.minY, gy1 = baseline + ci.maxY;
-            if (gx1 > gx0 && gy1 > gy0)
+            if (!kf.font.GetCharacterInfo(ch, out CharacterInfo ci, req, FontStyle.Normal)) continue;
+            float gx0 = pen + ci.minX * k, gx1 = pen + ci.maxX * k, gy0 = baseline + ci.minY * k, gy1 = baseline + ci.maxY * k;
+            int gw = ci.maxX - ci.minX, gh = ci.maxY - ci.minY;
+            if (gx1 > gx0 && gy1 > gy0 && gw > 0 && gh > 0)
             {
+                // 글자 칸을 글자판 텍셀에 맞춘다: 모서리 UV에서 정수 원점과 한 칸 방향을 구하고, 칸 안 자리는 글자 기준 좌표(배정밀도)로만 계산한다.
+                // 글자가 글자판 어디에 놓였든, 글자판 크기가 얼마든 같은 픽셀이 나온다 (예전 GetPixelBilinear는 놓인 자리에 따라 끝자리가 흔들려
+                // 다시 만들 때마다 간판 PNG 몇 픽셀이 한 단계씩 달라졌다 — 11-16 확인)
+                int exx = Mathf.RoundToInt((ci.uvBottomRight.x - ci.uvBottomLeft.x) * kf.pw / gw), exy = Mathf.RoundToInt((ci.uvBottomRight.y - ci.uvBottomLeft.y) * kf.ph / gw);
+                int eyx = Mathf.RoundToInt((ci.uvTopLeft.x - ci.uvBottomLeft.x) * kf.pw / gh), eyy = Mathf.RoundToInt((ci.uvTopLeft.y - ci.uvBottomLeft.y) * kf.ph / gh);
+                int ox = Mathf.RoundToInt(ci.uvBottomLeft.x * kf.pw + 0.5f * (exx + eyx) - 0.5f), oy = Mathf.RoundToInt(ci.uvBottomLeft.y * kf.ph + 0.5f * (exy + eyy) - 0.5f);
                 int jMax = Mathf.Min(h, Mathf.CeilToInt(gy1)), iMax = Mathf.Min(w, Mathf.CeilToInt(gx1));
                 for (int j = Mathf.Max(0, Mathf.FloorToInt(gy0)); j < jMax; j++)
                     for (int i = Mathf.Max(0, Mathf.FloorToInt(gx0)); i < iMax; i++)
                     {
-                        float s = (i + 0.5f - gx0) / (gx1 - gx0), t = (j + 0.5f - gy0) / (gy1 - gy0);
-                        if (s < 0 || s > 1 || t < 0 || t > 1) continue;
-                        var uv = Vector2.Lerp(Vector2.Lerp(ci.uvBottomLeft, ci.uvBottomRight, s), Vector2.Lerp(ci.uvTopLeft, ci.uvTopRight, s), t);
-                        var g = kf.atlas.GetPixelBilinear(uv.x, uv.y);
-                        float a = (kf.red ? g.r : g.a) * color.a;
+                        double uo = (i + 0.5 - gx0) / k, vo = (j + 0.5 - gy0) / k; // 예전 s·gw, t·gh
+                        if (uo < 0 || uo > gw || vo < 0 || vo > gh) continue; // 예전 s·t가 0~1 밖인 자리
+                        // 예전 GetPixelBilinear는 텍셀 n을 가운데가 아니라 좌표 n에 두고 섞었다 (11-16 시험: 텍셀 가운데에서 0.25). 같은 자리를 글자 기준
+                        // 좌표로 옮겨 같은 모양을 내되, 칸 밖(이웃 글자)은 0으로 읽는다 — 예전에는 이웃 글자가 끝자리에 섞여 실행마다 1단계씩 흔들렸다
+                        double u = uo - 0.5 + 0.5 * (exx + exy), v = vo - 0.5 + 0.5 * (eyx + eyy);
+                        int u0 = (int)System.Math.Floor(u), v0 = (int)System.Math.Floor(v);
+                        float fu = (float)(u - u0), fv = (float)(v - v0);
+                        float a = Mathf.Lerp(Mathf.Lerp(KGlyphTexel(kf, gw, gh, ox, oy, exx, exy, eyx, eyy, u0, v0), KGlyphTexel(kf, gw, gh, ox, oy, exx, exy, eyx, eyy, u0 + 1, v0), fu),
+                                             Mathf.Lerp(KGlyphTexel(kf, gw, gh, ox, oy, exx, exy, eyx, eyy, u0, v0 + 1), KGlyphTexel(kf, gw, gh, ox, oy, exx, exy, eyx, eyy, u0 + 1, v0 + 1), fu), fv);
+                        if (k > 1f) a = Mathf.Clamp01((a - 0.5f) * gain + 0.5f);
+                        a *= color.a;
                         if (a <= 0) continue;
-                        int k = j * w + i;
-                        px[k] = Color.Lerp(px[k], new Color(color.r, color.g, color.b, 1f), a);
+                        int idx = j * w + i;
+                        px[idx] = Color.Lerp(px[idx], new Color(color.r, color.g, color.b, 1f), a);
                     }
             }
-            pen += ci.advance;
+            pen += ci.advance * k;
         }
         return width;
     }
