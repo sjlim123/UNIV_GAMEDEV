@@ -356,7 +356,8 @@ public class Zombie : MonoBehaviour, IDamageable
                 }
                 ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.8f, 0.8f);
                 UIManager.LastHitFrom = transform.position;
-                GameManager.Instance.Damage(stats.damage * (1 + 0.3f * danger), DeathReason());
+                // 공격력 = 기본 × 날짜 배율(EnemyPace.DamageMultiplier) × 탐험 안 위험도 배율
+                GameManager.Instance.Damage(stats.damage * EnemyPace.DamageMultiplier() * (1 + 0.3f * danger), DeathReason());
                 break;
         }
     }
@@ -370,7 +371,7 @@ public class Zombie : MonoBehaviour, IDamageable
     void ReleaseAttack(PlayerController player, Vector3 playerPos, float dist, float danger)
     {
         lunge = 1;
-        float damage = stats.damage * (1 + 0.3f * danger);
+        float damage = stats.damage * EnemyPace.DamageMultiplier() * (1 + 0.3f * danger);
         if (shooting)
         {
             Shoot(player, damage);
