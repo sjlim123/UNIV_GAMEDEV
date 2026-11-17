@@ -124,8 +124,9 @@ public class Radio : Interactable
 
     // 켤 때마다 두 방송이 번갈아 잡힌다 (○○ 지명은 나중에 정한다):
     // 1) 긴급 재난 방송 — 핵폭발 뒤 퍼진 바이러스와 감염자(좀비)를 알리고 서울시 ○○으로 대피하라는 안내
-    // 2) 생존자의 호출 — 트럭을 만들어 ○○으로 오라는 끊어진 목소리 (남은 턴에 따라 한 줄이 바뀐다)
+    // 2) 생존자의 호출 — 트럭을 만들어 ○○으로 오라는 끊어진 목소리 (남은 날에 따라 한 줄이 바뀐다)
     static int broadcastTurn;
+    const int HurryDays = 15; // 남은 날이 이 이하이면 생존자가 '더는 기다릴 수 없다'고 말한다
 
     void BuildTransmission()
     {
@@ -149,7 +150,7 @@ public class Radio : Interactable
         Add($"…{GameState.MaxTurns}일 안에… 트럭을… 만들어서…", 3f);
         Add("…서울시 ○○으로… 와라… 치직…", 3f);
         if (s.Turn > 1) // 첫날에는 남은 시간을 말하지 않는다
-            Add(left > 20 ? $"…남은 시간… {left}일… 치지직…" : $"…{left}일… 치직… 더는… 기다릴 수 없다…", 2.5f);
+            Add(left > HurryDays ? $"…남은 시간… {left}일… 치지직…" : $"…{left}일… 치직… 더는… 기다릴 수 없다…", 2.5f);
         Add("…반복한다… 치지직…", 2.5f);
     }
 

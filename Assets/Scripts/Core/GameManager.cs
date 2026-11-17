@@ -122,8 +122,9 @@ public class GameManager : MonoBehaviour
         if (InShelter && !IsTransitioning) SaveGame();
     }
 
-    // 하루 진행 (State.Turn = 며칠차, 1부터). 죽거나 마지막 날(MaxTurns일차)을 넘기면 false
-    public bool AdvanceTurn()
+    // 하루 진행 (State.Turn = 며칠차, 1부터). 죽거나 마지막 날(MaxTurns일차)을 넘기면 false.
+    // quiet면 굶주림·갈증 피해 알림을 띄우지 않는다 (잠잘 때: RestRoutine이 깬 뒤 알림에 그 말을 합쳐 한 번만 보인다)
+    public bool AdvanceTurn(bool quiet = false)
     {
         var s = State;
         s.Turn++;
@@ -135,7 +136,7 @@ public class GameManager : MonoBehaviour
         if (starving)
         {
             s.Health -= StarveDamagePerTurn;
-            UI.ShowMessage(s.Hunger <= 0 ? "굶주림으로 몸이 점점 약해진다..." : "목이 타들어 간다. 몸이 버티지 못한다...", 3.5f);
+            if (!quiet) UI.ShowMessage(s.Hunger <= 0 ? "굶주림으로 몸이 점점 약해진다..." : "목이 타들어 간다. 몸이 버티지 못한다...", 3.5f);
         }
         if (s.Health <= 0)
         {
@@ -367,15 +368,21 @@ public class GameManager : MonoBehaviour
         sfx.PlayOneShot(ProceduralAudio.SleepBreath(), 0.55f);
         // 잠드는 동안은 글자 없이 조용히 어두워진다 ('Z z z' 같은 만화풍 표시는 분위기에 맞지 않는다)
         yield return UI.Fade(1, 2.6f);
-        bool alive = AdvanceTurn();
+        // 깬 뒤 알림에 실제로 오른 체력을 적으려고 잠들기 직전 체력을 기억한다 (밤사이 굶주림 피해와 최대 체력에 막힌 몫이 빠진다)
+        float healthBefore = State.Health;
+        // 밤사이 굶주림·갈증 피해 알림은 여기서 띄우지 않는다 (quiet): 띄우면 검은 화면이 걷히는 동안 비쳐 보였다가 깬 뒤 알림이 같은 말을 또 했다
+        bool alive = AdvanceTurn(quiet: true);
+        // AdvanceTurn이 밤사이 굶주림·갈증 피해를 줬는가. 그 말은 깬 뒤 알림에 합친다
+        bool starved = alive && (State.Hunger <= 0 || State.Thirst <= 0);
         if (alive)
         {
             State.Health = Mathf.Min(State.MaxHealth, State.Health + RestHeal);
             SaveGame();
-            UI.ShowSleepText($"{State.Turn}일차 / {GameState.MaxTurns}일");
+            UI.ShowDayCard(State); // 검은 화면 가운데 'N일차' (UIManager.Rest)
         }
-        yield return new WaitForSecondsRealtime(1.1f);
-        UI.ShowSleepText(null);
+        // 살아서 깼으면 날짜 화면이 1일차부터 오늘까지 세어 올라가는 것을 다 보여 준 뒤 눈을 뜬다
+        yield return new WaitForSecondsRealtime(alive ? UIManager.DayCardSeconds : 1.1f);
+        UI.HideDayCard();
         if (!alive)
         {
             // 마지막 턴이 끝났다: 검은 화면을 걷어야 그 아래 끝 화면이 보인다 (걷지 않으면 8초 동안 까만 화면만 보인다).
@@ -393,7 +400,11 @@ public class GameManager : MonoBehaviour
                 yield return null;
             }
         if (pc != null) pc.SetSleep(null, 0);
-        UI.ShowMessage($"잘 잤다. 체력 +{RestHeal:0}  ({State.Turn}일차 / {GameState.MaxTurns}일)", 3f);
+        float gained = State.Health - healthBefore;
+        string feel = !starved ? "잘 잤다." : State.Hunger <= 0 ? "굶주림으로 몸이 점점 약해진다..." : "목이 타들어 간다. 몸이 버티지 못한다...";
+        string change = Mathf.Abs(gained) < 0.05f ? "체력 그대로" : gained > 0 ? $"체력 +{gained:0.#}" : $"체력 {gained:0.#}";
+        // 굶주린 밤 뒤에도 3초: 깨고 3초 뒤 굶주림 틱(Update, starveInterval)이 제 알림으로 덮으므로 더 길게 잡아도 보이지 않는다
+        UI.ShowMessage($"{feel} {change}  ({State.Turn}일차 / {GameState.MaxTurns}일)", 3f);
         IsTransitioning = false;
     }
 

@@ -35,9 +35,9 @@ public class GameBalance : ScriptableObject
 {
     [Header("턴 (게임 화면에는 '일'로 보인다: 1턴 = 하루)")]
     public int maxTurns = 100;
-    public float hungerPerTurn = 3f;
-    public float thirstPerTurn = 4f;
-    public float powerPerTurn = 3f;
+    public float hungerPerTurn = 4.5f;
+    public float thirstPerTurn = 6f;
+    public float powerPerTurn = 4.5f;
     [Tooltip("배고픔이나 갈증이 0일 때 턴마다 잃는 체력")]
     public float starveDamagePerTurn = 8f;
     [Tooltip("배고픔이나 갈증이 0이면 starveInterval초마다 이만큼 체력을 잃는다")]
@@ -130,7 +130,7 @@ public class GameBalance : ScriptableObject
     [Tooltip("플레이어와 이 거리 안에서는 좀비가 생기지 않는다")]
     public float safeRadius = 30f;
     [Tooltip("탐험마다 잡상인이 나타날 확률 (0.1 = 10번에 한 번)")]
-    [Range(0, 1)] public float traderChance = 0.1f;
+    [Range(0, 1)] public float traderChance = 0.2f;
     [Tooltip("탐험마다 약탈자가 나타날 확률")]
     [Range(0, 1)] public float raiderChance = 0.3f;
 
@@ -161,8 +161,11 @@ public class GameBalance : ScriptableObject
     [Range(0.05f, 1f)] public float paceStartRanged = 0.34f;
     [Range(0.05f, 1f)] public float paceStartLeather = 0.28f;
     [Range(0.05f, 1f)] public float paceStartHeavy = 0.2f;
+    [Tooltip("공격력도 추격 속도와 같은 날에 한 단계씩 오른다. 이 값은 마지막 단계부터의 공격력 배율이다 (1.3 = 1.3배, 1이면 오르지 않는다). "
+        + "첫 단계 전에는 1배이고 단계마다 고르게 오른다. 탐험 안에서 시간이 갈수록 붙는 배율(감염자 최대 1.3배 · 들개 1.2배)과 곱해진다")]
+    [Range(1f, 3f)] public float paceDamageMax = 1.3f;
     [Tooltip("속도가 오르기 몇 턴 전부터 방공호(출입구·침대·돌아왔을 때)에서 경고하는가")]
-    public int paceWarnTurns = 3;
+    public int paceWarnTurns = 2;
 
     [Header("방공호 정전 (전력 0%)")]
     [Tooltip("정전 중 출입구로 좀비가 들어오는 간격(초)")]

@@ -70,7 +70,7 @@ public static partial class GameSceneBuilder
         shelterLights.lights = lights.ToArray();
         shelterLights.emergencyLights = new[] { emergency };
 
-        BuildBed(root, new Vector3(-4.3f, 0, 2.3f));
+        BuildBed(root, new Vector3(-4.3f, 0, 2.84f)); // 머리판 뒷면(z +1.0)을 북쪽 벽 안쪽 면(z 3.85)에서 1cm 띄워 붙인다
         BuildWorkbench(root, new Vector3(3.2f, 0, 3.45f));
         BuildStorage(root, new Vector3(-3.4f, 0, -3.55f));
         BuildShelf(root, new Vector3(-1.2f, 0, -3.62f), 0, true);
@@ -89,7 +89,7 @@ public static partial class GameSceneBuilder
         PolyProp("metal_tool_chest", root, new Vector3(1.65f, 0, 3.6f), 180, 0.35f, 0.4f);
         PolyProp("metal_jerrycan", root, new Vector3(6.0f, 0, -1.95f), 25, 0.45f, 0.3f);
         PolyProp("metal_jerrycan", root, new Vector3(6.45f, 0, -2.05f), -10, 0.45f, 0.3f);
-        PolyProp("old_gas_mask", root, new Vector3(-4.78f, 1.95f, 3.05f), 90, 0.35f, 0, false); // 침대 머리맡 (서쪽 벽 북쪽 끝, 베개 위)
+        PolyProp("old_gas_mask", root, new Vector3(-4.78f, 1.95f, 3.59f), 90, 0.35f, 0, false); // 침대 머리맡 (서쪽 벽 북쪽 끝, 베개 위. 침대와 함께 옮김)
         // 방독면이 걸려 있던 자리: 3시 31분에 멈춘 벽시계(위)와 삼일은행 달력(아래) (GameSceneBuilder.ShelterWall.cs)
         BuildWallClock(root, new Vector3(-4.85f, 2.1f, 0.55f), 90f);
         BuildCalendar(root, new Vector3(-4.85f, 1.42f, 0.55f), 90f);
@@ -130,6 +130,9 @@ public static partial class GameSceneBuilder
         var surface = root.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+        // 침대(0.7m)처럼 올라설 수 있는 턱을 내비메시가 비탈로 뭉개 감염자가 턱 둘레에서 떠서 걷지 않게, 실제 높이(높이 메시)를 함께 굽는다.
+        // 침대를 내비메시에서 빼면(NavCut) 침대 머리 쪽 구석에 감염자 손이 닿지 않아 안전한 자리가 생긴다
+        surface.buildHeightMesh = true;
         surface.BuildNavMesh();
         string navPath = GenDir + "/ShelterNavMesh.asset";
         AssetDatabase.DeleteAsset(navPath);

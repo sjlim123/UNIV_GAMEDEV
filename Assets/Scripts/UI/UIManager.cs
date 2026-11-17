@@ -711,7 +711,6 @@ public partial class UIManager : MonoBehaviour
             fpsTimer = 0;
         }
 
-        UpdateSleepText();
         UpdateLetterbox();
         KeepPauseOnTop(); // 레터박스 띠가 일시정지 창을 가리지 않게 (UIManager.Menus)
         UpdateJournal();
@@ -922,31 +921,6 @@ public partial class UIManager : MonoBehaviour
             hitArcAlpha = 0.9f;
             LastHitFrom = null;
         }
-    }
-
-    // 잠잘 때 검은 화면 가운데 글자 (null이면 감춘다)
-    UnityEngine.UI.Text sleepText;
-    float sleepTextAlpha, sleepTextTarget;
-
-    public void ShowSleepText(string text)
-    {
-        if (sleepText == null)
-        {
-            sleepText = NewText(root, "", 40, TextAnchor.MiddleCenter, new Color(0.85f, 0.85f, 0.95f, 0), FontSemiBold);
-            Place(sleepText.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 80));
-        }
-        sleepText.transform.SetAsLastSibling();
-        if (!string.IsNullOrEmpty(text)) sleepText.text = text;
-        sleepTextTarget = string.IsNullOrEmpty(text) ? 0 : 1;
-    }
-
-    void UpdateSleepText()
-    {
-        if (sleepText == null) return;
-        sleepTextAlpha = Mathf.MoveTowards(sleepTextAlpha, sleepTextTarget, Time.unscaledDeltaTime * 1.2f);
-        sleepText.color = new Color(0.85f, 0.85f, 0.95f, sleepTextAlpha);
-        // 천천히 떠오르며 흔들린다
-        sleepText.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(Time.unscaledTime * 1.3f) * 6f, Mathf.Sin(Time.unscaledTime * 0.9f) * 8f);
     }
 
     // 검은 막의 현재 투명도 (1 = 완전히 검다)
