@@ -75,6 +75,11 @@ public static partial class GameSceneBuilder
         if (!AssetDatabase.IsValidFolder(parent + "/" + name)) AssetDatabase.CreateFolder(parent, name);
     }
 
+    // '매우 높음' 전용 2048 묶음 (밉맵 단계 묶음 HighRes): 매우 높음 = 2048, 높음·중간 = 1024, 낮음 = 512. GameSettings.ApplyGlobal이 단계를 정한다 (11-20)
+    const string HighResGroup = "HighRes";
+    // 2k 판으로 바꿔 넣은 Poly Haven 그림 (파일 이름은 GUID를 지키려고 _1k 그대로 둔다)
+    static readonly string[] HighResPolyHaven = { "concrete_wall_008_diff_1k.jpg", "concrete_wall_008_nor_gl_1k.jpg", "concrete_floor_worn_001_diff_1k.jpg", "concrete_floor_worn_001_nor_gl_1k.jpg" };
+
     static void ConfigureTextures()
     {
         foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { TexDir }))
@@ -84,7 +89,9 @@ public static partial class GameSceneBuilder
             imp.textureType = path.Contains("_nor_") ? TextureImporterType.NormalMap : TextureImporterType.Default;
             imp.wrapMode = TextureWrapMode.Repeat;
             imp.anisoLevel = 4;
-            imp.maxTextureSize = 1024;
+            bool hiRes = System.Array.IndexOf(HighResPolyHaven, System.IO.Path.GetFileName(path)) >= 0;
+            imp.maxTextureSize = hiRes ? 2048 : 1024;
+            imp.mipmapLimitGroupName = hiRes ? HighResGroup : "";
             imp.SaveAndReimport();
         }
     }

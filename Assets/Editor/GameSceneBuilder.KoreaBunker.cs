@@ -14,7 +14,7 @@ public static partial class GameSceneBuilder
         var plaque = PlaquePixels(dohyeon, pretendard);
         BunkerFacePixels(out var fa, out var fn);
         KReleaseFonts();
-        M["bunkerFace"] = KLitMat("M_BunkerFace", KSaveTex("bunker_face", fa, 1024, 1024, KTexKind.Color), KSaveTex("bunker_face_normal", fn, 1024, 1024, KTexKind.Normal), Color.white, 0.12f, 0f, 0.8f);
+        M["bunkerFace"] = KLitMat("M_BunkerFace", KSaveTex("bunker_face", fa, BunkerFaceN, BunkerFaceN, KTexKind.Color, maxSize: 2048, limitGroup: HighResGroup), KSaveTex("bunker_face_normal", fn, BunkerFaceN, BunkerFaceN, KTexKind.Normal, maxSize: 2048, limitGroup: HighResGroup), Color.white, 0.12f, 0f, 0.8f);
         M["plaque"] = KLitMat("M_ShelterPlaque", KSaveTex("bunker_plaque", plaque, 1024, 256, KTexKind.Color, false), null, Color.white, 0.3f, 0.2f);
         M["grassDry"] = TexMat("M_GrassDry", "dirty_concrete", new Color(0.42f, 0.38f, 0.22f), 0.03f);
         M["vine"] = TexMat("M_Vine", "dirty_concrete", new Color(0.12f, 0.17f, 0.09f), 0.05f);
@@ -22,9 +22,12 @@ public static partial class GameSceneBuilder
     }
 
     // 콘크리트 정면 1024px = 2.5m: 회색 콘크리트 위에 벗겨진 녹색 페인트 조각(가장자리 들림), 이끼, 흘러내린 때, 아래쪽 흙 얼룩. 노멀은 페인트 두께·벗겨진 턱
+    // 2048로 그린다 ('매우 높음' 전용 묶음. 높음 이하는 한 단계 아래 1024). 무늬는 N에 상관없는 노이즈라 크기만 바뀐다 (11-20)
+    const int BunkerFaceN = 2048;
+
     static void BunkerFacePixels(out Color32[] albedo, out Color32[] normal)
     {
-        const int N = 1024;
+        const int N = BunkerFaceN;
         var px = new Color32[N * N];
         var hgt = new float[N * N];
         var concrete = new Color(0.52f, 0.52f, 0.5f);
@@ -64,7 +67,7 @@ public static partial class GameSceneBuilder
                 hgt[y * N + x] = h * 0.7f + grain * 0.15f;
             }
         albedo = px;
-        normal = KNormalFromHeight(hgt, N, 2.0f);
+        normal = KNormalFromHeight(hgt, N, 2.0f * N / 1024f); // 이웃 픽셀 높이 차가 N에 반비례하므로 세기를 N에 비례해 1024 때와 같은 기울기로
     }
 
     // 명판 1024×256: 어두운 쇠판에 '민방위 대피소 / CIVIL DEFENSE SHELTER'

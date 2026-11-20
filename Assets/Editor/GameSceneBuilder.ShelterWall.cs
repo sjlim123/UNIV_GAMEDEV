@@ -21,7 +21,7 @@ public static partial class GameSceneBuilder
         var hand = TexMat("M_ClockHand", null, new Color(0.05f, 0.045f, 0.04f), 0.5f, 0.55f);
         var second = TexMat("M_ClockSecond", null, new Color(0.72f, 0.07f, 0.05f), 0.45f, 0.25f);
         var glass = TransparentMat("M_ClockGlass", new Color(0.82f, 0.86f, 0.9f, 0.035f), 0.45f); // 광택을 낮춰 전구 반사로 글자판이 하얗게 날아가지 않게
-        var dialTex = ShelterTexture("clock_dial", ClockDialPixels(1024), 1024, 1024, false);
+        var dialTex = ShelterTexture("clock_dial", ClockDialPixels(1024), 1024, 1024, false, 512); // 1024로 그리고 512로 들여온다 (36 cm 문자판에 1414 px/m)
         var dial = KLitMat("M_ClockDial", dialTex, null, Color.white, 0.12f, 0f);
 
         // 오크 틀 (둥근 몰딩, 벽에서 8.8cm): 단면은 안쪽 턱 아래에서 시작해 위→앞면→바깥→뒤로 돈다 (겉면이 밖을 보는 순서). 축을 로컬 +z로 돌려 세운다
@@ -363,8 +363,8 @@ public static partial class GameSceneBuilder
             }
     }
 
-    // PNG로 저장해 들여온다 (KSaveTex와 같되 Assets/Generated/Shelter/에, 반복 없음)
-    static Texture2D ShelterTexture(string name, Color32[] px, int w, int h, bool repeat)
+    // PNG로 저장해 들여온다 (KSaveTex와 같되 Assets/Generated/Shelter/에, 반복 없음). maxSize = 들여오는 최대 크기 (그림이 더 크면 줄여서 들여온다)
+    static Texture2D ShelterTexture(string name, Color32[] px, int w, int h, bool repeat, int maxSize = 1024)
     {
         if (!AssetDatabase.IsValidFolder("Assets/Generated")) AssetDatabase.CreateFolder("Assets", "Generated");
         if (!AssetDatabase.IsValidFolder(ShelterGenDir)) AssetDatabase.CreateFolder("Assets/Generated", "Shelter");
@@ -384,7 +384,7 @@ public static partial class GameSceneBuilder
             imp.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
             imp.filterMode = FilterMode.Trilinear;
             imp.anisoLevel = 8;
-            imp.maxTextureSize = 1024;
+            imp.maxTextureSize = maxSize;
             imp.textureCompression = TextureImporterCompression.CompressedHQ;
             imp.SaveAndReimport();
         }

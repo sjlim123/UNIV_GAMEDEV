@@ -55,8 +55,9 @@ public static partial class GameSceneBuilder
     static void KWindowMaterials()
     {
         KWinAtlasPixels(out var albedo, out var normal);
-        var atlas = KSaveTex("win_frame", albedo, KWinTex, KWinTex, KTexKind.ColorAlpha, false, true);
-        var atlasN = KSaveTex("win_frame_normal", normal, KWinTex, KWinTex, KTexKind.Normal, false);
+        // 1024로 그리고 512로 들여온다 (품질 '낮음'에서만 보이는 카드)
+        var atlas = KSaveTex("win_frame", albedo, KWinTex, KWinTex, KTexKind.ColorAlpha, false, true, 512);
+        var atlasN = KSaveTex("win_frame_normal", normal, KWinTex, KWinTex, KTexKind.Normal, false, maxSize: 512);
         M["winFrame"] = KCardMat("M_WinFrame", atlas, atlasN);
     }
 

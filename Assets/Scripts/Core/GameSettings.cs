@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 // 설정 메뉴 값 (PlayerPrefs에 저장). 저사양 PC용 품질 조절도 여기서 한다.
 public static class GameSettings
 {
-    public static readonly string[] QualityNames = { "낮음", "중간", "높음" };
+    public static readonly string[] QualityNames = { "낮음", "중간", "높음", "매우 높음" };
     public static readonly int[] FpsOptions = { 30, 60, 120, 144, 0 };
     // 조준점: 모양·색·크기
     public static readonly string[] CrosshairStyleNames = { "점", "십자", "십자 + 점", "원", "원 + 점", "없음" };
@@ -17,7 +17,7 @@ public static class GameSettings
     };
     public static readonly string[] CrosshairSizeNames = { "작게", "보통", "크게" };
 
-    public static int Quality;        // 0 낮음, 1 중간, 2 높음
+    public static int Quality;        // 0 낮음, 1 중간, 2 높음, 3 매우 높음
     public static float RenderScale;  // 0.5 ~ 1.0
     public static float Brightness;   // 0.5 ~ 2.0
     public static float Fov;
@@ -35,10 +35,15 @@ public static class GameSettings
     static readonly Dictionary<Light, LightShadows> lightShadows = new Dictionary<Light, LightShadows>();
     static readonly Dictionary<ParticleSystem, float> particleRates = new Dictionary<ParticleSystem, float>();
     static float originalRenderScale = -1f, originalShadowDistance;
+    static int originalTextureLimit = -1;
+    // '매우 높음' 전용 2048 텍스처 묶음 (방공호 벽·바닥, 벙커 정면, 제작대 때). 전체 단계에 더하는 값: 매우 높음 0(2048), 그 밖 1(높음·중간 1024, 낮음 512)
+    const string HighResGroup = "HighRes";
+    static bool highResSaved;
+    static TextureMipmapLimitSettings originalHighRes;
 
     public static void Load()
     {
-        Quality = PlayerPrefs.GetInt("set_quality", 2);
+        Quality = Mathf.Clamp(PlayerPrefs.GetInt("set_quality", 2), 0, QualityNames.Length - 1);
         RenderScale = PlayerPrefs.GetFloat("set_renderScale", 1f);
         Brightness = PlayerPrefs.GetFloat("set_brightness", 1f);
         Fov = PlayerPrefs.GetFloat("set_fov", 70f);
@@ -114,6 +119,16 @@ public static class GameSettings
         // 전체 음량을 100%로 둬도 실제 출력은 81% (처음 시작한 사람이 놀라지 않게 10%씩 두 번 낮춤, 사용자 요청)
         AudioListener.volume = Volume * 0.81f;
 
+        // 그래픽 품질 '낮음'은 3D 텍스처를 밉맵 한 단계 아래(가로·세로 절반)로 쓴다. 중간·높음·매우 높음은 원본이다.
+        // UI 그림(아이템 아이콘, 등급 배경)은 들여오기 설정에서 'Ignore Mipmap Limit'을 켜 두어 늘 원본으로 그린다
+        if (originalTextureLimit < 0) originalTextureLimit = QualitySettings.globalTextureMipmapLimit;
+        QualitySettings.globalTextureMipmapLimit = Quality == 0 ? 1 : 0;
+        if (TextureMipmapLimitGroups.HasGroup(HighResGroup))
+        {
+            if (!highResSaved) { originalHighRes = QualitySettings.GetTextureMipmapLimitSettings(HighResGroup); highResSaved = true; }
+            QualitySettings.SetTextureMipmapLimitSettings(HighResGroup, new TextureMipmapLimitSettings { limitBiasMode = TextureMipmapLimitBiasMode.OffsetGlobalLimit, limitBias = Quality >= 3 ? 0 : 1 });
+        }
+
         if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
         {
             if (originalRenderScale < 0)
@@ -122,13 +137,15 @@ public static class GameSettings
                 originalShadowDistance = urp.shadowDistance;
             }
             urp.renderScale = RenderScale;
-            urp.shadowDistance = Quality == 0 ? 15f : Quality == 1 ? 25f : 40f;
+            urp.shadowDistance = Quality == 0 ? 15f : Quality == 1 ? 25f : Quality == 2 ? 40f : 60f; // 매우 높음: 그림자를 더 멀리까지
         }
     }
 
-    // 에디터에서 플레이를 끝낼 때 URP 설정 파일을 원래대로 돌린다
+    // 에디터에서 플레이를 끝낼 때 URP 설정 파일과 텍스처 단계를 원래대로 돌린다
     public static void RestoreAssets()
     {
+        if (originalTextureLimit >= 0) QualitySettings.globalTextureMipmapLimit = originalTextureLimit;
+        if (highResSaved && TextureMipmapLimitGroups.HasGroup(HighResGroup)) QualitySettings.SetTextureMipmapLimitSettings(HighResGroup, originalHighRes);
         if (originalRenderScale < 0) return;
         if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
         {
@@ -169,11 +186,11 @@ public static class GameSettings
             if (profile.TryGet<ChromaticAberration>(out var chroma)) chroma.active = Quality >= 2;
         }
 
-        // 낮음: 그림자 없음 / 중간: 점광원(전구·불) 그림자만 끔 / 높음: 전부
+        // 낮음: 그림자 없음 / 중간: 점광원(전구·불) 그림자만 끔 / 높음·매우 높음: 전부
         foreach (var kv in lightShadows)
         {
             if (kv.Key == null) continue;
-            bool keep = Quality == 2 || (Quality == 1 && kv.Key.type != LightType.Point);
+            bool keep = Quality >= 2 || (Quality == 1 && kv.Key.type != LightType.Point);
             kv.Key.shadows = keep ? kv.Value : LightShadows.None;
         }
         float particleScale = Quality == 0 ? 0.3f : Quality == 1 ? 0.6f : 1f;
@@ -183,7 +200,7 @@ public static class GameSettings
             var em = kv.Key.emission;
             em.rateOverTimeMultiplier = kv.Value * particleScale;
         }
-        FacadeDetail.ApplyAll(Quality); // 낮음: 도시 아파트 4층부터 창틀·유리·난간을 카드로 (중간·높음은 원래 메시)
+        FacadeDetail.ApplyAll(Quality); // 낮음: 도시 아파트 4층부터 창틀·유리·난간을 카드로 (중간 이상은 원래 메시)
 
         var cam = Camera.main;
         if (cam != null)

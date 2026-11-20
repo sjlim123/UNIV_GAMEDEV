@@ -118,7 +118,8 @@ public static partial class GameSceneBuilder
     enum KTexKind { Color, ColorAlpha, Normal, Linear }
 
     // coverage: 알파 클립 그림 (창틀 카드). 밉맵에서도 알파 0.5를 넘는 픽셀 비율을 지켜 가는 막대가 멀리서 사라지지 않게 한다
-    static Texture2D KSaveTex(string name, Color32[] px, int w, int h, KTexKind kind, bool repeat = true, bool coverage = false)
+    // maxSize: 들여오는 최대 크기. 그림을 그보다 크게 그렸으면 줄여서 들여온다 (창틀 카드는 1024로 그리고 512로 들여온다. 벙커 정면은 가까이서 흐려져 1024 그대로, 11-20)
+    static Texture2D KSaveTex(string name, Color32[] px, int w, int h, KTexKind kind, bool repeat = true, bool coverage = false, int maxSize = 1024, string limitGroup = "")
     {
         if (!AssetDatabase.IsValidFolder("Assets/Generated")) AssetDatabase.CreateFolder("Assets", "Generated");
         if (!AssetDatabase.IsValidFolder(CityGenDir)) AssetDatabase.CreateFolder("Assets/Generated", "City");
@@ -139,7 +140,8 @@ public static partial class GameSceneBuilder
             imp.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
             imp.filterMode = FilterMode.Trilinear;
             imp.anisoLevel = 6;
-            imp.maxTextureSize = 1024;
+            imp.maxTextureSize = maxSize;
+            imp.mipmapLimitGroupName = limitGroup; // 밉맵 단계 묶음 ('매우 높음' 전용 2048은 HighRes)
             imp.textureCompression = kind == KTexKind.Linear ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
             if (coverage)
             {
