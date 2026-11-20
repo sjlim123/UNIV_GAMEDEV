@@ -85,6 +85,7 @@ public static class Tutorial
 
     public const int HintInventory = 1, HintWorkbench = 2, HintBattery = 4, HintZombie = 8, HintHeavy = 16, HintRedNight = 32;
     public const int HintGlass = 64, HintEcho = 128, HintFall = 256; // 탐험 목적지의 함정 (유리 조각·울림·추락)
+    public const int HintCrawl = 512; // 판자로 막힌 출입구의 틈 (CrawlHint, 2026-11-20)
 
     // evt 사건으로 끝나는 할 일의 바로 다음 번호 (없으면 0). TutorialStep이 이 값 이상이면 그 일을 마친 것이다
     public static int StepAfter(string evt)

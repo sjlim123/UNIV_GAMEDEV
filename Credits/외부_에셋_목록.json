@@ -1,6 +1,6 @@
 {
   "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
-  "updated": "2026-11-05",
+  "updated": "2026-11-20",
   "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
   "licenses": {
     "CC0": {
@@ -27,8 +27,8 @@
       "items": [
         "asphalt_02",
         "brick_wall_10",
-        "concrete_floor_worn_001",
-        "concrete_wall_008",
+        "concrete_floor_worn_001 (2k)",
+        "concrete_wall_008 (2k)",
         "cracked_concrete_wall",
         "dirty_concrete",
         "rusty_metal_02",
@@ -38,7 +38,7 @@
       "source": "https://polyhaven.com/textures",
       "license": "CC0",
       "location": "Assets/ThirdParty/PolyHaven/*.jpg",
-      "used_for": "벽·바닥·금속·나무 재질",
+      "used_for": "벽·바닥·금속·나무 재질. 방공호 벽·바닥 2종은 2k판(2026-11-20, 그래픽 품질 '매우 높음'용. 파일 이름은 _1k 그대로)",
       "added": "2026-10-28",
       "status": "사용 중"
     },
@@ -125,19 +125,6 @@
       "license": "OFL",
       "location": "Assets/Resources/Fonts/DoHyeon-Regular.ttf (+ DoHyeon-LICENSE.txt)",
       "used_for": "UI 제목·라벨 (대피소 서류 스타일)",
-      "added": "2026-11-03",
-      "status": "사용 중"
-    },
-    {
-      "id": "font-nanumpenscript",
-      "kind": "글꼴",
-      "name": "Nanum Pen Script (나눔손글씨 펜)",
-      "items": [],
-      "author": "산돌커뮤니케이션 (네이버 나눔글꼴)",
-      "source": "https://fonts.google.com/specimen/Nanum+Pen+Script",
-      "license": "OFL",
-      "location": "Assets/Resources/Fonts/NanumPenScript-Regular.ttf (+ NanumPenScript-LICENSE.txt)",
-      "used_for": "손글씨 메모·일지",
       "added": "2026-11-03",
       "status": "사용 중"
     },

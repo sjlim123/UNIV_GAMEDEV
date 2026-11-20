@@ -113,6 +113,7 @@ public class TruckSite : Interactable
     {
         hintClock += Time.deltaTime;
         if (hintClock > HintGiveUp || !gm.State.Truck.IsEmpty) { hintPending = false; return; }
+        if (!GameSettings.Tips) return; // 안내를 꺼 두었으면 띄우지 않는다. 도착 뒤 40초 안에 Tip을 켜면 그때 뜬다 (2026-11-19)
         if (hintClock < HintDelay || gm.IsGameOver || gm.IsTransitioning || gm.UI.IsBlocking || gm.UI.IsShowingMessage) return;
         hintPending = false;
         gm.UI.ShowMessage(HintText(), 6f);

@@ -34,7 +34,7 @@ public partial class UIManager
     UnityEngine.UI.Text statusTag, timeLabel, timeValue, timeSub;
     Image timeIcon, timeFrame;
     readonly Image[] timeSegs = new Image[20];
-    float statusShake, hudIntro = 1f, promptPop = 1f;
+    float statusShake, hudIntro = 1f;
     string promptShown;
 
     void BuildStatusPanel(Transform h)
@@ -509,33 +509,51 @@ public partial class UIManager
         compassText.color = red ? c : Pale;
     }
 
-    // ---------- 씬에 들어올 때 잠깐 보이는 조작키 안내 ----------
+    // ---------- 조작키 안내 줄 (화면 아래 가운데) ----------
+    // 2026-11-19 (멘토링 3, 안내 고정 규칙): 씬에 들어오고 9초 뒤 1.2초에 걸쳐 사라지던 것을 고정했다. Tip이 켜져 있는 동안 그 자리에 그대로 있고,
+    // Tip을 끄면 바로 사라진다. 창·일시정지·컷씬·잠자기 같은 전환 중에는 이 키들을 쓸 수 없으니 감춘다 (PlayerController.InputBlocked, 움직임 없이 바로)
 
     UnityEngine.UI.Text keyHints;
-    float keyHintTimer;
+    int keyHintKeys = int.MinValue; // 글을 만들 때의 키 설정 (조작법 창에서 키를 바꾸면 글을 다시 만든다)
 
     void BuildKeyHints(Transform h)
     {
         keyHints = NewText(h, "", 17, TextAnchor.MiddleCenter, Pale, FontTitle);
         Place(keyHints.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 148), new Vector2(1200, 26));
         keyHints.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
-        keyHints.color = new Color(Pale.r, Pale.g, Pale.b, 0);
+        keyHints.gameObject.SetActive(false);
     }
 
+    // 지금 키 설정으로 글을 채운다 (씬에 들어올 때와 HUD가 켜질 때 부른다). 보이고 숨는 것은 UpdateKeyHints가 정한다
     public void ShowKeyHints()
     {
-        if (keyHints == null || !GameSettings.Tips) return;
-        string K(GameAction a) => KeyBindings.Label(a);
-        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
-        keyHintTimer = 9f;
+        if (keyHints == null) return;
+        keyHintKeys = int.MinValue;
+        RefreshKeyHintText();
     }
 
-    void UpdateKeyHints(float dt)
+    void RefreshKeyHintText()
     {
-        if (keyHints == null || (keyHintTimer <= 0 && keyHints.color.a <= 0)) return;
-        if (!GameSettings.Tips) keyHintTimer = 0; // 보이는 중에 꺼도 바로 사라진다
-        keyHintTimer -= dt;
-        keyHints.color = new Color(Pale.r, Pale.g, Pale.b, Mathf.Clamp01(keyHintTimer / 1.2f)); // 마지막 1.2초 동안 사라진다
+        int keys = 17;
+        keys = keys * 31 + KeyBindings.Get(GameAction.Interact);
+        keys = keys * 31 + KeyBindings.Get(GameAction.Inventory);
+        keys = keys * 31 + KeyBindings.Get(GameAction.Flashlight);
+        keys = keys * 31 + KeyBindings.Get(GameAction.Run);
+        keys = keys * 31 + KeyBindings.Get(GameAction.Crouch);
+        keys = keys * 31 + KeyBindings.Get(GameAction.Attack);
+        if (keys == keyHintKeys) return;
+        keyHintKeys = keys;
+        string K(GameAction a) => KeyBindings.Label(a);
+        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
+    }
+
+    void UpdateKeyHints()
+    {
+        if (keyHints == null) return;
+        var pc = PlayerController.Instance;
+        bool show = GameSettings.Tips && pc != null && !pc.InputBlocked;
+        if (keyHints.gameObject.activeSelf != show) keyHints.gameObject.SetActive(show);
+        if (show) RefreshKeyHintText();
     }
 
     static readonly string[] DangerNames = { "낮음", "보통", "높음", "매우 높음", "극도" };
@@ -628,7 +646,7 @@ public partial class UIManager
         float dt = Time.unscaledDeltaTime;
         hudIntro = Mathf.Min(1f, hudIntro + dt / 0.7f);
         float intro = 1 - Ease(hudIntro);
-        UpdateKeyHints(dt);
+        UpdateKeyHints();
         if (hotbarTray != null) hotbarTray.anchoredPosition = new Vector2(0, 14 - 140 * intro);
         if (hotbarBar != null) hotbarBar.anchoredPosition = new Vector2(0, 30 - 140 * intro);
         if (flashBox != null) ((RectTransform)flashBox.transform).anchoredPosition = new Vector2(-28 + 320 * intro, 48);
@@ -640,14 +658,7 @@ public partial class UIManager
             toastRect.anchoredPosition = new Vector2(0, 230 + (1 - Ease(a)) * 24f);
             toastRect.localScale = Vector3.one * (0.96f + 0.04f * Ease(a));
         }
-        // 상호작용 안내: 새로 뜰 때 톡 튀어나온다
-        if (promptBox != null && promptBox.gameObject.activeSelf)
-        {
-            promptPop = Mathf.Min(1f, promptPop + dt / 0.16f);
-            float k = Ease(promptPop);
-            promptBox.localScale = Vector3.one * (0.85f + 0.15f * k + Mathf.Sin(k * Mathf.PI) * 0.05f);
-            promptText.color = new Color(Text.r, Text.g, Text.b, k);
-        }
+        // 상호작용 안내([F] 띠)는 움직이지 않는다: 크기·투명도를 바꾸지 않고 글만 바뀐다 (2026-11-19, UIManager.SetPrompt)
         // 손에 든 아이템 이름·쓰는 법: 칸을 바꿔도 떠오르거나 사라지지 않고 그 자리에서 글만 바뀐다 (뜨고 사라지는 게 번잡하다는 의견)
         itemNameText.color = Pale;
         itemNameText.rectTransform.anchoredPosition = new Vector2(0, 112 - 140 * intro);

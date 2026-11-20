@@ -114,4 +114,4 @@
 - 텍스처 · 3D 모델: [Poly Haven](https://polyhaven.com) (CC0)
 - 감염자 목소리: ianzazz, Darsycho, saturn91 (OpenGameArt, CC0)
 - 발소리: Fantozzi, Kenney, Ali_6868 (CC0) / swuing, EminYILDIRIM (CC-BY 3.0)
-- 글꼴: Pretendard, Do Hyeon, Nanum Pen Script, Share Tech Mono (SIL Open Font License 1.1) — `Assets/Resources/Fonts`, 라이선스 문서를 함께 넣었습니다
+- 글꼴: Pretendard, Do Hyeon, Share Tech Mono (SIL Open Font License 1.1) — `Assets/Resources/Fonts`, 라이선스 문서를 함께 넣었습니다

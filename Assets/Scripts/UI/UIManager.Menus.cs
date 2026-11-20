@@ -85,7 +85,8 @@ public partial class UIManager
         // 오른쪽 아래 큰 '계속하기'. 왼쪽 아래에는 Tip 스위치와 Esc 안내
         PrimaryButton(p, "계속하기", () => SetPaused(false), out _, out _);
         BuildTipSwitch(p, new Vector2(MenuLeft + 4, 70));
-        var hint = NewText(p, "ESC   계속하기", 15, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.35f), FontMono);
+        // 한글이 든 줄은 프리텐다드로 (모노 글꼴에는 한글이 없어 PC마다 다른 OS 글꼴로 그려졌다), 15px·흐림 0.35 → 16px·0.7 (2026-11-19)
+        var hint = NewText(p, "ESC   계속하기", 16, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.7f), FontSemiBold);
         Place(hint.rectTransform, new Vector2(0, 0), new Vector2(MenuLeft + 4, 26), new Vector2(460, 24));
         return p.gameObject;
     }
@@ -413,8 +414,9 @@ public partial class UIManager
             f.color = new Color(1, 1, 1, 0.18f);
             primaryInfoTitle = NewText(panel, "최근 저장", 19, TextAnchor.UpperLeft, Text, FontTitle);
             Place(primaryInfoTitle.rectTransform, new Vector2(0, 1), new Vector2(18, -9), new Vector2(340, 26));
-            noteText = NewText(panel, "", 13, TextAnchor.UpperLeft, PaleDim, FontMono);
-            Place(noteText.rectTransform, new Vector2(0, 1), new Vector2(18, -36), new Vector2(340, 20));
+            // 'SLOT n · n일차 · 날짜'에 한글이 섞여 모노 글꼴 대신 프리텐다드 SemiBold 15px (2026-11-19)
+            noteText = NewText(panel, "", 15, TextAnchor.UpperLeft, PaleDim, FontSemiBold);
+            Place(noteText.rectTransform, new Vector2(0, 1), new Vector2(18, -36), new Vector2(340, 22));
             noteText.horizontalOverflow = HorizontalWrapMode.Overflow;
             primaryInfo = panel.gameObject;
         }
@@ -590,7 +592,7 @@ public partial class UIManager
         if (hover != null) SetMenuButtonColors(hover, has);
         if (primaryLabel != null) primaryLabel.text = has ? "이어하기" : "새 게임";
         if (primaryInfo != null) primaryInfo.SetActive(has);
-        if (primaryNote != null) primaryNote.text = has ? $"SLOT {latest}  ·  {SaveSystem.Summary(latest)}" : "";
+        if (primaryNote != null) primaryNote.text = has ? $"SLOT {latest} · {SaveSystem.Summary(latest)}" : "";
     }
 
     public void HideMainMenu() => mainMenuRoot.SetActive(false);
@@ -651,7 +653,7 @@ public partial class UIManager
 
             if (settingsTab == 1)
             {
-                Selector(c, "그래픽 품질", GameSettings.QualityNames[GameSettings.Quality], d => GameSettings.Quality = Mathf.Clamp(GameSettings.Quality + d, 0, 2));
+                Selector(c, "그래픽 품질", GameSettings.QualityNames[GameSettings.Quality], d => GameSettings.Quality = Mathf.Clamp(GameSettings.Quality + d, 0, GameSettings.QualityNames.Length - 1));
                 Selector(c, "렌더 해상도", $"{GameSettings.RenderScale * 100:0}%", d => GameSettings.RenderScale = Step(GameSettings.RenderScale, d * 0.1f, 0.5f, 1f));
                 Selector(c, "밝기", $"{GameSettings.Brightness * 100:0}%", d => GameSettings.Brightness = Step(GameSettings.Brightness, d * 0.1f, 0.5f, 2f));
                 Selector(c, "시야각 (FOV)", $"{GameSettings.Fov:0}", d => GameSettings.Fov = Mathf.Clamp(GameSettings.Fov + d * 5, 60, 100));
@@ -699,7 +701,9 @@ public partial class UIManager
 
             Line(c, "", 8);
             var row = Row(c, false);
-            RowButton(row, "기본값으로", () => { GameSettings.ResetToDefault(); rebinding = null; ApplyAllSettings(); RefreshPanel(); }, true, 200);
+            // Tip 스위치는 이 설정 창이 아니라 일시정지 화면에 있으므로 '기본값으로'가 건드리지 않는다 (2026-11-20.
+            // 전에는 Tip이 켜지는데 일시정지의 스위치 글은 '꺼짐'으로 남았다). 스위치 표시도 다시 맞춘다
+            RowButton(row, "기본값으로", () => { bool tips = GameSettings.Tips; GameSettings.ResetToDefault(); GameSettings.Tips = tips; GameSettings.Save(); rebinding = null; ApplyAllSettings(); RefreshPanel(); UpdateTipSwitch(true); }, true, 200);
         }, "settings", true, () => rebinding = null);
     }
 
@@ -781,7 +785,7 @@ public partial class UIManager
             Line(c, "· 군화·물 발소리 (CC BY 3.0): 'footstep-concrete' — swuing,");
             Line(c, "   'Water Footsteps' — EminYILDIRIM (Freesound 원본, OpenGameArt 묶음)");
             Line(c, "· 폰트 (SIL OFL 1.1): Pretendard — 길형진, Do Hyeon — 우아한형제들,");
-            Line(c, "   Nanum Pen Script — 산돌커뮤니케이션, Share Tech Mono — Carrois Apostrophe");
+            Line(c, "   Share Tech Mono — Carrois Apostrophe");
             Line(c, "· 나머지 효과음, 모델 대부분, UI 그림: 코드로 제작");
             Line(c, "· 엔진: Unity 6 (URP)");
             Line(c, "");
