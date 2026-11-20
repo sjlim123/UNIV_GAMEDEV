@@ -30,10 +30,29 @@ public static partial class GameSceneBuilder
         Debug.Log("[GameSceneBuilder] 제작대 강철에 때를 입혔습니다.");
     }
 
-    // 1024×1024, 한 칸이 1.2m (BoxMesh의 tile → 1cm ≈ 8.5px). 가장자리를 넘어도 이어지는 노이즈라 되풀이해도 이음새가 없다
+    // 2048×2048, 한 칸이 1.2m (BoxMesh의 tile → 1cm ≈ 17px). 가장자리를 넘어도 이어지는 노이즈라 되풀이해도 이음새가 없다
+    // 그림의 크기·자리는 1024 기준으로 정하고 S배 한다: 2048 그림의 한 단계 아래(1024)가 예전 1024 그림과 같게 (11-20, '매우 높음' 2048)
     static void SteelGrime(Material m)
     {
-        const int N = 1024;
+        SteelGrimeTextures(out var albedoTex, out var maskTex);
+        m.SetTexture("_BaseMap", albedoTex);
+        m.SetTexture("_MainTex", albedoTex);
+        m.SetTexture("_MetallicGlossMap", maskTex);
+        m.EnableKeyword("_METALLICSPECGLOSSMAP");
+        m.SetFloat("_SmoothnessTextureChannel", 0);
+        m.SetFloat("_Smoothness", 1f);
+        m.SetFloat("_Metallic", 1f);
+        m.SetColor("_BaseColor", new Color(0.86f, 0.86f, 0.85f));
+        m.SetColor("_Color", new Color(0.86f, 0.86f, 0.85f));
+        m.SetFloat("_BumpScale", 0.8f);
+        EditorUtility.SetDirty(m);
+    }
+
+    // 그림 두 장만 그려 저장한다 (재질은 건드리지 않는다)
+    static void SteelGrimeTextures(out Texture2D albedoTex, out Texture2D maskTex)
+    {
+        const int N = 2048;
+        const float S = N / 1024f;
         var albedo = new Color32[N * N];
         var mask = new Color32[N * N];
         var rnd = new System.Random(2026);
@@ -41,19 +60,19 @@ public static partial class GameSceneBuilder
         // 기름 번짐 (x, y, 가로 반지름, 세로 반지름) 셋과 흘러내린 자국 (x, 위 y, 길이, 폭) 넷. 칸 가장자리를 피한다
         var stains = new List<Vector4>();
         for (int i = 0; i < 3; i++)
-            stains.Add(new Vector4(120 + (float)rnd.NextDouble() * (N - 240), 120 + (float)rnd.NextDouble() * (N - 240), 28 + (float)rnd.NextDouble() * 40, 14 + (float)rnd.NextDouble() * 22));
+            stains.Add(new Vector4((120 + (float)rnd.NextDouble() * (1024 - 240)) * S, (120 + (float)rnd.NextDouble() * (1024 - 240)) * S, (28 + (float)rnd.NextDouble() * 40) * S, (14 + (float)rnd.NextDouble() * 22) * S));
         var drips = new List<Vector4>();
         for (int i = 0; i < 4; i++)
-            drips.Add(new Vector4(60 + (float)rnd.NextDouble() * (N - 120), 200 + (float)rnd.NextDouble() * (N - 260), 60 + (float)rnd.NextDouble() * 160, 1.5f + (float)rnd.NextDouble() * 2.5f));
+            drips.Add(new Vector4((60 + (float)rnd.NextDouble() * (1024 - 120)) * S, (200 + (float)rnd.NextDouble() * (1024 - 260)) * S, (60 + (float)rnd.NextDouble() * 160) * S, (1.5f + (float)rnd.NextDouble() * 2.5f) * S));
         // 잔 긁힘: 대부분 결(가로) 방향으로 짧게, 몇 개는 비스듬히. +면 쇠가 드러난 밝은 선, -면 어두운 선
         var scratch = new float[N * N];
         for (int i = 0; i < 44; i++)
         {
-            float x0 = 30 + (float)rnd.NextDouble() * (N - 60), y0 = 30 + (float)rnd.NextDouble() * (N - 60);
+            float x0 = (30 + (float)rnd.NextDouble() * (1024 - 60)) * S, y0 = (30 + (float)rnd.NextDouble() * (1024 - 60)) * S;
             float ang = rnd.NextDouble() < 0.7 ? ((float)rnd.NextDouble() - 0.5f) * 0.5f : (float)rnd.NextDouble() * Mathf.PI;
-            float l = 10 + (float)rnd.NextDouble() * 60;
-            float x1 = Mathf.Clamp(x0 + Mathf.Cos(ang) * l, 20, N - 20), y1 = Mathf.Clamp(y0 + Mathf.Sin(ang) * l, 20, N - 20);
-            float sign = rnd.NextDouble() < 0.7 ? 1f : -1f, width = 0.5f + (float)rnd.NextDouble() * 0.9f;
+            float l = (10 + (float)rnd.NextDouble() * 60) * S;
+            float x1 = Mathf.Clamp(x0 + Mathf.Cos(ang) * l, 20 * S, N - 20 * S), y1 = Mathf.Clamp(y0 + Mathf.Sin(ang) * l, 20 * S, N - 20 * S);
+            float sign = rnd.NextDouble() < 0.7 ? 1f : -1f, width = (0.5f + (float)rnd.NextDouble() * 0.9f) * S;
             GrimeLine(scratch, N, x0, y0, x1, y1, width, sign);
         }
 
@@ -69,7 +88,7 @@ public static partial class GameSceneBuilder
                 float nRust = GrimeFbm(x, y, N, 14, 4, 303);
                 float nRustArea = GrimeFbm(x, y, N, 2, 3, 404);
                 float nSpeck = GrimeNoise(x, y, N, 96, 505);
-                float brush = GrimeHash(y, x / 9, 55) - 0.5f; // 가로로 간 미세한 결
+                float brush = GrimeHash((int)(y / S), (int)(x / S) / 9, 55) - 0.5f; // 가로로 간 미세한 결 (1024 기준 픽셀로 센다)
                 float v = 0.57f + (nBase - 0.5f) * 0.14f + brush * 0.04f;
                 var c = new Color(v, v * 1.01f, v * 1.03f);
                 // 손때·걸레 자국 (넓고 옅게), 먼지 알갱이 (작고 드문드문)
@@ -98,7 +117,7 @@ public static partial class GameSceneBuilder
                 }
                 foreach (var d in drips)
                 {
-                    float dx = Mathf.Abs(Wrap(x - d.x, N)) + (nRust - 0.5f) * 2f, dy = d.y - y;
+                    float dx = Mathf.Abs(Wrap(x - d.x, N)) + (nRust - 0.5f) * 2f * S, dy = d.y - y;
                     if (dy < 0 || dy > d.z) continue;
                     float a = Smooth01(d.w, d.w * 0.3f, dx) * (1 - dy / d.z) * 0.3f;
                     if (a <= 0) continue;
@@ -119,22 +138,11 @@ public static partial class GameSceneBuilder
                 mask[k] = new Color32((byte)(Mathf.Clamp01(metallic) * 255), 0, 0, (byte)(Mathf.Clamp01(smooth) * 255));
             }
 
-        var albedoTex = SaveGrime("steel_grime_albedo", albedo, N, true);
-        var maskTex = SaveGrime("steel_grime_mask", mask, N, false);
-        m.SetTexture("_BaseMap", albedoTex);
-        m.SetTexture("_MainTex", albedoTex);
-        m.SetTexture("_MetallicGlossMap", maskTex);
-        m.EnableKeyword("_METALLICSPECGLOSSMAP");
-        m.SetFloat("_SmoothnessTextureChannel", 0);
-        m.SetFloat("_Smoothness", 1f);
-        m.SetFloat("_Metallic", 1f);
-        m.SetColor("_BaseColor", new Color(0.86f, 0.86f, 0.85f));
-        m.SetColor("_Color", new Color(0.86f, 0.86f, 0.85f));
-        m.SetFloat("_BumpScale", 0.8f);
-        EditorUtility.SetDirty(m);
+        albedoTex = SaveGrime("steel_grime_albedo", albedo, N, true);
+        maskTex = SaveGrime("steel_grime_mask", mask, N, false);
     }
 
-    // PNG로 저장하고 가져오기 설정을 맞춘 뒤 텍스처를 돌려준다 (색 그림은 sRGB, 금속성·매끈함 그림은 선형·무압축)
+    // PNG로 저장하고 가져오기 설정을 맞춘 뒤 텍스처를 돌려준다 (색 그림은 sRGB·2048·'매우 높음' 묶음, 금속성·매끈함 그림은 선형·512. 둘 다 고품질 압축)
     static Texture2D SaveGrime(string name, Color32[] px, int n, bool color)
     {
         if (!AssetDatabase.IsValidFolder("Assets/Generated")) AssetDatabase.CreateFolder("Assets", "Generated");
@@ -156,8 +164,10 @@ public static partial class GameSceneBuilder
             imp.wrapMode = TextureWrapMode.Repeat;
             imp.filterMode = FilterMode.Trilinear;
             imp.anisoLevel = 4;
-            imp.maxTextureSize = 1024;
-            imp.textureCompression = color ? TextureImporterCompression.CompressedHQ : TextureImporterCompression.Uncompressed;
+            // 색은 1024, 마스크(R 금속성·A 매끈함)는 512로 들여오고 마스크도 BC7로 압축한다 (무압축 1024 5.33 MB → 0.33 MB, 11-19 텍스처 정리)
+            imp.maxTextureSize = color ? 2048 : 512;
+            imp.mipmapLimitGroupName = color ? HighResGroup : ""; // 색은 '매우 높음'에서만 2048, 높음 이하 1024
+            imp.textureCompression = TextureImporterCompression.CompressedHQ;
             imp.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
