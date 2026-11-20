@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-05 · 항목 13개
+갱신: 2026-11-20 · 항목 12개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -16,19 +16,18 @@
 
 | # | 종류 | 에셋 | 만든 곳 / 사람 | 라이선스 | 위치 | 쓰는 곳 | 추가일 | 상태 |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 텍스처 | Poly Haven 텍스처 9종<br><small>asphalt_02, brick_wall_10, concrete_floor_worn_001, concrete_wall_008, cracked_concrete_wall, dirty_concrete, rusty_metal_02, wood_planks_dirt</small> | Poly Haven | CC0 | `Assets/ThirdParty/PolyHaven/*.jpg` | 벽·바닥·금속·나무 재질 | 2026-10-28 | 사용 중 |
+| 1 | 텍스처 | Poly Haven 텍스처 9종<br><small>asphalt_02, brick_wall_10, concrete_floor_worn_001 (2k), concrete_wall_008 (2k), cracked_concrete_wall, dirty_concrete, rusty_metal_02, wood_planks_dirt</small> | Poly Haven | CC0 | `Assets/ThirdParty/PolyHaven/*.jpg` | 벽·바닥·금속·나무 재질. 방공호 벽·바닥 2종은 2k판(2026-11-20, 그래픽 품질 '매우 높음'용. 파일 이름은 _1k 그대로) | 2026-10-28 | 사용 중 |
 | 2 | 3D 모델 | Poly Haven 모델 7종 (1K FBX + 색·노멀 텍스처)<br><small>metal_tool_chest, old_military_crate, metal_jerrycan, old_gas_mask, medical_box, old_tyre, trashbag</small> | Poly Haven | CC0 | `Assets/ThirdParty/PolyHaven/Models/` | 방공호 소품, 메인 화면 터널 | 2026-11-02 | 사용 중 |
 | 3 | 효과음 | Zombie noises and moans (zombienoises.zip) | ianzazz (OpenGameArt) | CC0 | `Assets/ThirdParty/OpenGameArt/ianzazz_zombie_noises/ → 잘라서 Assets/Resources/Audio/Zombie/` | 좀비 신음·맞음·공격 소리 | 2026-11-02 | 사용 중 |
 | 4 | 효과음 | Zombie moans (darsycho__zombie-moans.ogg) | Darsycho (OpenGameArt) | CC0 | `Assets/ThirdParty/OpenGameArt/darsycho_zombie_moans/ → Assets/Resources/Audio/Zombie/` | 좀비 신음·공격 소리 | 2026-11-02 | 사용 중 |
 | 5 | 효과음 | Zomby sfx pack (01~07_zombey.mp3) | saturn91 (saturn91.dev, OpenGameArt) | CC0 | `Assets/ThirdParty/OpenGameArt/saturn91_zomby_sfx/ → Assets/Resources/Audio/Zombie/` | 좀비 발견·신음 소리 | 2026-11-02 | 사용 중 |
 | 6 | 글꼴 | Pretendard (Regular·SemiBold·Bold) | 길형진 (orioncactus) | OFL | `Assets/Resources/Fonts/Pretendard-*.ttf (+ Pretendard-LICENSE.txt)` | UI 본문 글꼴 | 2026-10-28 | 사용 중 |
 | 7 | 글꼴 | Do Hyeon (도현체) | 우아한형제들 (Woowahan Brothers) | OFL | `Assets/Resources/Fonts/DoHyeon-Regular.ttf (+ DoHyeon-LICENSE.txt)` | UI 제목·라벨 (대피소 서류 스타일) | 2026-11-03 | 사용 중 |
-| 8 | 글꼴 | Nanum Pen Script (나눔손글씨 펜) | 산돌커뮤니케이션 (네이버 나눔글꼴) | OFL | `Assets/Resources/Fonts/NanumPenScript-Regular.ttf (+ NanumPenScript-LICENSE.txt)` | 손글씨 메모·일지 | 2026-11-03 | 사용 중 |
-| 9 | 글꼴 | Share Tech Mono | Carrois Apostrophe (Ralph du Carrois) | OFL | `Assets/Resources/Fonts/ShareTechMono-Regular.ttf (+ ShareTechMono-LICENSE.txt)` | 숫자·시간 표시 (라틴·숫자만) | 2026-11-03 | 사용 중 |
-| 10 | 파티클 스프라이트 | Kenney Particle Pack (80장, 512px) | Kenney (kenney.nl) | CC0 | `(파티클 단계에서 받을 예정) Assets/ThirdParty/Kenney/ParticlePack/` | 연기·먼지·불티 파티클 | 2026-11-03 | 예정 |
-| 11 | 효과음 | Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z<br><small>Fantozzi-StoneL1~L3·R1~R3 → stone, Fantozzi-SandL1~L3·R1~R3 → sand</small> | Fantozzi (Freesound 팩 10338), 잘라 올린 이 qubodup (OpenGameArt) | CC0 | `Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)` | 플레이어 발소리: 방공호·복도·터널·보도(돌), 흙·재(모래), 출발 연출 걸음 | 2026-11-05 | 사용 중 |
-| 12 | 효과음 | Impact Sounds 1.0 — footstep_concrete_000~004 | Kenney (kenney.nl) | CC0 | `Assets/Resources/Audio/Footsteps/interior/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)` | 플레이어 발소리: 건물 안 바닥 | 2026-11-05 | 사용 중 |
-| 13 | 효과음 | footsteps on different surfaces (footsteps_0.zip) — gravel 0~9, boots 0~8, water 0~4<br><small>gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0, boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0, water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0</small> | 묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound) | CC-BY-3.0 | `Assets/Resources/Audio/Footsteps/gravel/, boots/, water/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)` | 플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화) | 2026-11-05 | 사용 중 |
+| 8 | 글꼴 | Share Tech Mono | Carrois Apostrophe (Ralph du Carrois) | OFL | `Assets/Resources/Fonts/ShareTechMono-Regular.ttf (+ ShareTechMono-LICENSE.txt)` | 숫자·시간 표시 (라틴·숫자만) | 2026-11-03 | 사용 중 |
+| 9 | 파티클 스프라이트 | Kenney Particle Pack (80장, 512px) | Kenney (kenney.nl) | CC0 | `(파티클 단계에서 받을 예정) Assets/ThirdParty/Kenney/ParticlePack/` | 연기·먼지·불티 파티클 | 2026-11-03 | 예정 |
+| 10 | 효과음 | Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z<br><small>Fantozzi-StoneL1~L3·R1~R3 → stone, Fantozzi-SandL1~L3·R1~R3 → sand</small> | Fantozzi (Freesound 팩 10338), 잘라 올린 이 qubodup (OpenGameArt) | CC0 | `Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)` | 플레이어 발소리: 방공호·복도·터널·보도(돌), 흙·재(모래), 출발 연출 걸음 | 2026-11-05 | 사용 중 |
+| 11 | 효과음 | Impact Sounds 1.0 — footstep_concrete_000~004 | Kenney (kenney.nl) | CC0 | `Assets/Resources/Audio/Footsteps/interior/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)` | 플레이어 발소리: 건물 안 바닥 | 2026-11-05 | 사용 중 |
+| 12 | 효과음 | footsteps on different surfaces (footsteps_0.zip) — gravel 0~9, boots 0~8, water 0~4<br><small>gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0, boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0, water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0</small> | 묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound) | CC-BY-3.0 | `Assets/Resources/Audio/Footsteps/gravel/, boots/, water/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)` | 플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화) | 2026-11-05 | 사용 중 |
 
 ## 출처 링크
 
@@ -39,7 +38,6 @@
 - Zomby sfx pack (01~07_zombey.mp3) — https://opengameart.org/
 - Pretendard (Regular·SemiBold·Bold) — https://github.com/orioncactus/pretendard
 - Do Hyeon (도현체) — https://fonts.google.com/specimen/Do+Hyeon
-- Nanum Pen Script (나눔손글씨 펜) — https://fonts.google.com/specimen/Nanum+Pen+Script
 - Share Tech Mono — https://fonts.google.com/specimen/Share+Tech+Mono
 - Kenney Particle Pack (80장, 512px) — https://kenney.nl/assets/particle-pack
 - Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z — https://opengameart.org/content/fantozzis-footsteps-grasssand-stone

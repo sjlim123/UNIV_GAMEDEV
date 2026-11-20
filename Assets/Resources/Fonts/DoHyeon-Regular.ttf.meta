@@ -10,7 +10,9 @@ TrueTypeFontImporter:
   includeFontData: 1
   fontNames:
   - Do Hyeon
-  fallbackFontReferences: []
+  - Pretendard
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: de161ecd7b6da9c4097aaf5c37b7ca0b, type: 3}
   customCharacters: 
   fontRenderingMode: 0
   ascentCalculationMode: 1

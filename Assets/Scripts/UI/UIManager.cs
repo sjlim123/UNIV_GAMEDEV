@@ -44,12 +44,11 @@ public partial class UIManager : MonoBehaviour
     static readonly Color WindowFill = new Color(0.045f, 0.046f, 0.05f, 0.97f);
 
     // 글꼴 (모두 SIL OFL 1.1, Assets/Resources/Fonts): Pretendard 본문 Regular·버튼 SemiBold·큰 제목 Bold,
-    // Do Hyeon(HUD 라벨), Nanum Pen Script(손글씨), Share Tech Mono(숫자·시간, 라틴만)
+    // Do Hyeon(HUD 라벨), Share Tech Mono(숫자·시간, 라틴만). 손글씨 Nanum Pen Script는 쓰는 곳이 없어 2026-11-20에 뺐다
     public static Font Font { get; private set; }
     public static Font FontSemiBold { get; private set; }
     public static Font FontBold { get; private set; }
     public static Font FontTitle { get; private set; }
-    public static Font FontHand { get; private set; }
     public static Font FontMono { get; private set; }
 
     RectTransform root;
@@ -122,7 +121,6 @@ public partial class UIManager : MonoBehaviour
         FontSemiBold = Resources.Load<Font>("Fonts/Pretendard-SemiBold") ?? Font;
         FontBold = Resources.Load<Font>("Fonts/Pretendard-Bold") ?? FontSemiBold;
         FontTitle = Resources.Load<Font>("Fonts/DoHyeon-Regular") ?? FontBold;
-        FontHand = Resources.Load<Font>("Fonts/NanumPenScript-Regular") ?? Font;
         FontMono = Resources.Load<Font>("Fonts/ShareTechMono-Regular") ?? FontSemiBold;
 
         var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
@@ -163,12 +161,14 @@ public partial class UIManager : MonoBehaviour
     }
 
     // ---------- 로딩 화면 (씬 전환 사이: 탐험 출발 · 방공호 귀환 · 메인 메뉴로 나가기) ----------
-    // 검은 판 위에 옅은 긁힘, 메인 메뉴 제목 묶음과 같은 꼴(핏빛 세로 막대 + 제목 + 영문 꼬리표 + 가는 선), 왼쪽에서 오른쪽으로 흐르는 붉은 막대 조각,
-    // 낡은 형광등처럼 깜빡이는 한 줄 메모 (2026-11-05 저녁, 메인 메뉴와 통일)
+    // 검은 판 위에 옅은 긁힘, 메인 메뉴 제목 묶음과 같은 꼴(핏빛 세로 막대 + 제목 + 영문 꼬리표 + 가는 선), 왼쪽에서 오른쪽으로 흐르며
+    // 낡은 형광등처럼 깜빡이는 붉은 막대 조각, 늘 같은 밝기의 한 줄 메모 (2026-11-05 저녁, 메인 메뉴와 통일.
+    // 2026-11-20: 안내 글은 깜빡이지 않는다는 규칙에 따라 메모의 깜빡임을 막대 조각으로 옮겼다)
 
     GameObject loadingRoot;
     UnityEngine.UI.Text loadingTitle, loadingTip, loadingTag;
     RectTransform loadingBar;
+    Image loadingBarFill; // 붉은 막대 조각의 그림. 깜빡임(알파)을 맡는다
     float loadingT;
     static readonly string[] LoadingTips =
     {
@@ -230,7 +230,7 @@ public partial class UIManager : MonoBehaviour
         loadingBar.anchorMax = new Vector2(0, 1);
         loadingBar.pivot = new Vector2(0, 0.5f);
         loadingBar.sizeDelta = new Vector2(160, 0);
-        var fill = loadingBar.gameObject.AddComponent<Image>();
+        var fill = loadingBarFill = loadingBar.gameObject.AddComponent<Image>();
         fill.sprite = UIStyle.HorizontalFade;
         fill.color = new Color(0.85f, 0.14f, 0.1f);
         fill.raycastTarget = false;
@@ -248,7 +248,8 @@ public partial class UIManager : MonoBehaviour
         loadingTitle.text = title;
         loadingTag.text = tag ?? (title.Contains("방공호") ? "RETURNING  ·  SHELTER" : title.Contains("도시") ? "DEPARTING  ·  CITY" : title.Contains("메뉴") ? "RETURNING  ·  MAIN MENU" : "LOADING");
         loadingRoot.transform.SetAsLastSibling(); // 검은 막보다 위에 (창·컷씬이 열릴 때마다 막이 맨 위로 가므로 보일 때마다 다시 올린다)
-        loadingTip.text = LoadingTips[UnityEngine.Random.Range(0, LoadingTips.Length)];
+        int tip = UnityEngine.Random.Range(0, LoadingTips.Length); // Tip을 꺼도 난수는 똑같이 하나 쓴다 (뒤따르는 난수 순서가 Tip 설정에 따라 달라지지 않게)
+        loadingTip.text = GameSettings.Tips ? LoadingTips[tip] : ""; // 한 줄 팁도 안내라서 Tip 스위치를 따른다 (2026-11-19)
         loadingT = 0;
         loadingRoot.SetActive(true);
     }
@@ -261,8 +262,9 @@ public partial class UIManager : MonoBehaviour
         loadingT += Time.unscaledDeltaTime;
         float k = Mathf.Repeat(loadingT * 0.55f, 1f);
         loadingBar.anchoredPosition = new Vector2(Mathf.Lerp(-160, 560, k), 0);
-        float flicker = Mathf.PerlinNoise(loadingT * 9f, 0.3f) > 0.84f ? 0.3f : 1f;
-        loadingTip.color = new Color(Dim.r, Dim.g, Dim.b, flicker);
+        float flicker = Mathf.PerlinNoise(loadingT * 9f, 0.3f) > 0.84f ? 0.3f : 1f; // 낡은 형광등처럼 가끔 흐려진다 (예전에는 한 줄 메모가 깜빡였다)
+        var c = loadingBarFill.color;
+        loadingBarFill.color = new Color(c.r, c.g, c.b, flicker);
     }
 
     // 블러용 렌더 텍스처를 내린다
@@ -374,8 +376,11 @@ public partial class UIManager : MonoBehaviour
 
         promptBox = BlackBand(h, "Prompt");
         Place(promptBox, new Vector2(0.5f, 0.5f), new Vector2(0, -95), new Vector2(300, 46));
-        promptText = NewText(promptBox, "", 23, TextAnchor.MiddleCenter, Text);
-        Stretch(promptText.rectTransform);
+        // 글은 띠 왼쪽 끝에서 28px 안쪽부터 (띠 너비 = 글 폭 + 56이라 보통은 가운데 정렬과 같아 보인다). 띠 너비는 숫자 폭과 상관없이 정해지므로(SetPrompt)
+        // 왼쪽에 붙여 두면 숫자만 바뀌는 동안 띠도 글 시작도 움직이지 않는다 (2026-11-19)
+        promptText = NewText(promptBox, "", 23, TextAnchor.MiddleLeft, Text);
+        Stretch(promptText.rectTransform, 28, 0);
+        promptText.horizontalOverflow = HorizontalWrapMode.Overflow;
         promptBox.gameObject.SetActive(false);
 
         // 알림 띠: 글 길이에 맞게 줄어든다 (FitToast)
@@ -672,7 +677,7 @@ public partial class UIManager : MonoBehaviour
         WatchItemDrag(); // 끌던 그림이 남지 않도록 버튼이 떼어졌는지 매 프레임 본다
         UpdateTipKnob();
         bool inField = PlayerController.Instance != null && !gm.IsGameOver && boxTarget < 0.5f; // 죽거나 엔딩이면, 그리고 출입 연출 동안은 HUD를 치운다
-        if (inField && !hud.activeSelf) ShowKeyHints(); // HUD가 켜지는 순간(씬에 들어온 뒤) 조작키를 잠깐 보여 준다
+        if (inField && !hud.activeSelf) ShowKeyHints(); // HUD가 켜지는 순간(씬에 들어온 뒤) 조작키 줄의 글을 지금 키 설정으로 채운다
         hud.SetActive(inField);
         if (hud.activeSelf)
         {
@@ -865,6 +870,11 @@ public partial class UIManager : MonoBehaviour
         }
     }
 
+    // 상호작용 안내 띠 ([F] 띠). 2026-11-19 (멘토링 3, 안내 고정 규칙): 글이 바뀔 때마다 0.16초 동안 작아졌다 커지며 흐려졌다 진해지던
+    // '톡' 움직임을 없앴다. 화로처럼 매 프레임 숫자만 바뀌는 글에서는 띠가 2초에 100번 넘게 떨렸다. 이제 띠는 그 자리에 그대로 있고 글만 바뀐다.
+    // 띠 너비는 실제 글이 아니라 '숫자를 가장 넓은 숫자로 바꾸고, 글 끝의 N%는 세 자리로 채운 글'로 잰다 (PromptWidth). 그래서 '녹이는 중… 0%'부터
+    // '100%'까지 띠 너비가 첫 프레임부터 같고, 글은 왼쪽 정렬이라 숫자만 제자리에서 바뀐다 (프리텐다드 숫자는 폭이 제각각이다).
+    // 발전기 '(전력 60%) - 연료 넣기'처럼 %가 글 가운데 있는 글은 보는 동안 세어 올라가지 않으므로 세 자리를 잡지 않는다 (2026-11-20, 글이 띠 가운데에 오게)
     public void SetPrompt(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -872,11 +882,51 @@ public partial class UIManager : MonoBehaviour
             promptBox.gameObject.SetActive(false);
             return;
         }
-        if (text != promptShown || !promptBox.gameObject.activeSelf) promptPop = 0;
+        if (text == promptShown && promptBox.gameObject.activeSelf) return;
         promptShown = text;
         promptText.text = text;
-        promptBox.sizeDelta = new Vector2(promptText.preferredWidth + 56, 46);
+        promptBox.sizeDelta = new Vector2(PromptWidth(text) + 56, 46);
         promptBox.gameObject.SetActive(true);
+    }
+
+    char promptWideDigit; // 이 글꼴·크기에서 가장 넓은 숫자 (처음 잴 때 한 번 정한다)
+
+    // 띠 너비를 정하는 글 폭: 숫자는 모두 가장 넓은 숫자로, 글 끝의 'N%' 숫자 묶음은 세 자리로 채워 잰다. <color> 같은 서식 꼬리표는 그대로 둔다.
+    // 세어 올라가는 진행률(화로 Furnace.Prompt, 보급 상자 LootCache.Prompt)은 %가 글의 마지막 글자여야 한다 (% 뒤에 꼬리표·빈칸이 붙으면 세 자리를 잡지 않는다)
+    float PromptWidth(string text)
+    {
+        var settings = promptText.GetGenerationSettings(Vector2.zero);
+        var gen = promptText.cachedTextGeneratorForLayout;
+        if (promptWideDigit == '\0')
+        {
+            float best = -1f;
+            for (char d = '0'; d <= '9'; d++)
+            {
+                float w = gen.GetPreferredWidth(new string(d, 8), settings);
+                if (w > best) { best = w; promptWideDigit = d; }
+            }
+        }
+        var sb = new System.Text.StringBuilder(text.Length + 4);
+        for (int i = 0; i < text.Length;)
+        {
+            char c = text[i];
+            if (c == '<')
+            {
+                int end = text.IndexOf('>', i);
+                if (end < 0) end = text.Length - 1;
+                sb.Append(text, i, end - i + 1);
+                i = end + 1;
+                continue;
+            }
+            if (c < '0' || c > '9') { sb.Append(c); i++; continue; }
+            int j = i;
+            while (j < text.Length && text[j] >= '0' && text[j] <= '9') j++;
+            int n = j - i;
+            if (j < text.Length && text[j] == '%' && j + 1 == text.Length && n < 3) n = 3;
+            sb.Append(promptWideDigit, n);
+            i = j;
+        }
+        return gen.GetPreferredWidth(sb.ToString(), settings) / promptText.pixelsPerUnit;
     }
 
     public void ShowMessage(string text, float duration = 2.5f)
