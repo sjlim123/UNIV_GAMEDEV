@@ -47,7 +47,7 @@ public static partial class CharacterModels
             case FigureKind.Merchant: Merchant(b); break;
             case FigureKind.Civilian: Civilian(b, variant); break;
             case FigureKind.Corpse: Corpse(b, variant); break;
-            default: CommonZombie(b, variant); break;
+            default: if (!SkinnedCommonZombie(b)) CommonZombie(b, variant); break; // 새 감염자 피부 메시 (CharacterModels.Skinned.cs), 없으면 예전 관 몸
         }
         b.Finish();
         return b.Rig;
