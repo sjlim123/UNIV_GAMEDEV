@@ -527,7 +527,12 @@ public class GameManager : MonoBehaviour
                 color.saturation.value = Mathf.Lerp(saturation, -85f, e);
                 color.postExposure.value = exposure - 1.0f * e;
             }
-            if (vignette != null) vignette.intensity.value = Mathf.Lerp(edge, 0.8f, e);
+            if (vignette != null)
+            {
+                // 설정에서 비네트 효과를 꺼도 죽는 순간의 가장자리 어두워짐은 보여 준다 (화면 연출이라, 2026-11-22). 꺼져 있었으면 0에서 시작
+                if (e > 0f) vignette.active = true;
+                vignette.intensity.value = Mathf.Lerp(GameSettings.Vignette ? edge : 0f, 0.8f, e);
+            }
             if (lowPass != null) lowPass.cutoffFrequency = Mathf.Exp(Mathf.Lerp(Mathf.Log(22000f), Mathf.Log(380f), e));
         }
     }

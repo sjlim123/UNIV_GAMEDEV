@@ -653,16 +653,38 @@ public partial class UIManager
 
             if (settingsTab == 1)
             {
-                Selector(c, "그래픽 품질", GameSettings.QualityNames[GameSettings.Quality], d => GameSettings.Quality = Mathf.Clamp(GameSettings.Quality + d, 0, GameSettings.QualityNames.Length - 1));
+                // 그래픽 품질 = 아래 세부 항목을 한 번에 맞추는 묶음 (2026-11-22). 세부 항목을 따로 바꾸면 '사용자 지정'
+                bool custom = GameSettings.Quality == GameSettings.CustomQuality;
+                Choice(c, custom ? "그래픽 품질 (사용자 지정)" : "그래픽 품질", GameSettings.Level4Names, custom ? -1 : GameSettings.Quality, k => GameSettings.ApplyPreset(k));
                 Selector(c, "렌더 해상도", $"{GameSettings.RenderScale * 100:0}%", d => GameSettings.RenderScale = Step(GameSettings.RenderScale, d * 0.1f, 0.5f, 1f));
                 Selector(c, "밝기", $"{GameSettings.Brightness * 100:0}%", d => GameSettings.Brightness = Step(GameSettings.Brightness, d * 0.1f, 0.5f, 2f));
                 Selector(c, "시야각 (FOV)", $"{GameSettings.Fov:0}", d => GameSettings.Fov = Mathf.Clamp(GameSettings.Fov + d * 5, 60, 100));
                 int fps = GameSettings.FpsOptions[GameSettings.FpsIndex];
                 Selector(c, "최대 FPS", fps == 0 ? "무제한" : fps.ToString(), d => GameSettings.FpsIndex = (GameSettings.FpsIndex + d + GameSettings.FpsOptions.Length) % GameSettings.FpsOptions.Length);
-                Selector(c, "수직 동기화", GameSettings.VSync ? "켬" : "끔", d => GameSettings.VSync = !GameSettings.VSync);
                 Selector(c, "화면 모드", GameSettings.Fullscreen ? "전체 화면" : "창 모드", d => GameSettings.Fullscreen = !GameSettings.Fullscreen);
-                Selector(c, "FPS 표시", GameSettings.ShowFps ? "켬" : "끔", d => GameSettings.ShowFps = !GameSettings.ShowFps);
-                Line(c, "저사양 PC: 품질 '낮음' + 렌더 해상도 70%를 권장합니다. (그림자·블룸·필름 효과를 끕니다)", 17, Dim);
+                OnOff(c, "FPS 표시", GameSettings.ShowFps, v => GameSettings.ShowFps = v);
+
+                Line(c, "", 6);
+                Line(c, "세부 그래픽", 22, Pale);
+                Choice(c, "물질 품질", GameSettings.Level3Names, GameSettings.MaterialQ, k => { GameSettings.MaterialQ = k; GameSettings.MarkCustom(); });
+                Choice(c, "텍스처 품질", GameSettings.Level4Names, GameSettings.TextureQ, k => { GameSettings.TextureQ = k; GameSettings.MarkCustom(); });
+                Choice(c, "세부 묘사 품질", GameSettings.Level4Names, GameSettings.DetailQ, k => { GameSettings.DetailQ = k; GameSettings.MarkCustom(); });
+                Choice(c, "UI 품질", GameSettings.Level3Names, GameSettings.UiQ, k => { GameSettings.UiQ = k; GameSettings.MarkCustom(); });
+                OnOff(c, "비네트 효과", GameSettings.Vignette, v => { GameSettings.Vignette = v; GameSettings.MarkCustom(); });
+                OnOff(c, "수직 동기화", GameSettings.VSync, v => GameSettings.VSync = v);
+                // 선명도 향상(실험) = STP가 켜져 있으면 안티 앨리어싱을 STP가 맡는다: 줄을 잠근다 (보이지 않는 값을 바꾸지 않게)
+                Selector(c, "안티 앨리어싱", GameSettings.SharpenExp ? "STP (실험)" : GameSettings.AntiAliasNames[GameSettings.AntiAlias], d => { GameSettings.AntiAlias = Cycle(GameSettings.AntiAlias, d, GameSettings.AntiAliasNames.Length); GameSettings.MarkCustom(); }, !GameSettings.SharpenExp);
+                Selector(c, "이방성 필터링", GameSettings.AnisoNames[GameSettings.Aniso], d => { GameSettings.Aniso = Cycle(GameSettings.Aniso, d, GameSettings.AnisoNames.Length); GameSettings.MarkCustom(); });
+                OnOff(c, "선명도 향상", GameSettings.Sharpen, v => { GameSettings.Sharpen = v; GameSettings.MarkCustom(); });
+                OnOff(c, "선명도 향상 (실험)", GameSettings.SharpenExp, v => { GameSettings.SharpenExp = v; GameSettings.MarkCustom(); });
+                OnOff(c, "블룸 효과", GameSettings.Bloom, v => { GameSettings.Bloom = v; GameSettings.MarkCustom(); });
+                OnOff(c, "왜곡", GameSettings.Distortion, v => { GameSettings.Distortion = v; GameSettings.MarkCustom(); });
+                OnOff(c, "필름 그레인", GameSettings.FilmGrain, v => { GameSettings.FilmGrain = v; GameSettings.MarkCustom(); });
+                OnOff(c, "그림자 활성화", GameSettings.Shadows, v => { GameSettings.Shadows = v; GameSettings.MarkCustom(); });
+                Line(c, "물질: 주변 그림자(중간부터)·전구 그림자(높음)·그림자 부드러움 / 텍스처: 낮음 1/4, 중간 1/2, 매우 높음은 고해상도", 16, Dim);
+                Line(c, "세부 묘사: 그림자 거리·단계·해상도, 파티클 양, 먼 아파트 창틀(낮음은 판) / UI: 핫바 유리 흐림 / 왜곡: 색수차", 16, Dim);
+                Line(c, "선명도 향상 (실험): Unity STP. 렌더 해상도를 낮췄을 때 선명하게 되살립니다. 켜면 안티 앨리어싱을 대신합니다.", 16, Dim);
+                Line(c, "저사양 PC: 그래픽 품질 '낮음' + 렌더 해상도 70%를 권장합니다. (그림자·블룸·필름 효과를 끕니다)", 17, Dim);
             }
             else if (settingsTab == 3)
             {
@@ -693,7 +715,7 @@ public partial class UIManager
             else
             {
                 Selector(c, "마우스 감도", $"{GameSettings.Sensitivity:0.0}", d => GameSettings.Sensitivity = Step(GameSettings.Sensitivity, d * 0.1f, 0.2f, 3f));
-                Selector(c, "마우스 Y축 반전", GameSettings.InvertY ? "켬" : "끔", d => GameSettings.InvertY = !GameSettings.InvertY);
+                OnOff(c, "마우스 Y축 반전", GameSettings.InvertY, v => GameSettings.InvertY = v);
                 Selector(c, "조준점 모양", GameSettings.CrosshairStyleNames[GameSettings.CrosshairStyle], d => GameSettings.CrosshairStyle = Cycle(GameSettings.CrosshairStyle, d, GameSettings.CrosshairStyleNames.Length));
                 Selector(c, "조준점 색", GameSettings.CrosshairColorNames[GameSettings.CrosshairColor], d => GameSettings.CrosshairColor = Cycle(GameSettings.CrosshairColor, d, GameSettings.CrosshairColors.Length));
                 Selector(c, "조준점 크기", GameSettings.CrosshairSizeNames[GameSettings.CrosshairSize], d => GameSettings.CrosshairSize = Mathf.Clamp(GameSettings.CrosshairSize + d, 0, GameSettings.CrosshairSizeNames.Length - 1));
@@ -711,16 +733,33 @@ public partial class UIManager
 
     static int Cycle(int value, int delta, int count) => (value + delta + count) % count;
 
-    void Selector(RectTransform c, string label, string value, Action<int> change)
+    void Selector(RectTransform c, string label, string value, Action<int> change, bool interactable = true)
     {
         var row = Row(c);
         RowLabel(row, label);
-        RowButton(row, "<", () => { change(-1); ApplyAllSettings(); RefreshPanel(); }, true, 54);
-        var v = NewText(row, value, 22, TextAnchor.MiddleCenter, Pale, FontTitle);
+        RowButton(row, "<", () => { change(-1); ApplyAllSettings(); RefreshPanel(); }, interactable, 54);
+        var v = NewText(row, value, 22, TextAnchor.MiddleCenter, interactable ? Pale : Dim, FontTitle);
         var le = v.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = le.minWidth = 170;
-        RowButton(row, ">", () => { change(1); ApplyAllSettings(); RefreshPanel(); }, true, 54);
+        RowButton(row, ">", () => { change(1); ApplyAllSettings(); RefreshPanel(); }, interactable, 54);
     }
+
+    // 고르는 줄: 이름 + 단계 버튼들 (고른 것은 강조). current가 -1이면 아무것도 강조하지 않는다 (그래픽 품질 '사용자 지정')
+    void Choice(RectTransform c, string label, string[] names, int current, Action<int> pick)
+    {
+        var row = Row(c);
+        RowLabel(row, label);
+        float w = names.Length >= 4 ? 100 : names.Length == 3 ? 132 : 150;
+        for (int i = 0; i < names.Length; i++)
+        {
+            int k = i;
+            var b = RowButton(row, names[i], () => { pick(k); ApplyAllSettings(); RefreshPanel(); }, true, w);
+            if (k == current) AccentButton(b);
+        }
+    }
+
+    void OnOff(RectTransform c, string label, bool value, Action<bool> set) =>
+        Choice(c, label, new[] { "켜짐", "꺼짐" }, value ? 0 : 1, k => set(k == 0));
 
     static void ApplyAllSettings()
     {

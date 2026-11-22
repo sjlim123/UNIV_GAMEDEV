@@ -578,7 +578,7 @@ public static class Vfx
     }
 
     // 그래픽 품질에 따라 입자 수를 줄인다
-    static int Count(float n) => Mathf.Max(1, Mathf.RoundToInt(n * (GameSettings.Quality == 0 ? 0.45f : GameSettings.Quality == 1 ? 0.75f : 1f)));
+    static int Count(float n) => Mathf.Max(1, Mathf.RoundToInt(n * (GameSettings.DetailQ == 0 ? 0.45f : GameSettings.DetailQ == 1 ? 0.75f : 1f)));
 
     static void Run(IEnumerator routine)
     {

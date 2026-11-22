@@ -583,7 +583,11 @@ public partial class UIManager : MonoBehaviour
         var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
         float backdrop = urp != null && urp.supportsCameraOpaqueTexture ? 1f : 0f;
         if (hudGlassMat != null) hudGlassMat.SetFloat("_Backdrop", backdrop);
-        if (hudPillMat != null) hudPillMat.SetFloat("_Backdrop", backdrop);
+        if (hudPillMat != null)
+        {
+            hudPillMat.SetFloat("_Backdrop", backdrop);
+            hudPillMat.SetFloat("_Blur", GameSettings.UiQ >= 2 ? 1.6f : 0.7f); // UI 품질 중간: 약한 흐림 (낮음은 화면 복사가 없어 바탕색만)
+        }
     }
 
     // 명판 귀퉁이의 나사 네 개 (제각각 조금씩 돌아가 있다)

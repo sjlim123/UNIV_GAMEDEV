@@ -18,7 +18,7 @@ public class FacadeDetail : MonoBehaviour
         // (지금은 [ExecuteAlways]가 없어 편집 모드에서 불리지 않지만, 나중에 붙여도 안전하게)
         if (!Application.isPlaying) return;
         if (!live.Contains(this)) live.Add(this);
-        Apply(GameSettings.Quality); // GameManager가 씬보다 먼저 설정을 읽어 둔다 (BeforeSceneLoad)
+        Apply(GameSettings.DetailQ); // 세부 묘사 품질 (2026-11-22부터, 전에는 그래픽 품질). GameManager가 씬보다 먼저 설정을 읽어 둔다 (BeforeSceneLoad)
     }
 
     void OnDisable() => live.Remove(this);
