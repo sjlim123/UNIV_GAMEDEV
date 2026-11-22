@@ -169,6 +169,7 @@ public static partial class GameSceneBuilder
             body.localRotation = Quaternion.Euler(0, 0, 180);
             body.localPosition = Vector3.up * (roofTop + 0.005f);
         }
+        TripoCar(body, flipped, burnt); // 도시: 몸체 겉모습을 Tripo 차로 (난수를 뽑지 않는다, GameSceneBuilder.Tripo.cs)
     }
 
     // 버려진 차들이 땅에 붙었는지 검사하고(렌더러 경계 아랫면이 바닥에서 5cm 넘게 뜨거나 묻히면) 바로잡는다. 결과를 콘솔에 적는다
@@ -255,8 +256,8 @@ public static partial class GameSceneBuilder
                     PolyProp("old_tyre", g, p + Vector3.up * 0.085f, yaw, 0.35f, 0, true, new Vector3(90, 0, 0));
                     break;
                 case 3:
-                    if (r.NextDouble() < 0.5) Prim(PrimitiveType.Cylinder, "Barrel", g, p + Vector3.up * 0.45f, new Vector3(0.6f, 0.45f, 0.6f), r.NextDouble() < 0.5 ? M["metal"] : M["paintBlue"], new Vector3(0, yaw, 0), true);
-                    else Prim(PrimitiveType.Cylinder, "BarrelTipped", g, p + Vector3.up * 0.3f, new Vector3(0.6f, 0.45f, 0.6f), M["metal"], new Vector3(90, yaw, 0), true);
+                    if (r.NextDouble() < 0.5) TripoDrum(Prim(PrimitiveType.Cylinder, "Barrel", g, p + Vector3.up * 0.45f, new Vector3(0.6f, 0.45f, 0.6f), r.NextDouble() < 0.5 ? M["metal"] : M["paintBlue"], new Vector3(0, yaw, 0), true));
+                    else TripoDrum(Prim(PrimitiveType.Cylinder, "BarrelTipped", g, p + Vector3.up * 0.3f, new Vector3(0.6f, 0.45f, 0.6f), M["metal"], new Vector3(90, yaw, 0), true));
                     break;
                 case 4:
                 {

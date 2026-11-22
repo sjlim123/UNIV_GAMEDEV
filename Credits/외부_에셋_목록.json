@@ -18,6 +18,11 @@
       "url": "https://creativecommons.org/licenses/by/3.0/",
       "summary": "제작자와 출처를 표기하면 상업용 포함 사용·수정 가능 (이 목록과 게임 크레딧에 표기)"
     },
+    "Tripo-유료": {
+      "name": "Tripo AI API 이용 약관 (Holymolly Ltd, 2025-07-11판)",
+      "url": "https://developers.tripo3d.ai/en/terms",
+      "summary": "유료 사용자는 만든 결과물의 권리를 가지며(5.2.2) 상업·비상업 용도로 쓸 수 있다(3.2). 출처 표기 의무 없음. 무료 사용자의 결과물은 Tripo가 권리를 가진다(5.2.1). 약관과 어긋나게 제3자에게 배포하는 것은 금지(3.2). 이 프로젝트의 Tripo 모델은 모두 사용자가 Tripo 유료 구독(Max 플랜)을 결제한 뒤에 만들었다(사용자 11-23 확인) — www.tripo3d.ai/terms(2026-11-13판) 5.2.2의 유료 결과물(Paid Content: 유료 구독 중에 만든 것)"
+    },
     "Higgsfield": {
       "name": "Higgsfield AI 이용 약관 (2026-10-23판)",
       "url": "https://higgsfield.ai/terms",
@@ -43,7 +48,7 @@
       "source": "https://polyhaven.com/textures",
       "license": "CC0",
       "location": "Assets/ThirdParty/PolyHaven/*.jpg",
-      "used_for": "벽·바닥·금속·나무 재질. 방공호 벽·바닥 2종은 2k판(2026-11-20, 그래픽 품질 '매우 높음'용. 파일 이름은 _1k 그대로)",
+      "used_for": "벽·바닥·금속·나무 재질. 방공호 벽·바닥 2종은 2k판(2026-11-20, 그래픽 품질 '매우 높음'용. 파일 이름은 _1k 그대로). rusty_metal_02는 가로등 품질별 판 굽기의 잔무늬로도 씀(11-23)",
       "added": "2026-10-28",
       "status": "사용 중"
     },
@@ -204,6 +209,148 @@
       "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화)",
       "added": "2026-11-05",
       "status": "사용 중"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "버려진 소형 세단 (wrecked_sedan_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 6872개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 176e117c(생성)·f0f9c1d8(FBX 변환), 35크레딧",
+        "매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 20000, 삼각형 19,090개, 텍스처 1024로 들여옴, 작업 f6128ec5(생성)·f0f6bc82(FBX 변환), 45크레딧"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/wrecked_sedan_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 길가 부서진 차 (시험 모델, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-21",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "녹슨 200리터 드럼통 (steel_drum_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 2048개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 094e3fe9(생성)·3dae0078(FBX 변환), 35크레딧",
+        "매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 10000, 삼각형 14,860개, 텍스처 1024로 들여옴, 작업 b4d97c3d(생성)·88c14ee4(FBX 변환), 45크레딧 (먼저 만든 면 2만 판은 깨져 버림, 45크레딧 더 씀)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/steel_drum_01/ (만든 방법: SOURCE.md)",
+      "used_for": "드럼통 (시험 모델, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "에어컨 실외기 (ac_unit_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 3076개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 b0a47db2(생성)·42a844cd(FBX 변환), 35크레딧"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/ac_unit_01/ (만든 방법: SOURCE.md)",
+      "used_for": "건물 벽 실외기 (시험 모델, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "소화전 (fire_hydrant_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 3984개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 afb3dacf(생성)·dc1246f2(FBX 변환), 35크레딧",
+        "매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 20000, 삼각형 24,581개, 텍스처 1024로 들여옴, 작업 8f8ff6dc(생성)·52f864d3(FBX 변환), 45크레딧"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/fire_hydrant_01/ (만든 방법: SOURCE.md)",
+      "used_for": "보도 소화전 (시험 모델, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "고장 난 픽업트럭 (pickup_truck_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 7511개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 488d2baf(생성)·1ccfaec3(FBX 변환), 35크레딧",
+        "다시 만든 판(11-23, 바퀴·엔진 없는 수리용): 그림 편집 130e1dda(5)·그림→3D 면 1만 d31b76aa(40)·FBX 06d399c7(5), 삼각형 12,970, 낮음~높음 1,192·3,255·7,000 (면 1만5천 판 33e81d48·5a4b61f1 45크레딧은 짐칸 벽이 빠져 버림)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/pickup_truck_01/ (만든 방법: SOURCE.md)",
+      "used_for": "트럭 마당 픽업트럭 후보 (시험, 바퀴·엔진이 붙어 있어 수리 목표로는 아직 못 씀). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "가로등 (lamp_post_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 2251개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 b0a7a989(생성)·f828e544(FBX 변환), 35크레딧",
+        "품질 4단계 판(11-23): 모양은 직접 짬(코드 가로등 치수), 칠은 Tripo 그림 편집 bbaa2387(5)을 비춰 굽고 Poly Haven rusty_metal_02(CC0) 잔무늬. 삼각형 120·394·1,920·2,912 (그림→3D 9df2f9cd·FBX 4afd4e86 45크레딧은 기둥이 끊겨 버림)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/lamp_post_01/ (만든 방법: SOURCE.md)",
+      "used_for": "길가 가로등 후보 (시험, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "버스정류장 (bus_stop_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 3700개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 c14b7f84(생성)·dc3c245f(FBX 변환), 35크레딧",
+        "매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 10000, 삼각형 13,093개, 텍스처 1024로 들여옴, 작업 57dca359(생성)·98d7f36b(FBX 변환), 45크레딧 (먼저 만든 면 2만 판은 깨져 버림, 45크레딧 더 씀)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/bus_stop_01/ (만든 방법: SOURCE.md)",
+      "used_for": "버스정류장 후보 (시험, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "불탄 가로수 (dead_tree_01) — Tripo AI로 글에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 5098개, 색 텍스처 2048 원본 → 512로 들여옴",
+        "작업 7f16f36d(생성)·12f13270(FBX 변환), 35크레딧"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/dead_tree_01/ (만든 방법: SOURCE.md)",
+      "used_for": "길가 죽은 나무 후보 (시험, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "뒤집힌 버려진 소형 세단, 바닥 부품이 보이는 판 (wrecked_sedan_flipped_01) — Tripo AI로 그림(우리 차를 뒤집어 찍고 이미지 편집)에서 만든 모델",
+      "items": [
+        "v3.1 저폴리, 삼각형 7790개, 색 텍스처 512로 들여옴",
+        "작업 cd45c2be(이미지 편집 5)·b3ded922(그림→3D 40)·463abcdb(FBX 변환 5), 50크레딧",
+        "매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 20000, 삼각형 24,488개, 텍스처 1024로 들여옴, 작업 dca4d5fc(생성)·7dd1335a(FBX 변환), 45크레딧"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/wrecked_sedan_flipped_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시의 뒤집힌 차 5대 (시험, 11-22 도시 씬에 넣음, 아직 커밋 전). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인)",
+      "added": "2026-11-22",
+      "status": "시험",
+      "source": "https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)"
     },
     {
       "kind": "3D 모델",

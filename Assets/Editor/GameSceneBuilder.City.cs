@@ -17,7 +17,7 @@ public static partial class GameSceneBuilder
     static readonly Vector3 SpawnPos = new Vector3(-23f, 0.05f, -22.5f);
     static readonly Vector3 CityHatchPos = new Vector3(-23f, 0, -26.5f);
 
-    static void BuildCityScene(GameObject playerPrefab, GameObject zombiePrefab, GameObject dogPrefab)
+    static void BuildCitySceneCore(GameObject playerPrefab, GameObject zombiePrefab, GameObject dogPrefab) // BuildCityScene(GameSceneBuilder.Tripo.cs)이 Tripo 소품 스위치를 켜고 부른다
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         BeginMeshes(GenDir + "/CityMeshes.asset");
@@ -118,6 +118,8 @@ public static partial class GameSceneBuilder
             vol.size = Mathf.Abs(cut.z) > 50f ? new Vector3(300f, 40f, 33.6f) : new Vector3(33.6f, 40f, 300f);
             vol.area = 1; // Not Walkable
         }
+        if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 차 {TripoCarColliders(geo)}대의 콜라이더를 모델에 맞춤 (굽기 직전, 배치가 다 끝난 뒤)");
+        if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 트럭 {TripoTruckColliders(geo)}대의 긴 짐칸에 콜라이더를 더함 (굽기 직전)");
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
@@ -641,7 +643,7 @@ public static partial class GameSceneBuilder
         var cp = p.P(0.5f, 0.5f, 0);
         Box("Crate", g2, cp + Vector3.up * 0.3f, new Vector3(0.7f, 0.6f, 0.6f), M["wood"], 1f, true, new Vector3(0, R(0, 90), 0));
         if (Chance(0.7)) Spawn<ItemSpawnPoint>(points, g2.TransformPoint(cp) + Vector3.up * 0.65f);
-        if (Chance(0.6)) Prim(PrimitiveType.Cylinder, "Barrel", g2, p.P(0.45f, 1.4f, 0.45f), new Vector3(0.55f, 0.45f, 0.55f), Pick(M["metal"], M["paintBlue"]), null, true);
+        if (Chance(0.6)) TripoDrum(Prim(PrimitiveType.Cylinder, "Barrel", g2, p.P(0.45f, 1.4f, 0.45f), new Vector3(0.55f, 0.45f, 0.55f), Pick(M["metal"], M["paintBlue"]), null, true));
         if (!p.hasQ && zB) SpawnUpstairsPoint(points, g2.TransformPoint(p.P(1.7f, 2.3f, 0)));
         for (int i = 0; i < 3; i++)
             Box("Debris", g2, p.P(R(0.3f, p.len - 0.3f), R(StairWidth + 0.3f, hall - 0.3f), 0.03f), new Vector3(R(0.1f, 0.5f), 0.06f, R(0.1f, 0.4f)), Pick(M["cracked"], M["wood"], M["metal"]), 1f, false, new Vector3(R(-10, 10), R(0, 180), 0));
@@ -859,6 +861,9 @@ public static partial class GameSceneBuilder
         CombineInto(pole, "Post", parts, steel);
         Box("Head", pole, new Vector3(0, 8.38f, 1.65f), new Vector3(0.34f, 0.1f, 0.62f), M.ContainsKey("lampHead") ? M["lampHead"] : M["tire"], 1f, false);
         ColliderBox("PoleCollider", pole, new Vector3(0, 4f, 0), new Vector3(0.22f, 8f, 0.22f), Vector3.zero);
+        // 도시: 기둥·등 머리를 품질별 가로등으로 (같은 치수·원점으로 짰으므로 크기·자리 맞춤 없이 배율 1. 휜 기둥(Pole 그룹)을 따라 기울고,
+        // 빛 판·점광·콜라이더는 그대로. 난수를 뽑지 않으므로 아래 켜짐 난수 순서도 그대로. GameSceneBuilder.TripoLamp.cs)
+        if (kTripoCity) TripoSwap(pole, "lamp_post_01", new[] { "Post", "Head" }, TripoFit.Height, TripoAlign.None, 1f);
         if (!bent && (forceLit || Chance(0.3)))
         {
             Box("Glow", pole, new Vector3(0, 8.325f, 1.65f), new Vector3(0.28f, 0.01f, 0.52f), M["bulb"], 1f, false);
@@ -871,7 +876,7 @@ public static partial class GameSceneBuilder
     static void FireBarrel(Transform parent, Vector3 pos)
     {
         var g = Group("FireBarrel", parent, pos);
-        Prim(PrimitiveType.Cylinder, "Barrel", g, new Vector3(0, 0.45f, 0), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], null, true);
+        TripoDrum(Prim(PrimitiveType.Cylinder, "Barrel", g, new Vector3(0, 0.45f, 0), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], null, true));
         var l = PointLight("Fire", g, new Vector3(0, 1.3f, 0), new Color(1f, 0.5f, 0.18f), 16f, 14f);
         Flicker(l, 0.35f, 9f, false);
 
@@ -1181,8 +1186,8 @@ public static partial class GameSceneBuilder
         Spawn<ItemSpawnPoint>(points, cart.TransformPoint(new Vector3(0.25f, 0.97f, 0.02f)));
 
         // 뒤 구석의 드럼통
-        Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(5.3f, 0.47f, 5.35f), new Vector3(0.6f, 0.43f, 0.6f), M["paintBlue"], null, true);
-        Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(4.6f, 0.47f, 5.5f), new Vector3(0.6f, 0.43f, 0.6f), M["metal"], new Vector3(0, R(0, 90), 0), true);
+        TripoDrum(Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(5.3f, 0.47f, 5.35f), new Vector3(0.6f, 0.43f, 0.6f), M["paintBlue"], null, true));
+        TripoDrum(Prim(PrimitiveType.Cylinder, "Drum", yard, new Vector3(4.6f, 0.47f, 5.5f), new Vector3(0.6f, 0.43f, 0.6f), M["metal"], new Vector3(0, R(0, 90), 0), true));
 
         // 간판: 남서쪽 모퉁이 기둥 위에서 해치 쪽(남서)을 본다. 작은 등이 글자를 비춘다
         var sign = Group("Sign", yard, new Vector3(-5.55f, 0, -5.55f), 45);
@@ -1394,6 +1399,8 @@ public static partial class GameSceneBuilder
         };
         site.whenComplete = complete.ToArray();
         site.soundPoint = bay;
+        // 도시: 몸통 겉모습을 Tripo 트럭 품질 4단계로, 몸통에 붙는 수리 부품을 새 표면에 (난수를 뽑지 않는다, GameSceneBuilder.TripoTruck.cs)
+        TripoTruck(t, plates, bay, batteries, wires, navi, complete.FindAll(go => go != null && go.name == "HeadlightOn"), beam);
         // 처음에는 모두 숨긴다 (내비메시도 빈 트럭 모양으로 굽는다). 실행되면 TruckSite.Start가 저장된 만큼 켠다
         foreach (var part in site.parts)
             foreach (var go in part.pieces) go.SetActive(false);

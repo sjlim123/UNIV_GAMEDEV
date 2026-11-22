@@ -234,8 +234,8 @@ public static partial class GameSceneBuilder
         Box("Board", sign, new Vector3(0, 1.9f, 0), new Vector3(2.6f, 0.95f, 0.06f), M["tire"], 1f, false);
         var face = Prim(PrimitiveType.Quad, "Face", sign, new Vector3(0, 1.9f, -0.032f), new Vector3(2.5f, 0.9f, 1f), M["checkSign"]);
         face.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
-        Prim(PrimitiveType.Cylinder, "Drum", g, new Vector3(5.9f, 0.45f, -1.2f), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], null, true);
-        Prim(PrimitiveType.Cylinder, "DrumTipped", g, new Vector3(6.6f, 0.3f, -0.4f), new Vector3(0.6f, 0.45f, 0.6f), M["paintRed"], new Vector3(90f, KF(r, 0, 90), 0), true);
+        TripoDrum(Prim(PrimitiveType.Cylinder, "Drum", g, new Vector3(5.9f, 0.45f, -1.2f), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], null, true));
+        TripoDrum(Prim(PrimitiveType.Cylinder, "DrumTipped", g, new Vector3(6.6f, 0.3f, -0.4f), new Vector3(0.6f, 0.45f, 0.6f), M["paintRed"], new Vector3(90f, KF(r, 0, 90), 0), true));
         var l = PointLight("CheckLight", g, new Vector3(-5.6f, 2.6f, -0.9f), new Color(1f, 0.6f, 0.3f), 2.5f, 7f);
         Flicker(l, 0.4f, 9f, true);
     }

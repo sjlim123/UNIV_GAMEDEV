@@ -614,6 +614,19 @@ public static partial class GameSceneBuilder
         bgo.AddComponent<MeshFilter>().sharedMesh = bracket;
         bgo.AddComponent<MeshRenderer>().sharedMaterial = M["steelGrey"];
         GameObjectUtility.SetStaticEditorFlags(bgo, StaticEditorFlags.BatchingStatic);
+        // 도시: 몸통·팬을 품질별 실외기로 (뒷면을 벽 쪽에 붙이고 폭을 맞추고, 다리 끝을 예전 몸통 바닥에. 콜라이더는 그대로, 난수 안 씀).
+        // 그림자는 드리우지 않는다: 467개라 그림자 그리기 부담이 크고, 높음·매우 높음 판의 둥근 철망·두꺼운 날개가 손전등 그림자로 팬 자리를 까맣게 덮었다 (11-23 검수)
+        if (kTripoCity)
+        {
+            var ach = TripoSwap(g, "ac_unit_01", new[] { "Body", "Fan" }, TripoFit.Width, TripoAlign.BackBottom);
+            if (ach != null) foreach (var acr in ach.GetComponentsInChildren<MeshRenderer>(true)) acr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // 코드 브래킷(받침 팔·배관) 겉모습을 뺀다: Tripo 실외기는 제 다리·배관이 있어 받침이 두 벌로 보였다 (11-23 재검수, 사용자 "둘 다 손보기"). 콜라이더는 원래 없다
+            if (ach != null)
+            {
+                var br = g.Find("Bracket");
+                if (br != null) { var brr = br.GetComponent<MeshRenderer>(); if (brr != null) Object.DestroyImmediate(brr); var brf = br.GetComponent<MeshFilter>(); if (brf != null) Object.DestroyImmediate(brf); }
+            }
+        }
     }
 
     // 위층 겉모습 창문 (들어갈 수 없는 층): 흰 틀 + 어두운 유리, 실외기 더러, 깨진 창 조금. FacadeWindows와 같은 자리·같은 수

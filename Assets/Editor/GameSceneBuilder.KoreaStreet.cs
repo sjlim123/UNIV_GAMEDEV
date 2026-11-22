@@ -448,6 +448,8 @@ public static partial class GameSceneBuilder
         Box("Lid", bins, new Vector3(0.25f, 0.92f, 0), new Vector3(0.44f, 0.04f, 0.44f), M["tire"], 1f, false);
         // 벤치 위 아이템 자리 (바깥 자리: 돌만 나온다)
         OutdoorItemPoint(points, g.TransformPoint(new Vector3(0.6f, 0.55f, -0.18f)));
+        // 도시: 틀·벤치·뒤 유리를 Tripo 모델로 (난수·콜라이더·표지판·광고판·쓰레기통은 그대로, GameSceneBuilder.Tripo.cs)
+        if (kTripoCity) TripoSwap(g, "bus_stop_01", new[] { "Frame", "BackGlass", "Shards" }, TripoFit.Width, TripoAlign.Bottom);
     }
 
     // 소화전: 붉은 몸통·뚜껑·토출구 둘
@@ -462,6 +464,7 @@ public static partial class GameSceneBuilder
         foreach (float s in new[] { -1f, 1f }) KCylAt(parts, new Vector3(s * 0.15f, 0.42f, 0), 0.055f, 0.14f, Quaternion.Euler(0, 0, 90));
         CombineInto(g, "Body", parts, M["paintRed"]);
         ColliderBox("HydrantCollider", g, new Vector3(0, 0.4f, 0), new Vector3(0.36f, 0.8f, 0.24f), Vector3.zero);
+        if (kTripoCity) TripoSwap(g, "fire_hydrant_01", new[] { "Body" }, TripoFit.Height, TripoAlign.Bottom); // 도시: 몸통만 Tripo 모델로 (GameSceneBuilder.Tripo.cs)
     }
 
     // 가로수 (불탄 은행나무): 격자 덮개가 있는 나무 구덩이, 그을린 줄기, 가지 몇, 잔가지 (난수는 자리에서 뽑는다)
@@ -514,5 +517,7 @@ public static partial class GameSceneBuilder
                 KPart(limbs, new Vector3(0.05f, KF(r, 0.2f, 0.5f), 0.05f), 1f, new Vector3(KF(r, -0.06f, 0.06f), h + 0.1f, KF(r, -0.06f, 0.06f)), Quaternion.Euler(KF(r, -25f, 25f), KF(r, 0, 360), KF(r, -25f, 25f)));
         }
         CombineInto(trunk.transform, "Limbs", limbs, M["bark"]);
+        // 도시: 부러지지 않은 나무는 줄기·가지를 품질별 죽은 나무로 (높이를 이 나무 높이에 맞춘다. 격자 덮개·흙·캡슐 콜라이더는 그대로, 난수는 위에서 다 뽑았다)
+        if (kTripoCity && !stump) TripoSwap(g, "dead_tree_01", new[] { "Trunk" }, TripoFit.Height, TripoAlign.BottomTrunk); // 밑동을 격자 가운데(캡슐 콜라이더 자리)에
     }
 }

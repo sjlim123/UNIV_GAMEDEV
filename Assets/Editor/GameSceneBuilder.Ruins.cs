@@ -563,8 +563,8 @@ public static partial class GameSceneBuilder
         WreckedCarV2(g, new Vector3(6.4f, 0, -1.8f), F(55f, 75f), false, true, r);
         Box("Sandbag3", g, new Vector3(-1.9f, 0.25f, 1.3f), new Vector3(0.9f, 0.5f, 0.45f), M["cloth"], 1f, true, new Vector3(0, -20, 0));
         Box("Sandbag4", g, new Vector3(-1.95f, 0.68f, 1.25f), new Vector3(0.8f, 0.4f, 0.42f), M["cloth"], 1f, true, new Vector3(0, 12, 0));
-        Prim(PrimitiveType.Cylinder, "Drum", g, new Vector3(2.9f, 0.45f, -2.6f), new Vector3(0.6f, 0.45f, 0.6f), M["paintBlue"], null, true);
-        Prim(PrimitiveType.Cylinder, "DrumTipped", g, new Vector3(3.8f, 0.3f, -2.1f), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], new Vector3(90, 30, 0), true);
+        TripoDrum(Prim(PrimitiveType.Cylinder, "Drum", g, new Vector3(2.9f, 0.45f, -2.6f), new Vector3(0.6f, 0.45f, 0.6f), M["paintBlue"], null, true));
+        TripoDrum(Prim(PrimitiveType.Cylinder, "DrumTipped", g, new Vector3(3.8f, 0.3f, -2.1f), new Vector3(0.6f, 0.45f, 0.6f), M["metal"], new Vector3(90, 30, 0), true));
         // 잿더미·그을음·잔해 (문 앞 길목 |x|<1.7, z 1.4~4.5는 비워 둔다: 돌아가기 연출에서 주인공이 서고 물러나는 자리)
         for (int i = 0; i < 4; i++)
         {
