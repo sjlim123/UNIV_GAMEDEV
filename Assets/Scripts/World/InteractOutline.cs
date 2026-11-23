@@ -18,6 +18,7 @@ public class InteractOutline : MonoBehaviour
     static readonly int WidthId = Shader.PropertyToID("_Width");
 
     readonly List<GameObject> shells = new List<GameObject>();
+    int lodKey;
     float fade;
 
     // target이 null이면 윤곽선을 끈다
@@ -37,6 +38,12 @@ public class InteractOutline : MonoBehaviour
 
     void SetOn(bool on)
     {
+        // 품질별 판(LOD 묶음)을 든 물체: 설정에서 세부 묘사 품질을 바꿔 첫 칸의 판이 달라졌으면 껍데기를 새로 붙인다
+        if (on && shells.Count > 0 && LodKey(null) != lodKey)
+        {
+            foreach (var s in shells) if (s != null) Destroy(s);
+            shells.Clear();
+        }
         if (on && shells.Count == 0) Build();
         foreach (var s in shells)
             if (s != null) s.SetActive(on);
@@ -50,11 +57,13 @@ public class InteractOutline : MonoBehaviour
         var mat = Material;
         if (mat == null) return;
         var block = new MaterialPropertyBlock();
+        var farTiers = new HashSet<Renderer>();
+        lodKey = LodKey(farTiers);
         foreach (var mf in GetComponentsInChildren<MeshFilter>())
         {
             var mesh = mf.sharedMesh;
             var r = mf.GetComponent<MeshRenderer>();
-            if (mesh == null || r == null || !r.enabled || mesh.name.StartsWith("Combined Mesh")) continue;
+            if (mesh == null || r == null || !r.enabled || mesh.name.StartsWith("Combined Mesh") || farTiers.Contains(r)) continue;
             var go = new GameObject("Outline");
             go.transform.SetParent(mf.transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -69,6 +78,29 @@ public class InteractOutline : MonoBehaviour
             go.SetActive(false);
             shells.Add(go);
         }
+    }
+
+    // 품질별 판(LOD 묶음, 방공호 가구 Tripo 모델 2026-11-23)은 첫 칸(LOD 0)의 판에만 껍데기를 붙인다.
+    // 상호작용 거리(2.6 m)에서는 늘 첫 칸이 보이는데, 다른 칸의 판(켜져 있지만 LOD가 그리지 않음)에도 붙이면 껍데기는 LOD 밖이라 늘 그려져
+    // 판 수만큼 겹친 윤곽선이 된다. far에 첫 칸이 아닌 판을 모으고, 첫 칸 판들로 만든 값(바뀌었는지 보는 용도)을 돌려준다
+    int LodKey(HashSet<Renderer> far)
+    {
+        int key = 17;
+        foreach (var lg in GetComponentsInChildren<LODGroup>())
+        {
+            var lods = lg.GetLODs();
+            for (int l = 0; l < lods.Length; l++)
+                foreach (var r in lods[l].renderers)
+                {
+                    if (r == null) continue;
+                    if (l == 0) key = key * 31 + r.GetInstanceID();
+                    else if (far != null) far.Add(r);
+                }
+        }
+        if (far != null)
+            foreach (var lg in GetComponentsInChildren<LODGroup>())
+                foreach (var r in lg.GetLODs()[0].renderers) far.Remove(r); // 첫 칸과 다른 칸에 같은 판이 함께 들어 있으면(낮음 품질) 그 판은 남긴다
+        return key;
     }
 
     static Material[] Repeat(Material m, int n)

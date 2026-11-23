@@ -367,6 +367,102 @@
       "added": "2026-11-23",
       "status": "시험",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 철제 침대 (shelter_bed_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 17,381개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 b7984717-9042-402b-98d7-d76fc77a3819, 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 1,100 · 중간 2,199 · 높음 8,699 · 매우 높음 17,381 (낮음 550에서는 다리가 사라져 1,100, 작은 조각 빼기 끔)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_bed_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (틀·다리·머리판·매트리스·베개·담요를 바꿈, 길이 2 m로 맞춤, 콜라이더·Bed 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 양문 수납장 몸통 (shelter_cabinet_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 16,858개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 a89e75d0-a292-4dee-9130-fd9eca7762f4, 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 799 · 중간 2,499 · 높음 8,000 · 매우 높음 16,858"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_cabinet_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (몸통·선반·보관품을 바꾸고 문짝 둘은 코드로 남겨 색만 M_ShelterCabinetDoor로, 축마다 1.7×1.9×0.5 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 철제 선반 (shelter_shelf_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 13,674개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 52bd2192-ed9e-40a4-bf4c-e2cec069d661, 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 500 · 중간 1,800 · 높음 7,000 · 매우 높음 13,674 (중간은 이음매 지키기로 판자가 구겨져 새로 굽기)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_shelf_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (옆판·판자·뒤판을 바꾸고 난수로 놓인 장식은 모델 판자 위로 높이만 옮김, 판자 콜라이더도 가장 가까운 모델 판자 높이로, 도시 선반은 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 나무 탁자 (shelter_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 15,295개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 902b4c54-ac85-4bf1-802e-164c83bf1802, 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 300 · 중간 1,200 · 높음 4,999 · 매우 높음 15,295"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_table_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (상판·다리를 바꾸고 라디오·지도·컵은 그대로, 축마다 1.6×0.79×0.9 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 나무 의자 (shelter_chair_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 16,356개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 cc624b07-ad96-4e7f-a6b1-9f1cd3bfdd64, 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 300 · 중간 1,200 · 높음 5,000 · 매우 높음 16,356"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_chair_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (의자 전부를 바꿈, 높이로 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 철제 제작대 (shelter_workbench_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀, 삼각형 42,357개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음)",
+        "작업 7a22af2d-60d3-406e-92e5-10b81ac7d35b (면 5만, 다시 만듦. 먼저 만든 면 2만 판 265b0521-a869-49a5-93b6-165359606b75 45크레딧은 사용자 요청으로 바꿈), 45크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 104 · 중간 202 · 높음 18,097 · 매우 높음 42,357"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_workbench_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 가구 겉모습 (망치만 남기고 바꿈, 가로·깊이는 2.2×0.8 m, 높이는 모델 상판이 0.94 m에 오게). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

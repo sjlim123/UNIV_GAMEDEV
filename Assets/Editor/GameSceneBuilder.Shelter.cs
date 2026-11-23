@@ -12,7 +12,7 @@ public static partial class GameSceneBuilder
 {
     // ================= 방공호 =================
 
-    static void BuildShelterScene(GameObject playerPrefab, GameObject zombiePrefab)
+    static void BuildShelterSceneCore(GameObject playerPrefab, GameObject zombiePrefab) // BuildShelterScene(GameSceneBuilder.TripoShelter.cs)이 Tripo 가구 스위치를 켜고 부른다
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         BeginMeshes(GenDir + "/ShelterMeshes.asset");
@@ -167,6 +167,7 @@ public static partial class GameSceneBuilder
         var col = g.gameObject.AddComponent<BoxCollider>();
         col.center = new Vector3(0, 0.35f, 0);
         col.size = new Vector3(1f, 0.7f, 2.05f);
+        TripoShelterBed(g); // 방공호: 겉모습을 Tripo 침대로 (콜라이더·Bed 그대로, GameSceneBuilder.TripoShelter.cs)
         g.gameObject.AddComponent<Bed>();
     }
 
@@ -190,6 +191,7 @@ public static partial class GameSceneBuilder
         var col = g.gameObject.AddComponent<BoxCollider>();
         col.center = new Vector3(0, 0.5f, 0);
         col.size = new Vector3(2.2f, 1f, 0.8f);
+        TripoShelterWorkbench(g); // 방공호: 망치만 남기고 겉모습을 Tripo 제작대로 (GameSceneBuilder.TripoShelter.cs)
         g.gameObject.AddComponent<Workbench>();
     }
 
@@ -252,6 +254,7 @@ public static partial class GameSceneBuilder
         var col = g.gameObject.AddComponent<BoxCollider>();
         col.center = new Vector3(0, H / 2, 0);
         col.size = new Vector3(W, H, D + 0.08f);
+        TripoShelterStorage(g); // 방공호: 문짝 둘만 남기고 겉모습을 Tripo 수납장으로 (GameSceneBuilder.TripoShelter.cs)
     }
 
     // 선반 (장식용 깡통·물병 포함). 도시 건물에서도 쓴다
@@ -287,6 +290,7 @@ public static partial class GameSceneBuilder
                         if (keep) Box("Box", g, new Vector3(x, y + 0.12f, z), new Vector3(0.22f, 0.2f, 0.18f), M["cloth"], 1f, false, new Vector3(0, turn, 0));
                     }
                 }
+        TripoShelterShelf(g); // 방공호만: 겉모습을 Tripo 선반으로, 장식은 판자 위로 (난수는 위에서 다 뽑았다, GameSceneBuilder.TripoShelter.cs)
         GameObjectUtility.SetStaticEditorFlags(g.gameObject, StaticEditorFlags.BatchingStatic);
         return g;
     }
@@ -307,6 +311,7 @@ public static partial class GameSceneBuilder
         foreach (var x in new[] { -0.2f, 0.2f })
             foreach (var z in new[] { -0.2f, 0.2f })
                 Box("Leg", chair, new Vector3(x, 0.22f, z), new Vector3(0.04f, 0.45f, 0.04f), M["wood"], 1f, false);
+        TripoShelterTable(g); // 방공호: 상판·다리와 의자를 Tripo 탁자·의자로 (라디오·지도·컵 그대로, GameSceneBuilder.TripoShelter.cs)
     }
 
     // 발전기 (디젤 발전기, 사실적으로): 쇠 스키드 위에 검은 주철 엔진 블록·가로누운 원통형 발전부·녹슨 붉은 연료통·냉각 팬 격자·계기판.

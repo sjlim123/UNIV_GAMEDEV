@@ -23,17 +23,63 @@ public static partial class GameSceneBuilder
         { "bus_stop_01",              new[] { 700, 1400, 7000 } },
         // 트럭 (11-23 다시 만듦, 1만 판 12,970). 도시에 하나뿐이고 수리 목표라 가까이서 오래 보므로 낮음도 넉넉히
         { "pickup_truck_01",          new[] { 1200, 3000, 7000 } },
+        // 방공호 가구 6종 (11-23 웹 스튜디오 H3.1, 원본 1.4만~1.7만). 방이 좁아 늘 가까이서 보므로 높음은 원본의 약 1/2
+        { "shelter_bed_01",           new[] { 1100, 2200, 8700 } }, // 550에서는 가는 다리가 사라져 침대가 바닥에 붙었다 (11-23 품질 사진)
+        { "shelter_cabinet_01",       new[] { 800, 2500, 8000 } },  // 칸 안의 상자·통조림·물병이 잘게 나뉘어 낮음도 넉넉히
+        { "shelter_shelf_01",         new[] { 500, 1800, 7000 } },
+        { "shelter_table_01",         new[] { 300, 1200, 5000 } },
+        { "shelter_chair_01",         new[] { 300, 1200, 5000 } },
+        { "shelter_workbench_01",     new[] { 0, 0, 0 } },          // 5만 면 원본(11-23 다시 만듦). 낮음·중간·높음은 GameSceneBuilder.TripoWorkbench.cs가 만든다
     };
 
-    // TripoSpecs(재질 값이 정해진 모델)에 아직 없는 모델의 돌림 각도 (앞 = +Z)
-    static readonly Dictionary<string, float> TtYaw = new Dictionary<string, float> { { "pickup_truck_01", 90f } };
+    // TripoSpecs(재질 값이 정해진 모델)에 아직 없는 모델의 돌림 각도 (앞 = +Z).
+    // 방공호 가구는 '코드 가구와 같은 축'으로 맞춘다: 침대는 머리판을 +Z(코드 침대 머리 쪽), 제작대는 공구판을 +Z(코드 제작대가 북쪽 벽에 대는 쪽)
+    static readonly Dictionary<string, float> TtYaw = new Dictionary<string, float>
+    {
+        { "pickup_truck_01", 90f },
+        { "shelter_bed_01", 180f }, { "shelter_cabinet_01", 0f }, { "shelter_shelf_01", 0f },
+        { "shelter_table_01", 0f }, { "shelter_chair_01", 0f }, { "shelter_workbench_01", 180f },
+    };
+
+    // 웹 스튜디오에서 FBX(Blender 설정)로 받은 모델 (11-23 방공호 가구). 맨 위 물체에 X -90°, 메시 자식에 X 270°가 들어 있어
+    // 둘을 다 넣은 월드 자세가 바로 선 자세다 (맨 위 회전을 빼고 재면 누워 보인다). 아래 매우 높음 프리팹은 자식 회전까지 넣는다
+    static readonly HashSet<string> TtStandUp = new HashSet<string>
+    {
+        "shelter_bed_01", "shelter_cabinet_01", "shelter_shelf_01", "shelter_table_01", "shelter_chair_01", "shelter_workbench_01",
+    };
+
+    // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
+    // TtSeamOnly = 이음매를 지키며 줄이다 멈추면 그 수 그대로 쓴다 (새로 굽기는 제작대 다리를 지우고 앞을 막힌 상자로 무너뜨렸다: 구멍 뚫린 공구판이 면을 붙잡아 다른 곳이 먼저 무너짐)
+    // TtForceRebake = 이 판은 늘 모양만 줄이고 새로 굽는다 (선반 중간: 이음매 지키기로 목표에 닿아도 판자가 구겨졌다)
+    // TtKeepParts = 낮음 판에서 작은 조각을 먼저 빼지 않는다 (침대 다리)
+    static readonly HashSet<string> TtSeamOnly = new HashSet<string> { "shelter_workbench_01" };
+    // 매우 높음 프리팹만 만들고 낮음·중간·높음은 다른 곳에서 만드는 모델
+    static readonly HashSet<string> TtHighOnly = new HashSet<string> { "shelter_workbench_01" };
+    // TtFreeze = 이 자리(앞 = +Z 좌표, 원본 크기)의 점은 줄이지 않는다.
+    // 제작대: 낮음·중간에서 다리가 한쪽으로 쏠려 뭉개졌다 (11-23 사용자)
+    static readonly Dictionary<string, System.Func<Vector3, bool>> TtFreeze = new Dictionary<string, System.Func<Vector3, bool>>
+    {
+    };
+    static readonly Dictionary<string, int[]> TtForceRebake = new Dictionary<string, int[]> { { "shelter_shelf_01", new[] { 1 } } };
+    static readonly HashSet<string> TtKeepParts = new HashSet<string> { "shelter_bed_01" };
+
+    [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (방공호 가구 6종)")]
+    static void TtBuildShelter()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
+        var log = new List<string>();
+        foreach (var id in TtStandUp) log.Add(TtMake(id, TtTargets[id]));
+        log.Add(WbMakeHigh());
+        log.Add(WbMakeLow());
+        Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 가구): " + string.Join(" / ", log));
+    }
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (차·뒤집힌 차·소화전·드럼통·정류장·트럭)")]
     static void TtBuildAll()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         var log = new List<string>();
-        foreach (var kv in TtTargets) log.Add(TtMake(kv.Key, kv.Value));
+        foreach (var kv in TtTargets) if (!TtStandUp.Contains(kv.Key)) log.Add(TtMake(kv.Key, kv.Value)); // 방공호 가구는 따로 (TtBuildShelter)
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판: " + string.Join(" / ", log));
     }
 
@@ -61,18 +107,21 @@ public static partial class GameSceneBuilder
         var bakeSrc = new LpSource { p = pos, uv = uv, tri = tri0, tex = srcTex, b = srcB };
 
         var parts = new List<string>();
-        for (int q = 2; q >= 0; q--)
+        for (int q = 2; q >= (TtHighOnly.Contains(id) ? 3 : 0); q--)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int size = q == 0 ? 256 : 512; // 높음·중간 512, 낮음 256 (실외기·나무와 같다)
             List<Vector3> p2, n2; List<Vector2> u2; int[] t2; Color32[] px = null; string how;
 
             // 1) 텍스처 이음매를 지키며 줄이기 (원본 UV·텍스처 그대로). 목표의 115 % 안에 들면 이것을 쓴다
-            var simp = new TtSimplifier(pos, uv, tri0);
+            TtFreeze.TryGetValue(id, out var freeze);
+            var simp = new TtSimplifier(pos, uv, tri0, false, freeze);
             simp.Run(targets[q]);
-            if (simp.alive <= targets[q] * 1.15f)
+            bool forceRebake = TtForceRebake.TryGetValue(id, out var fr) && System.Array.IndexOf(fr, q) >= 0;
+            bool seamOnly = TtSeamOnly.Contains(id);
+            if (!forceRebake && (simp.alive <= targets[q] * 1.15f || seamOnly))
             {
-                how = "UV 그대로";
+                how = simp.alive <= targets[q] * 1.15f ? "UV 그대로" : "UV 그대로 (이음매 지키기로 " + simp.alive + "에서 멈춘 수 그대로)";
                 var idx = simp.Triangles();
                 var remap = new Dictionary<int, int>();
                 p2 = new List<Vector3>(); n2 = new List<Vector3>(); u2 = new List<Vector2>();
@@ -92,7 +141,7 @@ public static partial class GameSceneBuilder
             {
                 // 2) 이음매가 너무 잘게 나뉘어 더 못 줄이면: 모양만 줄이고(같은 자리 꼭짓점을 하나로), 새로 펼쳐 원본 텍스처를 구워 옮긴다
                 how = "새로 구움 (이음매 지키기로는 " + simp.alive + "에서 멈춤)";
-                var m = TtRebakeMesh(pos, tri0, targets[q], q == 0 ? 0.05f : 0f, out int dropped);
+                var m = TtRebakeMesh(pos, tri0, targets[q], q == 0 && !TtKeepParts.Contains(id) ? 0.05f : 0f, out int dropped, freeze);
                 var uvb = LpPackUv(m, size, q == 0 ? 2 : 3);
                 int outside = 0; foreach (var w in uvb) if (w.x < 0f || w.y < 0f || w.x > 1f || w.y > 1f) outside++;
                 if (outside > 0) Debug.LogWarning($"[GameSceneBuilder] {id} q{q}: 텍스처 한 장에 조각이 다 들어가지 않음 (꼭짓점 {outside}개가 밖)");
@@ -154,7 +203,8 @@ public static partial class GameSceneBuilder
             var go = new GameObject(id + "_q3");
             var child = new GameObject("M");
             child.transform.SetParent(go.transform, false);
-            child.transform.localRotation = rootRot;
+            // 메시 자식의 회전(Blender 설정 FBX는 X 270°)까지 넣는다. 예전 모델은 자식 회전이 없어 rootRot 그대로와 같다
+            child.transform.localRotation = rootRot * Quaternion.Inverse(model.transform.rotation) * mf.transform.rotation;
             child.AddComponent<MeshFilter>().sharedMesh = src;
             child.AddComponent<MeshRenderer>();
             PrefabUtility.SaveAsPrefabAsset(go, $"{q3Dir}/{id}_q3.prefab");
@@ -167,7 +217,7 @@ public static partial class GameSceneBuilder
     // 모양만 줄이고(같은 자리 꼭짓점을 한 점으로 묶어 이음매 없이 QEM) 새 조각으로 나눈 메시. 조각 = 이웃 면을 따라 번지되
     // 조각 평균 법선과 45° 안, 바로 옆 면과 35° 안인 면까지 (평면에 비춰 펼친다). 법선은 그 점의 면 중 이 조각 쪽 법선과 60° 안인 면의 평균
     // minPart > 0: 전체 대각선의 그 비율보다 작은 따로 떨어진 조각(볼트·너트 등)을 먼저 뺀다 (낮음 판: 작은 조각이 면을 붙잡아 큰 모양이 먼저 무너졌다)
-    static LpMesh TtRebakeMesh(Vector3[] wpos, int[] wtri, int target, float minPart, out int dropped)
+    static LpMesh TtRebakeMesh(Vector3[] wpos, int[] wtri, int target, float minPart, out int dropped, System.Func<Vector3, bool> freeze = null)
     {
         var map = new Dictionary<Vector3Int, int>(); var pl = new List<Vector3>(); var P = new int[wpos.Length];
         for (int w = 0; w < wpos.Length; w++)
@@ -203,7 +253,7 @@ public static partial class GameSceneBuilder
             }
             ptri = keep.ToArray();
         }
-        var simp = new TtSimplifier(pts, new Vector2[pts.Length], ptri, true);
+        var simp = new TtSimplifier(pts, new Vector2[pts.Length], ptri, true, freeze);
         simp.Run(target);
         for (int i = 0; i < pts.Length; i++) pts[i] = simp.Pos(i);
         var tri = simp.Triangles(); // 점 번호 (쐐기 = 점)

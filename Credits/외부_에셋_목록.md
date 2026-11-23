@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-23 · 항목 22개
+갱신: 2026-11-23 · 항목 28개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -40,6 +40,12 @@
 | 20 | 3D 모델 | 불탄 가로수 (dead_tree_01) — Tripo AI로 글에서 만든 모델<br><small>v3.1 저폴리, 삼각형 5098개, 색 텍스처 2048 원본 → 512로 들여옴, 작업 7f16f36d(생성)·12f13270(FBX 변환), 35크레딧</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/dead_tree_01/ (만든 방법: SOURCE.md)` | 길가 죽은 나무 후보 (시험, 아직 씬에는 넣지 않음). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인) | 2026-11-22 | 시험 |
 | 21 | 3D 모델 | 뒤집힌 버려진 소형 세단, 바닥 부품이 보이는 판 (wrecked_sedan_flipped_01) — Tripo AI로 그림(우리 차를 뒤집어 찍고 이미지 편집)에서 만든 모델<br><small>v3.1 저폴리, 삼각형 7790개, 색 텍스처 512로 들여옴, 작업 cd45c2be(이미지 편집 5)·b3ded922(그림→3D 40)·463abcdb(FBX 변환 5), 50크레딧, 매우 높음 판(Q3_매우높음/): 그림→3D 면 제한 20000, 삼각형 24,488개, 텍스처 1024로 들여옴, 작업 dca4d5fc(생성)·7dd1335a(FBX 변환), 45크레딧</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/wrecked_sedan_flipped_01/ (만든 방법: SOURCE.md)` | 도시의 뒤집힌 차 5대 (시험, 11-22 도시 씬에 넣음, 아직 커밋 전). Max 플랜 유료 구독 중에 만듦(11-23 사용자 확인) | 2026-11-22 | 시험 |
 | 22 | 3D 모델 | 감염자 (일반 좀비, zombie_common) — Higgsfield에서 만든 컨셉 그림과 3D 모델(Tripo H3.1)을 잘라 다듬은 모델<br><small>컨셉: Character_Design/Enemy01_CommonZombie.png를 바탕으로 Higgsfield nano_banana_2 (claude.ai 채팅 무료체험, 크레딧 0), 3D: Higgsfield tripo_h3_1_multiview_to_3d, job 1c153104 (7,694면, 9크레딧), 자동 뼈대 참고 3d_rigging job 4872a143 (5크레딧), Blender에서 관절별로 자르고 하나의 몸으로 다시 만들고 다듬음: 뼈 53개, LOD0 84,626 · LOD1 20,000 · LOD2 4,999 삼각형, 색·노멀 2048 (작업 기록 ModelWork/Enemies/zombie_common/README.md)</small> | Higgsfield AI(컨셉·3D 생성), Tripo H3.1 모델, Blender 손질은 적 모델링 세션 | Higgsfield | `Assets/Resources/Enemies/ZombieCommon/ (원본·만든 방법: 저장소 밖 ModelWork/Enemies/zombie_common/)` | 일반 좀비(감염자) 몸 — CharacterModels.Skinned.cs, SkinnedZombieDriver.cs. 약관 확인 11-23: 상업적 사용·공개 배포 가능, 소유권 주장 없음 | 2026-11-23 | 시험 |
+| 23 | 3D 모델 | 방공호 철제 침대 (shelter_bed_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 17,381개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 b7984717-9042-402b-98d7-d76fc77a3819, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 1,100 · 중간 2,199 · 높음 8,699 · 매우 높음 17,381 (낮음 550에서는 다리가 사라져 1,100, 작은 조각 빼기 끔)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_bed_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (틀·다리·머리판·매트리스·베개·담요를 바꿈, 길이 2 m로 맞춤, 콜라이더·Bed 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 24 | 3D 모델 | 방공호 양문 수납장 몸통 (shelter_cabinet_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 16,858개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 a89e75d0-a292-4dee-9130-fd9eca7762f4, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 799 · 중간 2,499 · 높음 8,000 · 매우 높음 16,858</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_cabinet_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (몸통·선반·보관품을 바꾸고 문짝 둘은 코드로 남겨 색만 M_ShelterCabinetDoor로, 축마다 1.7×1.9×0.5 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 25 | 3D 모델 | 방공호 철제 선반 (shelter_shelf_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 13,674개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 52bd2192-ed9e-40a4-bf4c-e2cec069d661, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 500 · 중간 1,800 · 높음 7,000 · 매우 높음 13,674 (중간은 이음매 지키기로 판자가 구겨져 새로 굽기)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_shelf_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (옆판·판자·뒤판을 바꾸고 난수로 놓인 장식은 모델 판자 위로 높이만 옮김, 판자 콜라이더도 가장 가까운 모델 판자 높이로, 도시 선반은 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 26 | 3D 모델 | 방공호 나무 탁자 (shelter_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 15,295개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 902b4c54-ac85-4bf1-802e-164c83bf1802, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 300 · 중간 1,200 · 높음 4,999 · 매우 높음 15,295</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_table_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (상판·다리를 바꾸고 라디오·지도·컵은 그대로, 축마다 1.6×0.79×0.9 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 27 | 3D 모델 | 방공호 나무 의자 (shelter_chair_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 16,356개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 cc624b07-ad96-4e7f-a6b1-9f1cd3bfdd64, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 300 · 중간 1,200 · 높음 5,000 · 매우 높음 16,356</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_chair_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (의자 전부를 바꿈, 높이로 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 28 | 3D 모델 | 방공호 철제 제작대 (shelter_workbench_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 42,357개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 7a22af2d-60d3-406e-92e5-10b81ac7d35b (면 5만, 다시 만듦. 먼저 만든 면 2만 판 265b0521-a869-49a5-93b6-165359606b75 45크레딧은 사용자 요청으로 바꿈), 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 104 · 중간 202 · 높음 18,097 · 매우 높음 42,357</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_workbench_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (망치만 남기고 바꿈, 가로·깊이는 2.2×0.8 m, 높이는 모델 상판이 0.94 m에 오게). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
 
 ## 출처 링크
 
@@ -65,6 +71,12 @@
 - 불탄 가로수 (dead_tree_01) — Tripo AI로 글에서 만든 모델 — https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)
 - 뒤집힌 버려진 소형 세단, 바닥 부품이 보이는 판 (wrecked_sedan_flipped_01) — Tripo AI로 그림(우리 차를 뒤집어 찍고 이미지 편집)에서 만든 모델 — https://www.tripo3d.ai/ (API: https://developers.tripo3d.ai/)
 - 감염자 (일반 좀비, zombie_common) — Higgsfield에서 만든 컨셉 그림과 3D 모델(Tripo H3.1)을 잘라 다듬은 모델 — https://higgsfield.ai/
+- 방공호 철제 침대 (shelter_bed_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 양문 수납장 몸통 (shelter_cabinet_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 철제 선반 (shelter_shelf_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 나무 탁자 (shelter_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 나무 의자 (shelter_chair_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 철제 제작대 (shelter_workbench_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 
 ## 메모
 

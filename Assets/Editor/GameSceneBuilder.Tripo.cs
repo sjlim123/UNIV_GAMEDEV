@@ -37,6 +37,13 @@ public static partial class GameSceneBuilder
         // 11-23 품질 4단계와 함께 더함 (재질 값은 도시 사진으로 확인 전). 가로등은 직접 짠 판이 이미 앞 = +Z, 트럭은 원본 FBX를 90° 돌린다
         { "lamp_post_01",     new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.35f, 0.3f, 0f) },
         { "pickup_truck_01",  new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0.3f, 0.3f, 90f) },
+        // 방공호 가구 6종 (11-23 웹 스튜디오, GameSceneBuilder.TripoShelter.cs). yaw는 품질별 판을 만들 때 쓰는 값(TtYaw)과 같게 (판은 이미 코드 가구와 같은 축)
+        { "shelter_bed_01",       new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.3f, 0.25f, 180f) },
+        { "shelter_cabinet_01",   new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.3f, 0.25f, 0f) },
+        { "shelter_shelf_01",     new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.3f, 0.25f, 0f) },
+        { "shelter_table_01",     new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0f, 0.15f, 0f) },
+        { "shelter_chair_01",     new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0f, 0.15f, 0f) },
+        { "shelter_workbench_01", new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.4f, 0.3f, 180f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
@@ -58,7 +65,7 @@ public static partial class GameSceneBuilder
     }
 
     // 모델 크기를 예전 소품의 어느 치수에 맞출지 (예전 겉모습의 대상 기준 축: x 오른쪽, y 위, z 앞)
-    enum TripoFit { Height, Width, Length }
+    enum TripoFit { Height, Width, Length, Box }
     // 맞춘 뒤 어디를 붙일지: Bottom = 바닥 높이와 가운데(x, z), Back = 뒷면(-z 쪽 면)과 가운데(x, y). 벽에 붙는 실외기는 Back.
     // Top = 윗면과 가운데(x, z): 뒤집힌 차처럼 대상이 거꾸로 놓여 대상 기준 '위'가 땅에 닿는 것
     // None = 옮기지 않는다 (가로등처럼 품질별 판을 코드 소품과 같은 치수·원점으로 짠 것)
@@ -314,6 +321,8 @@ public static partial class GameSceneBuilder
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         foreach (var id in TripoSpecs.Keys)
         {
+            string src = TripoSpecs[id].src ?? id;
+            if (AssetDatabase.LoadAssetAtPath<GameObject>($"{TripoModelDir}/{src}/{src}.fbx") == null) continue; // 품질별 판만 있는 모델 (방공호 가구): 판마다 재질은 TripoTierMat
             TripoConfigureImport(id);
             TripoMat(id);
         }
@@ -363,14 +372,6 @@ public static partial class GameSceneBuilder
     // fit: 예전 겉모습의 어느 치수에 맞출지. fixedScale > 0이면 그 배율을 그대로 쓴다 (원본 FBX는 긴 변이 약 1 m)
     static GameObject TripoSwap(Transform target, string id, string[] parts, TripoFit fit, TripoAlign align, float fixedScale = 0f, string matId = null)
     {
-        var spec = TripoSpecs[id];
-        var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{TripoModelDir}/{id}/{id}.fbx");
-        if (model == null)
-        {
-            Debug.LogWarning("[GameSceneBuilder] Tripo 모델이 없음: " + id);
-            return null;
-        }
-
         // 바꿀 렌더러 모으기
         var old = new List<Renderer>();
         if (parts == null || parts.Length == 0) old.AddRange(target.GetComponentsInChildren<Renderer>());
@@ -386,7 +387,15 @@ public static partial class GameSceneBuilder
             }
         }
         else foreach (var path in parts) { var c = target.Find(path); if (c != null) old.AddRange(c.GetComponentsInChildren<Renderer>()); }
-        old.RemoveAll(r => !r.enabled || !(r is MeshRenderer));
+        return TripoSwapRenderers(target, id, old, fit, align, fixedScale, matId, Vector3.zero);
+    }
+
+    // TripoSwap의 본체: 바꿀 렌더러를 목록으로 받는다 (이름이 같은 부품이 여럿인 방공호 선반 판자·탁자 다리용, 11-23).
+    // fit Box = 축마다 따로 예전 겉모습 크기에 맞춘다 (비율이 다른 가구). axisScale의 0보다 큰 성분은 그 축 배율을 그대로 쓴다 (제작대 높이: 상판 높이로 맞춤)
+    static GameObject TripoSwapRenderers(Transform target, string id, List<Renderer> old, TripoFit fit, TripoAlign align, float fixedScale, string matId, Vector3 axisScale)
+    {
+        var spec = TripoSpecs[id];
+        old.RemoveAll(r => r == null || !r.enabled || !(r is MeshRenderer));
         if (old.Count == 0)
         {
             Debug.LogWarning("[GameSceneBuilder] TripoSwap: 바꿀 겉모습이 없음 (" + target.name + ", " + id + ")");
@@ -404,7 +413,14 @@ public static partial class GameSceneBuilder
         GameObject go = TripoTierModel(holder, id, matId ?? id, spec.roll);
         MeshRenderer[] rs; // 크기·자리를 잴 렌더러 (LOD 묶음이면 가장 좋은 판만)
         bool tiered = go != null;
+        var model = tiered ? null : AssetDatabase.LoadAssetAtPath<GameObject>($"{TripoModelDir}/{id}/{id}.fbx");
         if (tiered) rs = go.transform.Find("LOD0_q3").GetComponentsInChildren<MeshRenderer>();
+        else if (model == null)
+        {
+            Debug.LogWarning("[GameSceneBuilder] Tripo 모델이 없음: " + id);
+            Object.DestroyImmediate(holder.gameObject);
+            return null;
+        }
         else
         {
             go = (GameObject)PrefabUtility.InstantiatePrefab(model, holder);
@@ -426,7 +442,11 @@ public static partial class GameSceneBuilder
         float want = fit == TripoFit.Height ? ob.size.y : fit == TripoFit.Width ? ob.size.x : ob.size.z;
         float have = fit == TripoFit.Height ? nb.size.y : fit == TripoFit.Width ? nb.size.x : nb.size.z;
         float scale = fixedScale > 0f ? fixedScale : have > 1e-4f ? want / have : 1f; // fixedScale: 사진으로 통과한 배율을 그대로 (차는 3.5: 예전 세단보다 짧은 옛 소형차라 길이로 맞추면 너무 높아진다)
-        go.transform.localScale = Vector3.one * scale;
+        var sv = Vector3.one * scale;
+        if (fit == TripoFit.Box)
+            for (int a = 0; a < 3; a++) sv[a] = nb.size[a] > 1e-4f ? ob.size[a] / nb.size[a] : 1f;
+        for (int a = 0; a < 3; a++) if (axisScale[a] > 0f) sv[a] = axisScale[a];
+        go.transform.localScale = sv;
         nb = TripoLocalBounds(holder, rs);
 
         // 자리 맞추기 (받침 기준 좌표. go는 받침의 자식이라 그대로 더한다)

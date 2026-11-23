@@ -55,7 +55,10 @@ public static partial class GameSceneBuilder
         // true: 합친 점을 오차가 가장 작은 자리로 옮긴다 (UV가 없는 '모양만 줄이기'용. 아주 적게 줄일 때 원통·상자 모양이 덜 무너진다)
         public bool freePlace;
 
-        public TtSimplifier(Vector3[] vpos, Vector2[] vuv, int[] src, bool freePlace = false)
+        // freeze: 이 자리의 점은 다른 점으로 합쳐지지 않는다 (그 자리와 모양이 그대로 남는다). 제작대 다리 (11-23): 곧은 상자 다리는 모서리를 따라
+        // 합쳐도 오차가 거의 0이라, 오차에 무게를 곱해도 먼저 합쳐져 한쪽으로 쏠렸다
+        bool[] frozenP;
+        public TtSimplifier(Vector3[] vpos, Vector2[] vuv, int[] src, bool freePlace = false, System.Func<Vector3, bool> freeze = null)
         {
             this.freePlace = freePlace;
             if (freePlace) boundaryWeight = 200f; // 점을 옮길 때는 열린 가장자리를 더 단단히 잡는다 (소화전 마개·차 앞 모서리에 틈이 벌어졌다)
@@ -120,6 +123,7 @@ public static partial class GameSceneBuilder
                     AddPlane(p1, cn, -Vector3.Dot(cn, pp[p0]), wgt);
                 }
             }
+            if (freeze != null) { frozenP = new bool[NP]; for (int p = 0; p < NP; p++) frozenP[p] = freeze(pp[p]); }
             foreach (var kv in edgeFaces)
             {
                 int p0 = (int)(kv.Key >> 32), p1 = (int)(kv.Key & 0xffffffff);
@@ -200,6 +204,7 @@ public static partial class GameSceneBuilder
         double Eval(int u, int v, bool apply)
         {
             if (u == v || deadP[u] || deadP[v]) return double.MaxValue;
+            if (frozenP != null && (frozenP[u] || (freePlace && frozenP[v]))) return double.MaxValue; // 옮기는 쪽이 고정이면 안 된다 (점을 옮기는 줄이기는 v도 움직인다)
             shared.Clear(); survive.Clear();
             foreach (int t in adj[u]) { if (Has(t, v)) shared.Add(t); else survive.Add(t); }
             if (shared.Count == 0) return double.MaxValue;
