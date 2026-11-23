@@ -44,6 +44,9 @@ public static partial class GameSceneBuilder
         { "shelter_table_01",     new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0f, 0.15f, 0f) },
         { "shelter_chair_01",     new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0f, 0.15f, 0f) },
         { "shelter_workbench_01", new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.4f, 0.3f, 180f) },
+        // 방공호 2차 (11-23, 화구·계기함 쪽이 코드와 같게 180°). 재질 값은 사진으로 확인 전
+        { "shelter_furnace_01",   new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.1f, 0.2f, 180f) },
+        { "shelter_generator_01", new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.4f, 0.3f, 180f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다

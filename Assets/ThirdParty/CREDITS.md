@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-23 · 항목 28개
+갱신: 2026-11-23 · 항목 30개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -46,6 +46,8 @@
 | 26 | 3D 모델 | 방공호 나무 탁자 (shelter_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 15,295개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 902b4c54-ac85-4bf1-802e-164c83bf1802, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 300 · 중간 1,200 · 높음 4,999 · 매우 높음 15,295</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_table_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (상판·다리를 바꾸고 라디오·지도·컵은 그대로, 축마다 1.6×0.79×0.9 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
 | 27 | 3D 모델 | 방공호 나무 의자 (shelter_chair_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 16,356개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 cc624b07-ad96-4e7f-a6b1-9f1cd3bfdd64, 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 300 · 중간 1,200 · 높음 5,000 · 매우 높음 16,356</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_chair_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (의자 전부를 바꿈, 높이로 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
 | 28 | 3D 모델 | 방공호 철제 제작대 (shelter_workbench_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀, 삼각형 42,357개, 색 텍스처 2K 원본 → 1024로 들여옴(HighRes 묶음), 작업 7a22af2d-60d3-406e-92e5-10b81ac7d35b (면 5만, 다시 만듦. 먼저 만든 면 2만 판 265b0521-a869-49a5-93b6-165359606b75 45크레딧은 사용자 요청으로 바꿈), 45크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 104 · 중간 202 · 높음 18,097 · 매우 높음 42,357</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_workbench_01/ (만든 방법: SOURCE.md)` | 방공호 가구 겉모습 (망치만 남기고 바꿈, 가로·깊이는 2.2×0.8 m, 높이는 모델 상판이 0.94 m에 오게). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 29 | 3D 모델 | 방공호 벽돌 화로 (shelter_furnace_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 71,445개, 색 텍스처 4K 원본 → 2048로 줄여 넣음(HighRes 묶음, 매우 높음에서만 2048), 작업 c66f1ecc-ff35-4e76-b80a-afc132521df9, 55크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 1,000 · 중간 4,000 · 높음 23,999 · 매우 높음 71,445 (텍스처 256 · 512 · 1024 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_furnace_01/ (만든 방법: SOURCE.md)` | 방공호 화로 몸통 겉모습 (벽돌 몸통·받침·쇠 띠·윗판·화구 테·문·장작을 바꿈, 1.4배). 불·숯·불빛·불티·소리·연통·콜라이더·Furnace는 코드 그대로 모델 화구·관 자리로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
+| 30 | 3D 모델 | 방공호 디젤 발전기 (shelter_generator_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 66,415개, 색 텍스처 4K 원본 → 2048로 줄여 넣음(HighRes 묶음, 매우 높음에서만 2048), 작업 d540c6c0-2454-4e03-95d9-7e48dfaa3406, 55크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 1,500 · 중간 5,000 · 높음 24,000 · 매우 높음 66,415 (텍스처 256 · 512 · 1024 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/shelter_generator_01/ (만든 방법: SOURCE.md)` | 방공호 발전기 몸통 겉모습 (스키드·엔진·발전부·연료통·라디에이터·머플러·계기함을 바꿈, 1.7배, 떨림 그대로). 연소실 빛·배기관 빛·계기·바늘·표시등·불티·배기관·굴뚝·연기·Generator는 코드 그대로 모델 자리로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-23 | 사용 |
 
 ## 출처 링크
 
@@ -77,6 +79,8 @@
 - 방공호 나무 탁자 (shelter_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 방공호 나무 의자 (shelter_chair_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 방공호 철제 제작대 (shelter_workbench_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 벽돌 화로 (shelter_furnace_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 방공호 디젤 발전기 (shelter_generator_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 
 ## 메모
 

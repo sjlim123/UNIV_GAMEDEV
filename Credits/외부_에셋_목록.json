@@ -463,6 +463,38 @@
       "added": "2026-11-23",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 벽돌 화로 (shelter_furnace_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 71,445개, 색 텍스처 4K 원본 → 2048로 줄여 넣음(HighRes 묶음, 매우 높음에서만 2048)",
+        "작업 c66f1ecc-ff35-4e76-b80a-afc132521df9, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 1,000 · 중간 4,000 · 높음 23,999 · 매우 높음 71,445 (텍스처 256 · 512 · 1024 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_furnace_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 화로 몸통 겉모습 (벽돌 몸통·받침·쇠 띠·윗판·화구 테·문·장작을 바꿈, 1.4배). 불·숯·불빛·불티·소리·연통·콜라이더·Furnace는 코드 그대로 모델 화구·관 자리로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 디젤 발전기 (shelter_generator_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 66,415개, 색 텍스처 4K 원본 → 2048로 줄여 넣음(HighRes 묶음, 매우 높음에서만 2048)",
+        "작업 d540c6c0-2454-4e03-95d9-7e48dfaa3406, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 1,500 · 중간 5,000 · 높음 24,000 · 매우 높음 66,415 (텍스처 256 · 512 · 1024 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_generator_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 발전기 몸통 겉모습 (스키드·엔진·발전부·연료통·라디에이터·머플러·계기함을 바꿈, 1.7배, 떨림 그대로). 연소실 빛·배기관 빛·계기·바늘·표시등·불티·배기관·굴뚝·연기·Generator는 코드 그대로 모델 자리로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-23",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

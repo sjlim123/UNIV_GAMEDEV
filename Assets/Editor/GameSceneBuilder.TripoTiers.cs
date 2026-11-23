@@ -30,7 +30,20 @@ public static partial class GameSceneBuilder
         { "shelter_table_01",         new[] { 300, 1200, 5000 } },
         { "shelter_chair_01",         new[] { 300, 1200, 5000 } },
         { "shelter_workbench_01",     new[] { 0, 0, 0 } },          // 5만 면 원본(11-23 다시 만듦). 낮음·중간·높음은 GameSceneBuilder.TripoWorkbench.cs가 만든다
+        // 방공호 2차 (11-23 웹 스튜디오 4K · 6만 설정, 원본 7.1만·6.6만이 그대로 매우 높음). 사용자 "8만·2K는 매우 높음에서만, 아래는 단계별로 확실히".
+        // 높음은 처음 1.6만 → 사용자 "높음은 2.4만까지" (11-23). 중간·낮음은 그대로
+        { "shelter_furnace_01",       new[] { 1000, 4000, 24000 } },
+        { "shelter_generator_01",     new[] { 1500, 5000, 24000 } }, // 작은 부품(관·볼트·계기함)이 많아 낮음·중간을 넉넉히
     };
+
+    // 품질별 텍스처 크기 {낮음, 중간, 높음}. 없으면 256·512·512. 2차 두 모델은 매우 높음이 2048이라 1024·512·256으로 한 단계씩
+    static readonly Dictionary<string, int[]> TtTexSizes = new Dictionary<string, int[]>
+    {
+        { "shelter_furnace_01", new[] { 256, 512, 1024 } },
+        { "shelter_generator_01", new[] { 256, 512, 1024 } },
+    };
+    // 방공호 2차 (화로·발전기): 메뉴가 따로다 (1차 가구 메뉴는 이 둘을 건드리지 않는다)
+    static readonly HashSet<string> TtShelter2 = new HashSet<string> { "shelter_furnace_01", "shelter_generator_01" };
 
     // TripoSpecs(재질 값이 정해진 모델)에 아직 없는 모델의 돌림 각도 (앞 = +Z).
     // 방공호 가구는 '코드 가구와 같은 축'으로 맞춘다: 침대는 머리판을 +Z(코드 침대 머리 쪽), 제작대는 공구판을 +Z(코드 제작대가 북쪽 벽에 대는 쪽)
@@ -39,6 +52,7 @@ public static partial class GameSceneBuilder
         { "pickup_truck_01", 90f },
         { "shelter_bed_01", 180f }, { "shelter_cabinet_01", 0f }, { "shelter_shelf_01", 0f },
         { "shelter_table_01", 0f }, { "shelter_chair_01", 0f }, { "shelter_workbench_01", 180f },
+        { "shelter_furnace_01", 180f }, { "shelter_generator_01", 180f }, // 화구·계기함이 -Z/+Z 쪽으로 코드와 같게 (11-23 앞모습 사진)
     };
 
     // 웹 스튜디오에서 FBX(Blender 설정)로 받은 모델 (11-23 방공호 가구). 맨 위 물체에 X -90°, 메시 자식에 X 270°가 들어 있어
@@ -46,6 +60,7 @@ public static partial class GameSceneBuilder
     static readonly HashSet<string> TtStandUp = new HashSet<string>
     {
         "shelter_bed_01", "shelter_cabinet_01", "shelter_shelf_01", "shelter_table_01", "shelter_chair_01", "shelter_workbench_01",
+        "shelter_furnace_01", "shelter_generator_01",
     };
 
     // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
@@ -68,10 +83,19 @@ public static partial class GameSceneBuilder
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         var log = new List<string>();
-        foreach (var id in TtStandUp) log.Add(TtMake(id, TtTargets[id]));
+        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
         log.Add(WbMakeHigh());
         log.Add(WbMakeLow());
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 가구): " + string.Join(" / ", log));
+    }
+
+    [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (방공호 2차: 화로·발전기)")]
+    static void TtBuildShelter2()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
+        var log = new List<string>();
+        foreach (var id in TtShelter2) log.Add(TtMake(id, TtTargets[id]));
+        Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 2차): " + string.Join(" / ", log));
     }
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (차·뒤집힌 차·소화전·드럼통·정류장·트럭)")]
@@ -110,7 +134,7 @@ public static partial class GameSceneBuilder
         for (int q = 2; q >= (TtHighOnly.Contains(id) ? 3 : 0); q--)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            int size = q == 0 ? 256 : 512; // 높음·중간 512, 낮음 256 (실외기·나무와 같다)
+            int size = TtTexSizes.TryGetValue(id, out var ts) ? ts[q] : q == 0 ? 256 : 512; // 높음·중간 512, 낮음 256 (실외기·나무와 같다)
             List<Vector3> p2, n2; List<Vector2> u2; int[] t2; Color32[] px = null; string how;
 
             // 1) 텍스처 이음매를 지키며 줄이기 (원본 UV·텍스처 그대로). 목표의 115 % 안에 들면 이것을 쓴다

@@ -553,6 +553,7 @@ public static partial class GameSceneBuilder
         hum.volume = 0.45f;
         gen.hum = hum;
         g.gameObject.AddComponent<AudioLowPassFilter>().cutoffFrequency = 22000f;
+        TripoShelterGenerator(g); // 방공호 씬에서만 몸통을 Tripo 발전기로 (GameSceneBuilder.TripoShelter2.cs)
     }
 
     // 발전기실 미닫이 철문: 거실 동쪽 벽(x 5)의 구멍(c: 벽 로컬 중심, width×height) 발전기실 쪽 면(로컬 -Z)에 레일을 달고,
@@ -769,6 +770,7 @@ public static partial class GameSceneBuilder
         furnace.embers = ps;
         furnace.crackle = crackle;
         furnace.roar = roar;
+        TripoShelterFurnace(g); // 방공호 씬에서만 몸통을 Tripo 화로로 (GameSceneBuilder.TripoShelter2.cs)
     }
 
     // 3D 반복 소리 (발전기 웅웅거림과 같은 설정)

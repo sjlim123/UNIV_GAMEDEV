@@ -28,8 +28,10 @@ public class Generator : Interactable
 
     public override string Prompt => $"발전기 (전력 {GameManager.Instance.State.Power:0}%) - 연료 넣기";
 
-    // 연료 주입구 (연료통 위 뚜껑)
-    Vector3 FillerPos => transform.TransformPoint(new Vector3(0.25f, 1.06f, 0.1f));
+    public Transform filler;           // 연료 주입구 구멍 (방공호 씬을 만들 때 채운다. 비어 있으면 예전 코드 발전기의 뚜껑 자리)
+
+    // 연료 주입구
+    public Vector3 FillerPos => filler != null ? filler.position : transform.TransformPoint(new Vector3(0.25f, 1.06f, 0.1f));
 
     public override void Interact(PlayerInteractor player)
     {
