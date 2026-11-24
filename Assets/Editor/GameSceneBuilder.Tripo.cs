@@ -47,6 +47,15 @@ public static partial class GameSceneBuilder
         // 방공호 2차 (11-23, 화구·계기함 쪽이 코드와 같게 180°). 재질 값은 사진으로 확인 전
         { "shelter_furnace_01",   new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.1f, 0.2f, 180f) },
         { "shelter_generator_01", new TripoSpec(new Color(0.8f, 0.8f, 0.8f), 0.4f, 0.3f, 180f) },
+        // 도시 남은 소품 1차 (11-24 웹 스튜디오, GameSceneBuilder.TripoCity2.cs). 색은 예전 코드 재질의 밝기와 손전등 사진으로 어둡게 (11-24, 재질 파일에 직접 넣었다)
+        { "city_rubble_concrete_01", new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0f, 0.15f, 0f) },
+        { "city_rubble_slab_01",     new TripoSpec(new Color(0.7f, 0.7f, 0.7f), 0f, 0.15f, 0f) },
+        { "city_rubble_wall_01",     new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0f, 0.15f, 0f) },
+        { "city_rubble_brick_01",    new TripoSpec(new Color(0.4f, 0.4f, 0.4f), 0f, 0.15f, 0f) },
+        { "city_rubble_asphalt_01",  new TripoSpec(new Color(0.45f, 0.45f, 0.45f), 0f, 0.15f, 0f) },
+        { "city_crate_01",           new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0f, 0.15f, 0f) },
+        { "city_barrier_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.15f, 90f) }, // 원본은 긴 쪽이 Z: 코드 방호벽(긴 쪽 X)에 맞춰 90°
+        { "city_sandbag_01",         new TripoSpec(new Color(0.4f, 0.4f, 0.4f), 0f, 0.1f, 0f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
@@ -465,6 +474,8 @@ public static partial class GameSceneBuilder
         else if (align == TripoAlign.BackBottom) { shift.z = ob.min.z - nb.min.z; shift.y = ob.min.y - nb.min.y; }
         else shift.z = ob.min.z - nb.min.z;
         go.transform.localPosition += shift;
+        // LOD 묶음 크기는 축마다 늘인 뒤에 다시 잰다 (TripoTierModel이 배율 1일 때 잰 값이면 늘인 소품의 매우 높음 판이 1.5~2.5배 멀리까지 남는다, 11-24 검토)
+        if (tiered) { var lg = go.GetComponent<LODGroup>(); if (lg != null) lg.RecalculateBounds(); }
 
         // 예전 겉모습 지우기 (콜라이더는 남긴다)
         foreach (var r in old)

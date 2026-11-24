@@ -60,6 +60,12 @@ public static class Footsteps
         string name = ground.name;
         var r = ground.GetComponent<Renderer>();
         string mat = r != null && r.sharedMaterial != null ? r.sharedMaterial.name : "";
+        // Tripo 모델로 겉모습만 바꾼 소품은 콜라이더 물체에 렌더러가 없다 (11-24 도시 남은 소품): 이름으로 고른다
+        if (r == null)
+        {
+            if (name == "Crate" || name == "Top" || name == "Seat" || name == "Board" || name == "BoardModel") return Surface.Interior;
+            if (name == "Barrier") return Surface.Stone; // 예전 더러운 콘크리트 재질과 같게 (상자·책상·선반 판자는 예전 나무 재질과 같게)
+        }
         if (name.StartsWith("Debris") || name.StartsWith("Rubble") || name == "Chunk" || name == "Slab" || name.StartsWith("Gravel") || mat.StartsWith("M_AshPile") || mat.StartsWith("M_Scorch") || mat.StartsWith("M_Soot"))
             return Surface.Gravel;
         if (name.StartsWith("Dirt") || name.StartsWith("Soil") || name.StartsWith("Sand") || name.StartsWith("Mud") || name.StartsWith("AshGround"))

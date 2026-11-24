@@ -120,6 +120,7 @@ public static partial class GameSceneBuilder
         }
         if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 차 {TripoCarColliders(geo)}대의 콜라이더를 모델에 맞춤 (굽기 직전, 배치가 다 끝난 뒤)");
         if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 트럭 {TripoTruckColliders(geo)}대의 긴 짐칸에 콜라이더를 더함 (굽기 직전)");
+        if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 남은 소품 1차 (잔해·상자·방호벽·모래주머니): {TripoCityRound1(geo)} (굽기 직전, 겉모습만)");
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
@@ -326,13 +327,13 @@ public static partial class GameSceneBuilder
         Vector3 backPos = backSide == 0 ? Inside(0.5f, 0) : backSide == 1 ? Inside(0.5f, 1) : backSide == 2 ? Inside(0, 0.5f) : Inside(1, 0.5f);
         var shelf = BuildShelf(g, backPos, backYaw, true);
         var shelfWorld = shelf.position;
-        Spawn<ItemSpawnPoint>(points, shelfWorld + shelf.rotation * new Vector3(-0.4f, 0.65f, 0));
-        Spawn<ItemSpawnPoint>(points, shelfWorld + shelf.rotation * new Vector3(0.4f, 1.15f, 0));
+        Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(-0.4f, 0.65f, 0))); // 도시 Tripo 선반은 맨 위 판자로 (GameSceneBuilder.TripoCity2.cs)
+        Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(0.4f, 1.15f, 0)));
         Transform shelf2 = null;
         if (Chance(0.6))
         {
             shelf2 = BuildShelf(g, Vector3.Lerp(backPos, Inside(0.5f, 0.5f), 0.45f) + new Vector3(R(-1, 1), 0, R(-1, 1)), backYaw + (Chance(0.3) ? R(-25, 25) : 0), Chance(0.5));
-            Spawn<ItemSpawnPoint>(points, shelf2.position + shelf2.rotation * new Vector3(0, 0.15f, 0));
+            Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf2, new Vector3(0, 0.15f, 0)));
         }
 
         // 계산대는 계단 길과 문 앞을 막지 않게 안쪽으로 당긴다
@@ -660,8 +661,8 @@ public static partial class GameSceneBuilder
 
         // 칸막이에 등을 댄 선반 (문에서 먼 쪽)
         var shelf = BuildShelf(g2, p.P(A(0.95f), rb0 + 0.25f, 0), face, Chance(0.7));
-        Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(-0.4f, 0.65f, 0));
-        if (Chance(0.5)) Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(0.4f, 1.15f, 0));
+        Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(-0.4f, 0.65f, 0)));
+        if (Chance(0.5)) Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(0.4f, 1.15f, 0)));
 
         // 바깥 끝 벽의 매트리스
         if (Chance(0.5))
@@ -694,6 +695,7 @@ public static partial class GameSceneBuilder
             foreach (var lx in new[] { -0.2f, 0.2f })
                 foreach (var lz in new[] { -0.2f, 0.2f })
                     Box("Leg", chair, new Vector3(lx, 0.22f, lz), new Vector3(0.04f, 0.45f, 0.04f), M["wood"], 1f, false);
+            TripoCityDeskChair(tg, chair); // 겉모습을 방공호 Tripo 탁자·의자로 (난수는 위에서 다 뽑았다, GameSceneBuilder.TripoCity2.cs)
         }
 
         for (int i = 0; i < 3; i++)

@@ -411,7 +411,7 @@
       "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
       "license": "Tripo-유료",
       "location": "Assets/ThirdParty/Tripo/Models/shelter_shelf_01/ (만든 방법: SOURCE.md)",
-      "used_for": "방공호 가구 겉모습 (옆판·판자·뒤판을 바꾸고 난수로 놓인 장식은 모델 판자 위로 높이만 옮김, 판자 콜라이더도 가장 가까운 모델 판자 높이로, 도시 선반은 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "used_for": "방공호 가구 겉모습 (옆판·판자·뒤판을 바꾸고 난수로 놓인 장식은 모델 판자 위로 높이만 옮김, 판자 콜라이더도 가장 가까운 모델 판자 높이로, 도시 선반은 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 2026-11-24부터 도시 가게·2층 방·폭격 건물 선반 76개에도 (판자 콜라이더는 모델 판자 높이로).",
       "added": "2026-11-23",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
@@ -427,7 +427,7 @@
       "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
       "license": "Tripo-유료",
       "location": "Assets/ThirdParty/Tripo/Models/shelter_table_01/ (만든 방법: SOURCE.md)",
-      "used_for": "방공호 가구 겉모습 (상판·다리를 바꾸고 라디오·지도·컵은 그대로, 축마다 1.6×0.79×0.9 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "used_for": "방공호 가구 겉모습 (상판·다리를 바꾸고 라디오·지도·컵은 그대로, 축마다 1.6×0.79×0.9 m에 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 2026-11-24부터 도시 2층 방 책상 24개에도.",
       "added": "2026-11-23",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
@@ -443,7 +443,7 @@
       "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
       "license": "Tripo-유료",
       "location": "Assets/ThirdParty/Tripo/Models/shelter_chair_01/ (만든 방법: SOURCE.md)",
-      "used_for": "방공호 가구 겉모습 (의자 전부를 바꿈, 높이로 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "used_for": "방공호 가구 겉모습 (의자 전부를 바꿈, 높이로 맞춤). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 2026-11-24부터 도시 2층 방 의자 24개에도.",
       "added": "2026-11-23",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
@@ -524,6 +524,134 @@
       "license": "Tripo-유료",
       "location": "Assets/ThirdParty/Tripo/Player/player_civilian_01/ (만든 방법: SOURCE.md), Assets/Resources/Player/player_civilian_body.prefab",
       "used_for": "도입 컷씬 장면 0~3의 주인공 (집 차림, 장면 3은 가방만). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 철근 콘크리트 덩어리 (city_rubble_concrete_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,464개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 ec2ebb5e-7e7f-469c-9660-d14020e50283, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 150 · 중간 600 · 높음 4,000 · 매우 높음 58,464 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_rubble_concrete_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 잔해 덩어리(금 간 콘크리트 중 두꺼운 것, 더러운 콘크리트 반). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 콘크리트 판 조각 (city_rubble_slab_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,664개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 630b652f-47ee-47c0-8699-b1a24fa32673, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 150 · 중간 600 · 높음 4,000 · 매우 높음 58,664 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_rubble_slab_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 잔해 덩어리 가운데 납작한 것 (금 간 콘크리트·더러운 콘크리트). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 칠한 벽 콘크리트 (city_rubble_wall_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,726개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 a50cdd34-72f9-476b-8a0e-3435d27f69f9, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 146 · 중간 600 · 높음 4,000 · 매우 높음 57,726 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_rubble_wall_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 잔해 덩어리(아파트 벽, 더러운 콘크리트 반). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 벽돌 덩어리 (city_rubble_brick_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,472개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 e59440a5-05f9-4f9b-a1c6-aa1411942e98, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 500 · 중간 1,000 · 높음 5,000 · 매우 높음 57,472 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_rubble_brick_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 잔해 덩어리(벽돌). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 아스팔트 조각 (city_rubble_asphalt_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,900개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 658826a0-da76-4de9-b93b-ed65a48ecae3, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 150 · 중간 600 · 높음 4,000 · 매우 높음 58,900 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_rubble_asphalt_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 잔해 덩어리(아스팔트: 폭격 웅덩이 둘레). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 나무 상자 (city_crate_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 51,260개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 627cb2e7-f8bc-4bb2-83ef-5c903a77b6a2, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 800 · 중간 1,600 · 높음 6,000 · 매우 높음 51,260 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_crate_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 나무 상자 139개 (가게·2층 방·폭격 건물·트럭 짐칸, 위에 아이템). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 도로 방호벽 (city_barrier_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,793개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 04b13475-68ff-4510-b99d-909ed2beb111, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 1,200 · 중간 2,000 · 높음 6,000 · 매우 높음 57,793 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_barrier_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 도로 콘크리트 방호벽 18개 (쓰러진 것은 쓰러진 채). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "도시 모래주머니 (city_sandbag_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,292개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 f2bf9dd0-c578-427c-96cb-145944dbce01, 55크레딧 (그림은 구독 무료 횟수)",
+        "품질 4단계: 낮음 150 · 중간 600 · 높음 3,000 · 매우 높음 58,292 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/city_sandbag_01/ (만든 방법: SOURCE.md)",
+      "used_for": "도시 모래주머니 43개 (방공호 해치·벙커 옥상·검문소). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
       "added": "2026-11-24",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"

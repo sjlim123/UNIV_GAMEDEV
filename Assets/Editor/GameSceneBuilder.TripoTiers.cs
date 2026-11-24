@@ -34,6 +34,15 @@ public static partial class GameSceneBuilder
         // 높음은 처음 1.6만 → 사용자 "높음은 2.4만까지" (11-23). 중간·낮음은 그대로
         { "shelter_furnace_01",       new[] { 1000, 4000, 24000 } },
         { "shelter_generator_01",     new[] { 1500, 5000, 24000 } }, // 작은 부품(관·볼트·계기함)이 많아 낮음·중간을 넉넉히
+        // 도시 남은 소품 1차 (11-24 웹 스튜디오 4K · 6만 설정). 잔해 덩어리는 도시에 650개쯤 깔려 낮음·중간을 아주 가볍게
+        { "city_rubble_concrete_01",  new[] { 150, 600, 4000 } },
+        { "city_rubble_slab_01",      new[] { 150, 600, 4000 } },
+        { "city_rubble_asphalt_01",   new[] { 150, 600, 4000 } },
+        { "city_rubble_wall_01",      new[] { 150, 600, 4000 } },
+        { "city_rubble_brick_01",     new[] { 500, 1000, 5000 } }, // 200에서는 낮음이 납작한 판으로 무너졌다 (11-24 품질 사진)
+        { "city_crate_01",            new[] { 800, 1600, 6000 } },  // 139개, 가게 안에서 가까이 본다. 낮음 200(멈춘 351)은 상자가 비틀려 무너졌다 (11-24 품질 사진)
+        { "city_barrier_01",          new[] { 1200, 2000, 6000 } }, // 300 목표(멈춘 756)에서 낮음이 얇은 판자처럼 무너졌다 (11-24 품질 사진)
+        { "city_sandbag_01",          new[] { 150, 600, 3000 } },
     };
 
     // 품질별 텍스처 크기 {낮음, 중간, 높음}. 없으면 256·512·512. 2차 두 모델은 매우 높음이 2048이라 1024·512·256으로 한 단계씩
@@ -44,6 +53,12 @@ public static partial class GameSceneBuilder
     };
     // 방공호 2차 (화로·발전기): 메뉴가 따로다 (1차 가구 메뉴는 이 둘을 건드리지 않는다)
     static readonly HashSet<string> TtShelter2 = new HashSet<string> { "shelter_furnace_01", "shelter_generator_01" };
+    // 도시 남은 소품 1차 (11-24): 메뉴가 따로다
+    static readonly HashSet<string> TtCity1 = new HashSet<string>
+    {
+        "city_rubble_concrete_01", "city_rubble_slab_01", "city_rubble_asphalt_01", "city_rubble_wall_01", "city_rubble_brick_01",
+        "city_crate_01", "city_barrier_01", "city_sandbag_01",
+    };
 
     // TripoSpecs(재질 값이 정해진 모델)에 아직 없는 모델의 돌림 각도 (앞 = +Z).
     // 방공호 가구는 '코드 가구와 같은 축'으로 맞춘다: 침대는 머리판을 +Z(코드 침대 머리 쪽), 제작대는 공구판을 +Z(코드 제작대가 북쪽 벽에 대는 쪽)
@@ -61,6 +76,8 @@ public static partial class GameSceneBuilder
     {
         "shelter_bed_01", "shelter_cabinet_01", "shelter_shelf_01", "shelter_table_01", "shelter_chair_01", "shelter_workbench_01",
         "shelter_furnace_01", "shelter_generator_01",
+        "city_rubble_concrete_01", "city_rubble_slab_01", "city_rubble_asphalt_01", "city_rubble_wall_01", "city_rubble_brick_01",
+        "city_crate_01", "city_barrier_01", "city_sandbag_01",
     };
 
     // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
@@ -83,7 +100,7 @@ public static partial class GameSceneBuilder
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         var log = new List<string>();
-        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
+        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id) && !TtCity1.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
         log.Add(WbMakeHigh());
         log.Add(WbMakeLow());
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 가구): " + string.Join(" / ", log));
@@ -96,6 +113,15 @@ public static partial class GameSceneBuilder
         var log = new List<string>();
         foreach (var id in TtShelter2) log.Add(TtMake(id, TtTargets[id]));
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 2차): " + string.Join(" / ", log));
+    }
+
+    [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (도시 남은 소품 1차: 잔해 5·상자·방호벽·모래주머니)")]
+    static void TtBuildCity1()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
+        var log = new List<string>();
+        foreach (var id in TtCity1) log.Add(TtMake(id, TtTargets[id]));
+        Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (도시 남은 소품 1차): " + string.Join(" / ", log));
     }
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (차·뒤집힌 차·소화전·드럼통·정류장·트럭)")]

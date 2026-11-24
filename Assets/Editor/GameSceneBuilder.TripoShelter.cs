@@ -109,11 +109,11 @@ public static partial class GameSceneBuilder
             if (t.name == "Leaf" || t.name == "Kick") { var r = t.GetComponent<Renderer>(); if (r != null) r.sharedMaterial = M["cabinetDoor"]; }
     }
 
-    // 선반 (방공호 둘): 옆판·판자 넷·뒤판. 장식(깡통·상자)은 난수로 놓인 코드 물체 그대로 두고, 높이만 바로 아래 모델 판자 위로 옮긴다
-    // (모델 판자는 다섯 장이라 코드 판자 0.1·0.6·1.1·1.6 m와 높이가 다르다). 판자 콜라이더는 그대로
+    // 선반 (방공호 둘, 11-24부터 도시 가게·2층 방·폭격 건물 선반 76개도): 옆판·판자 넷·뒤판. 장식(깡통·상자)은 난수로 놓인 코드 물체 그대로 두고, 높이만 바로 아래 모델 판자 위로 옮긴다
+    // (모델 판자는 다섯 장이라 코드 판자 0.1·0.6·1.1·1.6 m와 높이가 다르다). 판자 콜라이더는 가장 가까운 모델 판자 높이로
     static void TripoShelterShelf(Transform g)
     {
-        if (!kTripoShelter) return;
+        if (!kTripoShelter && !kTripoCity) return;
         var holder = TripoSwapRenderers(g, "shelter_shelf_01", TsRenderers(g, "SideL", "SideR", "Board", "Back"), TripoFit.Box, TripoAlign.Bottom, 0f, null, Vector3.zero);
         if (holder == null) return;
         var tops = TsBoardTops(g, holder.transform.Find("Model/LOD0_q3"));
@@ -129,6 +129,17 @@ public static partial class GameSceneBuilder
             used.Add(bi);
             c.localPosition = new Vector3(c.localPosition.x, tops[bi] - 0.015f, c.localPosition.z);
         }
+        // 모델 판자는 다섯 장이라 코드 판자 콜라이더(넷)가 닿지 않은 판자가 남는다: 같은 크기의 콜라이더를 따로 단다
+        // (보이는 판자를 떨어뜨린 아이템·쓰러진 몸이 뚫고 지나가지 않게, 11-24 검토). 이름이 Board가 아니라 겹친 상자 고치기·다른 검사에 잡히지 않는다
+        for (int i = 0; i < tops.Count; i++)
+        {
+            if (used.Contains(i)) continue;
+            var extra = new GameObject("BoardModel");
+            extra.transform.SetParent(g, false);
+            extra.transform.localPosition = new Vector3(0f, tops[i] - 0.015f, -0.005f);
+            extra.AddComponent<BoxCollider>().size = new Vector3(1.52f, 0.03f, 0.43f);
+            GameObjectUtility.SetStaticEditorFlags(extra, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic);
+        }
         int moved = 0;
         foreach (Transform c in g)
         {
@@ -140,7 +151,7 @@ public static partial class GameSceneBuilder
             if (best == float.MinValue) continue;
             c.localPosition += Vector3.up * (best + 0.003f - b.min.y); moved++;
         }
-        Debug.Log($"[GameSceneBuilder] Shelter: Tripo 선반 판자 높이 {string.Join(", ", tops.ConvertAll(y => y.ToString("F2")))} — 장식 {moved}개를 판자 위로");
+        if (kTripoShelter) Debug.Log($"[GameSceneBuilder] Shelter: Tripo 선반 판자 높이 {string.Join(", ", tops.ConvertAll(y => y.ToString("F2")))} — 장식 {moved}개를 판자 위로");
     }
 
     // 렌더러 메시에서 위를 보는 넓은 면이 모인 높이 (판자 윗면들, target 기준). 1 cm 칸마다 넓이를 모아 가장 넓은 칸의 15 %를 넘는 봉우리

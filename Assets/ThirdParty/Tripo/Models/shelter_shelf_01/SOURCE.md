@@ -8,4 +8,5 @@
 - 품질 4단계: 낮음 500 · 중간 1,800 · 높음 7,000 · 매우 높음 13,674 (중간은 이음매 지키기로 판자가 구겨져 새로 굽기). 도구 `Assets/Editor/GameSceneBuilder.TripoTiers.cs` 메뉴 'Tripo 품질별 판 만들기 (방공호 가구 6종)'
 - 방공호 넣기: `Assets/Editor/GameSceneBuilder.TripoShelter.cs` (옆판·판자·뒤판을 바꾸고 난수로 놓인 장식은 모델 판자 위로 높이만 옮김, 판자 콜라이더도 가장 가까운 모델 판자 높이로, 도시 선반은 그대로). 미리보기·사진 Docs/맵모델링_미리보기/13_방공호_가구
 - 2026-11-23 사용자 통과 (품질 4단계, 방공호 넣기)
+- 도시 재사용 (2026-11-24, 사용자 "1차: 재사용+상위 4종"): 2026-11-24부터 도시 가게·2층 방·폭격 건물 선반 76개에도 (판자 콜라이더는 모델 판자 높이로). `Assets/Editor/GameSceneBuilder.TripoShelter.cs` / `GameSceneBuilder.TripoCity2.cs`
 - 권리: 사용자가 Tripo 유료 구독(Max 플랜)을 결제한 뒤 웹 스튜디오(studio.tripo3d.ai)에서 그 구독 크레딧으로 만들었다. Tripo 약관(www.tripo3d.ai/terms, 2026-11-13판) 5.2.2 — 유료 구독 중에 만든 결과물(Paid Content)은 사용자 것이고 구독이 끝나도 그대로다. 출처 표기 의무 없음.

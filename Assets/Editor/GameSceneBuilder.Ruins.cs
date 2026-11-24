@@ -292,8 +292,8 @@ public static partial class GameSceneBuilder
         var doorLocal = FacePoint(doorSide, doorC + t / 2, 0, x0 - t / 2, z0 - t / 2, w + t, d + t);
         float doorA = Vector3.Dot(doorLocal - plan.O, plan.R);
         var shelf = BuildShelf(g, plan.P(doorA - 2.1f, plan.depth - 0.3f, 0), plan.yaw + 180f, true); // 예전 plan.len - 1.2: 문과 0.3m 겹쳐 지나갈 폭이 1m 아래였다
-        Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(-0.4f, 0.65f, 0));
-        Spawn<ItemSpawnPoint>(points, shelf.position + shelf.rotation * new Vector3(0.4f, 1.15f, 0));
+        Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(-0.4f, 0.65f, 0))); // 도시 Tripo 선반은 맨 위 판자로 (GameSceneBuilder.TripoCity2.cs)
+        Spawn<ItemSpawnPoint>(points, ShelfItemPoint(shelf, new Vector3(0.4f, 1.15f, 0)));
         for (int i = 0; i < 2; i++)
         {
             var p = plan.P(F(1f, plan.len - 1f), F(StairWidth + 1.2f, plan.depth - 1f), 0);
