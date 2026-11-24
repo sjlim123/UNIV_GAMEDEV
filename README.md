@@ -8,7 +8,7 @@
 
 - 팀: Team_31 벙커랩 (AI:ON 2026, T-2026-0031)
 - 플랫폼: PC (Windows 64비트)
-- 현재 버전: **26.0.3.0** (BETA_VER) — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md), 게임 안에서는 메인 메뉴 맨 아래 **패치노트**
+- 현재 버전: **0.4.0** (BETA_VER) — 변경 내역은 [PATCH_NOTES.md](PATCH_NOTES.md), 게임 안에서는 메인 메뉴 맨 아래 **패치노트**
 - 엔진: Unity 6.3 (6000.3.x) · URP · Input System
 
 ## 어떤 게임인가요?
