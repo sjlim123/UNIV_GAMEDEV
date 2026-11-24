@@ -495,6 +495,38 @@
       "added": "2026-11-23",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "플레이어 (방독면 탐험 차림, player_survivor_02) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 30만 설정), 삼각형 291,841개, 작업 7772ed90-d5a0-4091-be7a-4c1945806606, 55크레딧 (그림은 구독 무료 횟수)",
+        "리토폴로지 쿼드 5만 10크레딧 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20크레딧 (변환 a60f647e-553d-4e14-91e8-a56948a8528a), 가중치를 30만 메시로 옮김",
+        "품질 4단계: 낮음 5,999 · 중간 23,999 · 높음 94,737 · 매우 높음 291,841 (텍스처 256 · 512 · 1024 · 2048), 1인칭 팔은 팔만 잘라 팔 하나 2.8만 · 1만 삼각형"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Player/player_survivor_02/ (만든 방법: SOURCE.md), Assets/Resources/Player/",
+      "used_for": "플레이어 그림자 몸·1인칭 팔·방공호 해치 귀환 연출의 주인공. 얼굴 없음(방독면). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "플레이어 (얼굴 있는 집 차림, player_civilian_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "H3.1 고정밀 (텍스처 4K · 폴리곤 30만 설정), 삼각형 297,732개, 작업 05498afe-2553-4e74-ad01-5168ed354365, 55크레딧 (그림은 구독 무료 횟수)",
+        "리토폴로지 쿼드 5만 10크레딧 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20크레딧 (변환 a6d2e102-c186-4731-b98f-615f497cb955), 가중치를 30만 메시로 옮김",
+        "품질 4단계: 낮음 6,000 · 중간 24,000 · 높음 88,846 · 매우 높음 297,732 (텍스처 256 · 512 · 1024 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Player/player_civilian_01/ (만든 방법: SOURCE.md), Assets/Resources/Player/player_civilian_body.prefab",
+      "used_for": "도입 컷씬 장면 0~3의 주인공 (집 차림, 장면 3은 가방만). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-24",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

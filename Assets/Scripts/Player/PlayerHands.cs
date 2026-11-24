@@ -339,13 +339,13 @@ public class PlayerHands : MonoBehaviour
         switch (spec.Grip)
         {
             case GripKind.Power: // 손바닥과 손가락 사이 홈
-                at = new Vector3(-side * (0.012f + r), 0, 0.07f);
+                at = new Vector3(-side * (0.012f + rig.PalmGap + r), 0, 0.07f);
                 axis = PowerAxis;
                 second = Vector3.forward;
                 break;
             case GripKind.Hook: // 손잡이를 주먹으로 쥐고, 물건은 화면에서 똑바로 아래로 매달린다
             {
-                at = new Vector3(-side * (0.012f + r), 0, 0.07f);
+                at = new Vector3(-side * (0.012f + rig.PalmGap + r), 0, 0.07f);
                 axis = PowerAxis;
                 BasePose(HoldPose.Hook, out _, out var arm, out var wristBend);
                 second = Quaternion.Inverse(arm * wristBend) * Vector3.up;
@@ -362,11 +362,11 @@ public class PlayerHands : MonoBehaviour
                 var fwd = Vector3.ProjectOnPlane(spec.Second, up).normalized;
                 point = b.center + up * Support(b, up) - fwd * Support(b, fwd); // 손바닥 쪽 옆면의 윗모서리 가운데
                 at = inv * new Vector3(0, EdgeAt.y, EdgeAt.z); // 높이·앞뒤는 화면 좌표로
-                at.x = -side * EdgeAt.x; // 손바닥에서 띄우는 거리
+                at.x = -side * (EdgeAt.x + rig.PalmGap); // 손바닥에서 띄우는 거리
                 break;
             }
             default: // 손바닥 위 (손가락 뿌리 가까이)
-                at = new Vector3(-side * 0.012f, 0, 0.062f);
+                at = new Vector3(-side * (0.012f + rig.PalmGap), 0, 0.062f);
                 axis = new Vector3(-side, 0, 0);
                 second = Vector3.forward;
                 break;
@@ -606,6 +606,7 @@ public class PlayerHands : MonoBehaviour
 
     // 3인칭 연출 동안 손을 감춘다 (씬이 바뀌면 새 손이 생기므로 되돌릴 필요는 없다)
     public void SetHidden(bool value) => hidden = value;
+    public bool IsHidden => hidden; // 그림자 몸(PlayerShadowBody)도 3인칭 장면에서는 감춘다
     public HandRig Right => right;
 
     // 몸짓을 기본 자세 위에 얹는다 (손목을 화면 좌표로 옮기고, 손을 turn만큼 돌린다)

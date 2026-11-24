@@ -8,6 +8,9 @@ using UnityEngine.Rendering;
 // 손 좌표(Wrist): +z = 손가락 쪽, +y = 엄지 쪽, 손바닥은 -x*Side 쪽 (Side 1 = 오른손, -1 = 왼손, 왼손은 거울 모양).
 // 팔뚝은 늘 손 -z 쪽으로 뻗는다. 그래서 손을 어느 쪽으로 돌려도 손목이 꺾여 보이지 않는다 (몸짓 때만 Bend로 조금 꺾는다).
 // 손가락은 마디마다 굽힌 각도로 움직이고, Wrap()은 쥔 물건 표면에 닿을 때까지 손가락을 감는다.
+// 2026-11-24부터: 플레이어 모델(Tripo)의 아래팔·장갑 손 스킨 메시(Resources/Player/player_fp_arms)가 있으면 그것을 이 뼈대에 씌운다.
+//   손가락 마디 자리·길이·굵기도 모델 손에서 온다. 메시 판은 세부 묘사 품질로 고른다 (높음 이상 30만 모델에서 자른 것, 아래는 9.5만에서).
+//   자료가 없으면 아래 코드로 지은 반장갑 팔을 쓴다
 public class HandRig
 {
     public const float ForearmLength = 0.27f;
@@ -18,6 +21,9 @@ public class HandRig
 
     public readonly float Side;
     public readonly Transform Elbow, Wrist;
+    // 손바닥이 예전 코드 손보다 손목 줄기에서 더 나온 만큼 (모델 장갑 손은 두툼하다). 손바닥에 올리거나 쥐는 물건을 이만큼 더 띄운다
+    public float PalmGap { get; private set; }
+    const float CodePalm = 0.008f; // 예전 손: 손바닥 덩어리 가운데 Side*0.012, 두께 반 0.02
 
     readonly Transform[][] joints = new Transform[5][];
     readonly Quaternion[] rootRest = new Quaternion[5];
@@ -26,6 +32,13 @@ public class HandRig
 
     // 재질은 ProcTex가 이름으로 한 번만 만들어 함께 쓴다 (장면을 옮기며 지워져도 다시 만든다)
     readonly Material skin, nail, jacket, cuff, glove, pad, strap;
+
+    // 모델 팔 (없으면 null)
+    static PlayerArmsData armsData;
+    static bool armsLoaded;
+    PlayerArmsData.Arm arm;
+    SkinnedMeshRenderer armSkin;
+    int armTier = -1;
 
     // ---------- 손 모양 (자세) ----------
 
@@ -75,14 +88,74 @@ public class HandRig
         glove = ProcTex.Get(ProcTex.Kind.Leather, new Color(0.17f, 0.14f, 0.12f), 404, 0, 0.6f, new Color(0.09f, 0.075f, 0.065f));
         pad = ProcTex.Get(ProcTex.Kind.Rubber, new Color(0.2f, 0.19f, 0.18f), 405, 0, 0.5f);
         strap = ProcTex.Plain(new Color(0.08f, 0.075f, 0.07f), 0.25f);
-        BuildSleeve();
-        BuildHand();
+        if (!BuildModel())
+        {
+            BuildSleeve();
+            BuildHand();
+        }
         Apply(Relaxed);
         foreach (var r in Elbow.GetComponentsInChildren<Renderer>())
             r.shadowCastingMode = ShadowCastingMode.Off;
     }
 
     static readonly Quaternion Along = Quaternion.Euler(90, 0, 0); // 관(+y)을 앞(+z)으로 눕힌다
+
+    // 모델 팔: 관절을 모델 손 치수대로 세우고 스킨 메시를 씌운다. 뼈 순서는 PlayerArmsData와 같다 (0 팔꿈치, 1 손목, 2.. 손가락 마디)
+    bool BuildModel()
+    {
+        if (!armsLoaded) { armsLoaded = true; armsData = Resources.Load<PlayerArmsData>("Player/player_fp_arms"); }
+        var d = armsData;
+        if (d == null || d.hiMat == null || d.loMat == null) return false;
+        var a = Side < 0 ? d.left : d.right;
+        if (a == null || a.hi == null || a.lo == null || a.rootPos == null || a.rootPos.Length < 5 || a.lengths == null || a.lengths.Length < 15) return false;
+        arm = a;
+        PalmGap = Mathf.Clamp(a.palm - CodePalm, 0f, 0.05f);
+        var bones = new Transform[17];
+        bones[0] = Elbow; bones[1] = Wrist;
+        for (int f = 0; f < 5; f++)
+        {
+            radii[f] = a.radii[f] > 0.002f ? a.radii[f] : 0.0097f;
+            lengths[f] = new[] { a.lengths[f * 3], a.lengths[f * 3 + 1], a.lengths[f * 3 + 2] };
+            rootRest[f] = a.rootRest[f];
+            joints[f] = new Transform[3];
+            var parent = Wrist;
+            var pos = a.rootPos[f];
+            for (int j = 0; j < 3; j++)
+            {
+                var t = new GameObject("Joint").transform;
+                t.SetParent(parent, false);
+                t.localPosition = pos;
+                t.localRotation = j == 0 ? rootRest[f] : Quaternion.identity;
+                joints[f][j] = t;
+                bones[2 + f * 3 + j] = t;
+                parent = t;
+                pos = new Vector3(0, 0, lengths[f][j]);
+            }
+        }
+        var go = new GameObject("ArmModel");
+        go.transform.SetParent(Elbow, false);
+        armSkin = go.AddComponent<SkinnedMeshRenderer>();
+        armSkin.bones = bones;
+        armSkin.rootBone = Elbow;
+        armSkin.quality = SkinQuality.Bone4;
+        armSkin.shadowCastingMode = ShadowCastingMode.Off;
+        armSkin.skinnedMotionVectors = false;
+        // 화면 밖 판정 상자 (팔꿈치 기준): 팔뚝·손·벌린 손가락이 다 들어가게
+        armSkin.localBounds = new Bounds(new Vector3(0, 0, 0.14f), new Vector3(0.4f, 0.4f, 0.8f));
+        RefreshModel();
+        return true;
+    }
+
+    // 세부 묘사 품질이 바뀌면 메시 판을 바꾼다 (높음 이상 = 30만 모델에서 자른 판)
+    void RefreshModel()
+    {
+        if (armSkin == null) return;
+        int want = GameSettings.DetailQ >= 2 ? 1 : 0;
+        if (want == armTier) return;
+        armTier = want;
+        armSkin.sharedMesh = want == 1 ? arm.hi : arm.lo;
+        armSkin.sharedMaterial = want == 1 ? armsData.hiMat : armsData.loMat;
+    }
 
     // 야상 소매: 팔꿈치 뒤에서 손목 조금 앞까지. 팔뚝 굵기가 줄며 군데군데 주름이 진다
     void BuildSleeve()
@@ -227,6 +300,7 @@ public class HandRig
 
     public void Apply(float[] pose)
     {
+        RefreshModel();
         for (int f = 0; f < 5; f++)
             ApplyFinger(f, pose[f * 4], pose[f * 4 + 1], pose[f * 4 + 2], pose[f * 4 + 3]);
     }

@@ -13,7 +13,8 @@ public class HatchArrival : MonoBehaviour
     const float WheelRadius = 0.2f;   // 바퀴 손잡이 반지름 (빌더의 Wheel 지름 0.4)
     const float CrankDeg = -70f;      // 한 번에 돌리는 각도 (사람이 볼 때 반시계: 잠금을 푸는 방향)
     const float GripR = 60f, GripL = -60f; // 처음 잡는 테두리 각도 (12시 = 0, 시계 방향 +): 오른손 2시, 왼손 10시
-    static readonly float ArmReach = CharacterModels.UpperArm + CharacterModels.Forearm;
+    // 팔이 닿는 거리 (배우 몸의 팔 길이 × 늘일 수 있는 배율; 플레이어 모델 몸은 팔이 조금 짧아 늘인다)
+    float ArmReach => actor != null && actor.Rig != null ? (actor.Rig.UpperArmLen + actor.Rig.ForearmLen) * actor.Rig.MaxArmStretch : CharacterModels.UpperArm + CharacterModels.Forearm;
 
     public static IEnumerator Play()
     {

@@ -107,12 +107,12 @@ public class CutsceneActor : MonoBehaviour
     // 발이 땅을 디딜 때 (달리기 발소리용)
     public System.Action<Vector3> OnFootstep;
 
-    const float PalmDepth = 0.065f;   // 손목에서 손바닥 가운데까지
     // 입을 가릴 때 손바닥이 입 앞에 떠 있는 거리, 입을 찾지 못할 때의 머리 기준 입 위치
     const float MouthGap = 0.016f;
     static readonly Vector3 MouthFallback = new Vector3(0, 0.061f, 0.096f);
 
     Transform model, backpack;
+    Pose stand = Stand, sit = Sit, freeze = Freeze, shield = Shield;   // 이 몸에 맞춘 자세 (관 몸이면 원래 값 그대로)
     Pose from, to;
     float blend = 1, blendTime = 1, phase, breath;
     bool lastLeftDown;
@@ -132,11 +132,12 @@ public class CutsceneActor : MonoBehaviour
         if (glow != null) ProcTex.GlowTemplate = glow;
         if (backpack != null) { Destroy(backpack.gameObject); backpack = null; } // 다시 지으면 옛 몸과 함께 사라진다
         Rig = CharacterModels.Build(transform, FigureKind.Civilian, variant);
+        stand = FitPose(Rig, Stand); sit = FitPose(Rig, Sit); freeze = FitPose(Rig, Freeze); shield = FitPose(Rig, Shield);
         CollectCupJoints();
         model = Rig.Model;
-        from = to = Sit;
+        from = to = sit;
         blend = 1;
-        Apply(Sit);
+        Apply(sit);
     }
 
     // 왼손의 손가락·엄지 마디를 모은다 (Hand()가 지은 이름: …finger0 / …finger0b, …thumb / …thumbb; LiveFingers라 합쳐지지 않고 남아 있다).
@@ -170,29 +171,38 @@ public class CutsceneActor : MonoBehaviour
             var strap = ProcTex.Get(ProcTex.Kind.Cloth, new Color(0.13f, 0.15f, 0.11f), 96, 0, 0.5f);
             backpack = new GameObject("Backpack").transform;
             backpack.SetParent(Rig.Body, false);
-            Part(backpack, ProcMesh.Box("cs_pack", 0.34f, 0.44f, 0.17f, 5), mat, new Vector3(0, 0.27f, -0.2f), Vector3.zero);
-            Part(backpack, ProcMesh.Box("cs_packflap", 0.3f, 0.14f, 0.05f, 5), strap, new Vector3(0, 0.44f, -0.2f), new Vector3(8, 0, 0));
-            Part(backpack, ProcMesh.Box("cs_packpocket", 0.22f, 0.16f, 0.05f, 5), strap, new Vector3(0, 0.14f, -0.3f), Vector3.zero);
+            // 가방 자리: 관 몸은 예전 값 그대로, 플레이어 모델 몸은 어깨 높이에 맞춰 높이를 줄이고 등 겉면에 붙인다
+            float packZ = Rig.TorsoSurface == null ? -0.2f : SurfZ(Hy(0.27f), 0f, false) - 0.095f;
+            Part(backpack, ProcMesh.Box("cs_pack", 0.34f, 0.44f, 0.17f, 5), mat, new Vector3(0, Hy(0.27f), packZ), Vector3.zero);
+            Part(backpack, ProcMesh.Box("cs_packflap", 0.3f, 0.14f, 0.05f, 5), strap, new Vector3(0, Hy(0.44f), packZ), new Vector3(8, 0, 0));
+            Part(backpack, ProcMesh.Box("cs_packpocket", 0.22f, 0.16f, 0.05f, 5), strap, new Vector3(0, Hy(0.14f), packZ - 0.1f), Vector3.zero);
             // 어깨끈: 가슴 앞에서 몸통 겉면을 타고 올라가 어깨를 넘어 등의 가방 윗모서리에 이어진다 (짧은 조각을 이어 붙인 띠)
-            foreach (var s in new[] { -1f, 1f }) BuildStrap(strap, s * 0.1f);
+            foreach (var s in new[] { -1f, 1f }) BuildStrap(strap, s * 0.1f, packZ);
             // 가슴 앞 가로 끈과 버클 (두 어깨끈을 잇는다)
-            float chestZ = CharacterModels.TorsoSurfaceZ(0.3f, 0f, true) + 0.012f;
-            Part(backpack, ProcMesh.Box("cs_chest", 0.19f, 0.022f, 0.012f, 3), strap, new Vector3(0, 0.3f, chestZ), Vector3.zero);
-            Part(backpack, ProcMesh.Box("cs_buckle", 0.032f, 0.03f, 0.016f, 3), ProcTex.Plain(new Color(0.1f, 0.1f, 0.1f), 0.4f), new Vector3(0, 0.3f, chestZ + 0.003f), Vector3.zero);
+            float chestZ = SurfZ(Hy(0.3f), 0f, true) + 0.012f;
+            Part(backpack, ProcMesh.Box("cs_chest", 0.19f, 0.022f, 0.012f, 3), strap, new Vector3(0, Hy(0.3f), chestZ), Vector3.zero);
+            Part(backpack, ProcMesh.Box("cs_buckle", 0.032f, 0.03f, 0.016f, 3), ProcTex.Plain(new Color(0.1f, 0.1f, 0.1f), 0.4f), new Vector3(0, Hy(0.3f), chestZ + 0.003f), Vector3.zero);
         }
         backpack.gameObject.SetActive(on);
     }
 
-    // 어깨끈 하나 (x: 가로 자리): 가슴(y 0.17)에서 어깨 꼭대기(0.535)를 넘어 등의 가방 윗모서리(0.47, -0.118)까지, 몸통 겉면에서 1.1cm 떠서 따라간다
-    void BuildStrap(Material mat, float x)
+    // 몸통 관절 기준 높이: 관 몸 값(어깨 0.455)을 이 몸의 어깨 높이에 맞춘다
+    float Hy(float y) => y * Rig.Shoulder.y / 0.455f;
+
+    // 몸통 겉면 z (관 몸이면 관 몸통, 모델 몸이면 모델에서 잰 겉면)
+    float SurfZ(float y, float x, bool front) => Rig.TorsoSurface != null ? Rig.TorsoSurface(y, x, front) : CharacterModels.TorsoSurfaceZ(y, x, front);
+
+    // 어깨끈 하나 (x: 가로 자리): 가슴(y 0.17)에서 어깨 꼭대기(0.535)를 넘어 등의 가방 윗모서리(0.47, 가방 앞면)까지, 몸통 겉면에서 1.1cm 떠서 따라간다
+    void BuildStrap(Material mat, float x, float packZ)
     {
         var pts = new System.Collections.Generic.List<Vector3>();
         foreach (var y in new[] { 0.17f, 0.25f, 0.33f, 0.4f, 0.45f, 0.49f, 0.515f })
-            pts.Add(new Vector3(x, y, CharacterModels.TorsoSurfaceZ(y, x, true) + 0.011f));
-        pts.Add(new Vector3(x, 0.535f, -0.006f));
+            pts.Add(new Vector3(x, Hy(y), SurfZ(Hy(y), x, true) + 0.011f));
+        float topZ = Rig.TorsoSurface == null ? -0.006f : (SurfZ(Hy(0.515f), x, true) + SurfZ(Hy(0.515f), x, false)) * 0.5f;
+        pts.Add(new Vector3(x, Hy(0.535f) + (Rig.TorsoSurface == null ? 0f : 0.03f), topZ));
         foreach (var y in new[] { 0.515f, 0.49f })
-            pts.Add(new Vector3(x, y, CharacterModels.TorsoSurfaceZ(y, x, false) - 0.011f));
-        pts.Add(new Vector3(x, 0.47f, -0.118f));
+            pts.Add(new Vector3(x, Hy(y), SurfZ(Hy(y), x, false) - 0.011f));
+        pts.Add(new Vector3(x, Hy(0.47f), packZ + 0.082f));
         for (int i = 0; i < pts.Count - 1; i++)
         {
             var a = pts[i];
@@ -216,6 +226,26 @@ public class CutsceneActor : MonoBehaviour
         go.transform.localRotation = Quaternion.Euler(euler);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    }
+
+    // 자세의 손·팔꿈치 목표를 이 몸의 어깨 자리와 팔 길이에 맞춘다 (자세 값은 관 몸: 어깨 (±0.176, 1.375), 팔 0.57m 기준).
+    // 관 몸이면 그대로. 팔이 짧은 모델 몸이 손 목표에 닿지 못해 팔이 곧게 뻗치거나(서기) 엉뚱한 쪽을 가리키는 것(눈 가리기)을 막는다
+    static Pose FitPose(CharacterRig r, Pose src)
+    {
+        float ratio = (r.UpperArmLen + r.ForearmLen) / (CharacterModels.UpperArm + CharacterModels.Forearm);
+        if (Mathf.Abs(ratio - 1f) < 1e-4f && Mathf.Abs(r.BodyY - CharacterModels.HipY) < 1e-4f && (r.Shoulder - new Vector3(0.176f, 0.455f, -0.005f)).sqrMagnitude < 1e-8f) return src;
+        var p = src.Clone();
+        Vector3 Fit(Vector3 v, float side)
+        {
+            var oldS = new Vector3(side * 0.176f, CharacterModels.HipY + 0.455f, -0.005f);
+            var newS = new Vector3(side * r.Shoulder.x, r.BodyY + r.Shoulder.y, r.Shoulder.z);
+            return newS + (v - oldS) * ratio;
+        }
+        // 앉으면 엉덩이를 내린 만큼(Drop) 어깨도 내려가 있다
+        Vector3 Fit2(Vector3 v, float side) => Fit(v + new Vector3(0, src.Drop, 0), side) - new Vector3(0, src.Drop, 0);
+        p.HandL = Fit2(src.HandL, -1); p.ElbowL = Fit2(src.ElbowL, -1);
+        p.HandR = Fit2(src.HandR, 1); p.ElbowR = Fit2(src.ElbowR, 1);
+        return p;
     }
 
     // 자세를 바꾼다 (transition초에 걸쳐 섞인다)
@@ -256,12 +286,12 @@ public class CutsceneActor : MonoBehaviour
     {
         switch (m)
         {
-            case Mode.Sit: return Sit;
-            case Mode.Freeze: return Freeze;
-            case Mode.Shield: return Shield;
+            case Mode.Sit: return sit;
+            case Mode.Freeze: return freeze;
+            case Mode.Shield: return shield;
             case Mode.Run: return RunPose(phase);
             case Mode.Walk: return WalkPose(phase);
-            default: return Stand;
+            default: return stand;
         }
     }
 
@@ -358,7 +388,7 @@ public class CutsceneActor : MonoBehaviour
     {
         float k = Mathf.Clamp01(RunAmount);
         float uL = Mathf.Repeat(ph / (Mathf.PI * 2), 1f), uR = Mathf.Repeat(uL + 0.5f, 1f);
-        var p = Stand.Clone();
+        var p = stand.Clone();
 
         // 다리
         Foot(uL, g, k, out float zL, out float yL, out float liftL);
@@ -383,22 +413,23 @@ public class CutsceneActor : MonoBehaviour
     }
 
     // 팔 하나. sw: -1(뒤) ~ 1(앞), swLag: 조금 늦은 흔들림 (팔꿈치 굽힘·손목에 쓴다). 어깨 자리는 몸통 기울기를 따라 돈다 (사람 기준 좌표)
-    static void Arm(Pose p, bool left, float sw, float swLag, Gait g, float k, float leanDeg)
+    void Arm(Pose p, bool left, float sw, float swLag, Gait g, float k, float leanDeg)
     {
         float side = left ? -1f : 1f;
         float lean = leanDeg * Mathf.Deg2Rad;
-        var shoulder = new Vector3(side * 0.176f, CharacterModels.HipY - p.Drop + 0.455f * Mathf.Cos(lean), 0.455f * Mathf.Sin(lean) - 0.005f);
+        var sh = Rig.Shoulder; // 몸통 관절 기준 어깨 (몸통이 lean만큼 앞으로 숙는다)
+        var shoulder = new Vector3(side * sh.x, Rig.BodyY - p.Drop + sh.y * Mathf.Cos(lean) - sh.z * Mathf.Sin(lean), sh.y * Mathf.Sin(lean) + sh.z * Mathf.Cos(lean));
         float theta = (sw > 0 ? g.ArmFwd * sw : g.ArmBack * sw) * k * Mathf.Deg2Rad;
         float bend = (g.ElbowBase + g.ElbowExtra * (0.5f + 0.5f * swLag)) * Mathf.Deg2Rad * Mathf.Lerp(0.3f, 1f, k);
         float a = theta + lean;
         var upper = new Vector3(side * g.ArmOut, -Mathf.Cos(a), Mathf.Sin(a)).normalized;
         float f = a + bend;
         var fore = new Vector3(-side * g.HandIn * (0.5f + 0.5f * sw), -Mathf.Cos(f), Mathf.Sin(f)).normalized;
-        var elbow = shoulder + upper * CharacterModels.UpperArm;
-        var wrist = elbow + fore * CharacterModels.Forearm;
+        var elbow = shoulder + upper * Rig.UpperArmLen;
+        var wrist = elbow + fore * Rig.ForearmLen;
         // 서 있는 자세(k=0)의 손 자리와 섞어 멈춰 설 때 팔이 자연스럽게 내려온다
-        var restHand = left ? Stand.HandL : Stand.HandR;
-        var restElbow = left ? Stand.ElbowL : Stand.ElbowR;
+        var restHand = left ? stand.HandL : stand.HandR;
+        var restElbow = left ? stand.ElbowL : stand.ElbowR;
         var pole = elbow + new Vector3(side * 0.28f, 0f, -0.18f);
         var hand = Vector3.Lerp(restHand, wrist, Mathf.Clamp01(k * 1.5f));
         var elbowPole = Vector3.Lerp(restElbow, pole, Mathf.Clamp01(k * 1.5f));
@@ -417,8 +448,10 @@ public class CutsceneActor : MonoBehaviour
         var fwd = transform.forward;
         var right = transform.right;
         Vector3 P(Vector3 local) => transform.TransformPoint(local);
-        Reach(Rig.LegL, Rig.ShinL, CharacterModels.Thigh, CharacterModels.Shin, P(p.FootL), P(p.KneeL), fwd, right);
-        Reach(Rig.LegR, Rig.ShinR, CharacterModels.Thigh, CharacterModels.Shin, P(p.FootR), P(p.KneeR), fwd, right);
+        // 자세의 발 목표는 발목 높이 0.08 기준이다 (몸마다 발목 높이만큼 올린다)
+        var ankle = new Vector3(0, Rig.AnkleH - 0.08f, 0);
+        Reach(Rig.LegL, Rig.ShinL, Rig.ThighLen, Rig.ShinLen, P(p.FootL + ankle), P(p.KneeL), fwd, right);
+        Reach(Rig.LegR, Rig.ShinR, Rig.ThighLen, Rig.ShinLen, P(p.FootR + ankle), P(p.KneeR), fwd, right);
         ArmIK(true, P(p.HandL), P(p.ElbowL), p.HandRotL, p.MouthL);
         ArmIK(false, P(p.HandR), P(p.ElbowR), p.HandRotR, 0f);
     }
@@ -443,7 +476,7 @@ public class CutsceneActor : MonoBehaviour
             var fingers = (hr * 0.8f + Rig.Head.up * 0.5f).normalized;
             worldRot = HandRotation(left, palmNormal, fingers);
             var palm = mouthPos + hf * MouthGap - hr * 0.01f;
-            wrist = Vector3.Lerp(wrist, palm - worldRot * new Vector3(0, -PalmDepth, 0), mouth);
+            wrist = Vector3.Lerp(wrist, palm - worldRot * new Vector3(0, -Rig.PalmDepth, 0), mouth);
             // 곧장 직선으로 올라오지 않고 바깥·위로 둥글게 돌아 감싸듯 닿는다 (놀라 입을 막는 손)
             wrist += (Rig.Head.up * 0.07f - Rig.Head.right * 0.06f + Rig.Head.forward * 0.05f) * Mathf.Sin(mouth * Mathf.PI);
             w = mouth;
@@ -453,15 +486,31 @@ public class CutsceneActor : MonoBehaviour
         {
             var lr = left ? lockRotL : lockRotR;
             var lp = left ? lockPalmL : lockPalmR;
-            wrist = Vector3.Lerp(wrist, lp - lr * new Vector3(0, -PalmDepth, 0), lw);
+            wrist = Vector3.Lerp(wrist, lp - lr * new Vector3(0, -Rig.PalmDepth, 0), lw);
             if (left ? lockPoleOnL : lockPoleOnR) pole = Vector3.Lerp(pole, left ? lockPoleL : lockPoleR, lw);
             worldRot = w > 0 ? Quaternion.Slerp(worldRot, lr, lw) : lr;
             w = Mathf.Max(w, lw);
         }
-        Reach(upper, fore, CharacterModels.UpperArm, CharacterModels.Forearm, wrist, pole, fwd, transform.right);
+        float a = Rig.UpperArmLen, b = Rig.ForearmLen;
+        if (Rig.MaxArmStretch > 1f)
+        {
+            // 모델 몸은 팔이 조금 짧다: 바깥 점에 붙인 손(LockHand)이 닿지 않으면 팔을 늘여(최대 MaxArmStretch배) 문·바퀴에 손이 닿게 한다.
+            // 붙이지 않은 손은 늘이지 않는다 (예전 자세 값이 닿지 않는다고 팔을 늘이면 선 자세에서 팔이 20% 길어진다, 검토 11-24)
+            float need = Mathf.Clamp((wrist - upper.position).magnitude / ((a + b) * 0.995f), 1f, Rig.MaxArmStretch);
+            float st = Mathf.Lerp(1f, need, left ? lockWL : lockWR);
+            a *= st; b *= st;
+            fore.localPosition = new Vector3(0, -a, 0);
+            hand.localPosition = new Vector3(0, -b, 0);
+        }
+        Reach(upper, fore, a, b, wrist, pole, fwd, transform.right);
         var local = Quaternion.Euler(handRot);
         if (w > 0) local = Quaternion.Slerp(local, Quaternion.Inverse(fore.rotation) * worldRot, w);
         hand.localRotation = local;
+        // 모델 몸 손가락 굽힘: 달리고 걸을 때 느슨한 주먹, 서고 앉으면 힘을 뺀 손, 입을 가리면 둥글게 감싼 손
+        float curl = Current == Mode.Run || Current == Mode.Walk ? 1f : 0.55f;
+        curl = Mathf.Lerp(curl, 1f, left ? lockWL : lockWR); // 바깥 점(바퀴 테두리)을 쥔 손은 주먹으로
+        curl = Mathf.Lerp(curl, 0.3f, mouth);
+        if (left) Rig.CurlL = curl; else Rig.CurlR = curl;
         // 입을 가리는 왼손: 손가락·엄지 마디를 더 감아 손이 입과 뺨을 둥글게 감싼다
         if (left)
             for (int i = 0; i < cupJoints.Count; i++)

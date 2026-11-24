@@ -14,6 +14,15 @@ public class CharacterRig
     public Transform[] Legs, Knees; // 들개: 앞왼·앞오·뒤왼·뒤오
     public Transform Lantern;       // 잡상인 등불 (불빛을 단다)
     public Transform Mouth;         // 입 가운데 (매끄러운 얼굴에만 있다. 컷씬 배우가 손으로 입을 가릴 때 쓴다)
+    // 몸 치수 (컷씬 배우가 IK·걸음에 쓴다). 관 몸은 아래 상수 그대로, 플레이어 모델 몸(CharacterModels.Player.cs)은 모델에서 잰 값
+    public float ThighLen = CharacterModels.Thigh, ShinLen = CharacterModels.Shin, UpperArmLen = CharacterModels.UpperArm, ForearmLen = CharacterModels.Forearm;
+    public float BodyY = CharacterModels.HipY;                       // 몸통(Body) 관절 높이
+    public Vector3 Shoulder = new Vector3(0.176f, 0.455f, -0.005f);  // 오른 어깨 관절 자리 (몸통 관절 기준, 왼쪽은 x를 뒤집는다)
+    public float AnkleH = 0.08f;                                     // 서 있을 때 발목 높이 (자세의 발 목표는 0.08 기준이다)
+    public float MaxArmStretch = 1f;                                 // 손이 닿지 않을 때 팔을 늘일 수 있는 배율 (모델 몸만)
+    public System.Func<float, float, bool, float> TorsoSurface;      // 몸통 겉면 z (몸통 관절 기준 높이 y, 가로 x, 앞이면 true). null이면 관 몸통
+    public float PalmDepth = 0.065f;                                 // 손목에서 손바닥 가운데까지 (손을 바깥 점·입에 붙일 때)
+    public float CurlL = 1f, CurlR = 1f;                             // 손가락 굽힘 (모델 몸: 1 느슨한 주먹, 0.3 입을 감싸는 손, 0 편 손)
     // 맞으면 하나씩 떨어져 나가는 가죽 갑옷 (가슴·어깨·무릎·모자)
     public readonly List<Transform> Armor = new List<Transform>();
     public Renderer[] Renderers;
@@ -45,7 +54,7 @@ public static partial class CharacterModels
             case FigureKind.Raider: Raider(b); break;
             case FigureKind.Dog: Dog(b); break;
             case FigureKind.Merchant: Merchant(b); break;
-            case FigureKind.Civilian: Civilian(b, variant); break;
+            case FigureKind.Civilian: if (!SkinnedPlayer(b, variant)) Civilian(b, variant); break; // 플레이어 모델: 0 집 차림 얼굴 모델, 1 방독면 탐험 차림 (CharacterModels.Player.cs)
             case FigureKind.Corpse: Corpse(b, variant); break;
             default: if (!SkinnedCommonZombie(b)) CommonZombie(b, variant); break; // 새 감염자 피부 메시 (CharacterModels.Skinned.cs), 없으면 예전 관 몸
         }

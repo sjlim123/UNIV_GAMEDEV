@@ -61,7 +61,7 @@ public partial class CutsceneDirector : MonoBehaviour
     float actorYaw, actorYawFrom, actorYawTo, actorTurnT = 1, actorTurnTime = 1;
     Vector3 actorFrom, actorTo; float actorMoveT = 1, actorMoveTime = 1;
     int runLeg;
-    int actorVariant; // 0 집에서의 차림, 1 탐험 차림 (3번 장면부터: 방공호 출입 연출과 같은 모습)
+    int actorVariant; // 0 집에서의 차림 (인트로 전체, 장면 3은 가방만). 1 탐험 차림은 방공호 출입 연출(HatchArrival)에서 쓴다
     Vector3 camPos, camLook;
     float camFov = 45f, focusDist = 3f, aperture = 5.6f, handheld = 0.3f;
     // 색보정 목표 (장면마다 바뀌고, 매 프레임 부드럽게 따라간다)
@@ -160,7 +160,8 @@ public partial class CutsceneDirector : MonoBehaviour
         cloud.gameObject.SetActive(shot >= 2);
         ResetFx(shot);
         ResetExit(shot);
-        int wantVariant = shot >= 3 ? 1 : 0;
+        // 인트로는 집 차림 하나 (2026-11-24 사용자: 방호복이 아니라 집에서 방공호로 바로 달려간다). 장면 3은 가방만 멘다
+        int wantVariant = 0;
         if (actorVariant != wantVariant)
         {
             if (remote != null && actor.Rig != null && remote.IsChildOf(actor.transform)) remote.SetParent(home, true); // 손에 든 리모컨은 몸과 함께 지워지지 않게
