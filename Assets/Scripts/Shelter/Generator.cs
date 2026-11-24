@@ -5,7 +5,7 @@ using UnityEngine;
 // 연료를 부으면 꿀렁 소리와 함께 엔진이 울컥 빨라지고 불티·검은 연기가 확 늘었다가 가라앉는다. 전력이 20% 아래면 쿨럭이며 불안정해진다.
 // 소리(GeneratorAudio)는 발전기실 미닫이 문(SlidingDoor)이 닫혀 있고 밖에 있으면 들리지 않고, 문이 열리는 만큼 서서히 커진다 (먹먹함도 함께 풀린다).
 // 모양은 GameSceneBuilder.Shelter.cs의 BuildGenerator가 만들어 아래 참조를 채운다
-public class Generator : Interactable
+public partial class Generator : Interactable
 {
     public AudioSource hum;
     public Transform vibe;             // 돌 때 떨리는 몸체
@@ -27,6 +27,7 @@ public class Generator : Interactable
     bool wasPowered;
 
     public override string Prompt => $"발전기 (전력 {GameManager.Instance.State.Power:0}%) - 연료 넣기";
+    public override bool CanInteract => !pouring; // 붓는 동안은 다시 누를 수 없다 (Generator.Pour.cs)
 
     public Transform filler;           // 연료 주입구 구멍 (방공호 씬을 만들 때 채운다. 비어 있으면 예전 코드 발전기의 뚜껑 자리)
 
@@ -47,11 +48,21 @@ public class Generator : Interactable
             gm.UI.ShowMessage("연료가 없다. 도시에서 연료통을 찾아야 한다.");
             return;
         }
+        // 연료통은 지금 쓴다 (붓는 동안 소지품을 바꿔도 어긋나지 않게). 1인칭 손이 있으면 연료통을 들어 주입구에 붓는 몸짓을 하고(Generator.Pour.cs),
+        // 붓는 중에 전력이 오른다. 손이 없으면(편집기 시험 등) 예전처럼 바로
+        if (StartPour()) return;
+        ProceduralAudio.PlayAt(ProceduralAudio.Clang(), FillerPos, 0.3f, 0.7f);
+        ProceduralAudio.PlayAt(GeneratorAudio.Pour(), FillerPos, 0.8f, Random.Range(0.95f, 1.05f), 1f, 14f);
+        ApplyFuel();
+    }
+
+    // 연료가 들어간 순간: 전력이 오르고 엔진이 울컥 빨라지며 불티·검은 연기가 확 늘었다가 가라앉는다
+    void ApplyFuel()
+    {
+        var gm = GameManager.Instance;
+        var s = gm.State;
         s.Power = Mathf.Min(100, s.Power + GameBalance.Data.fuelPower);
         gm.UI.ShowMessage($"연료를 부었다. 전력 {s.Power:0}%");
-        var cap = FillerPos;
-        ProceduralAudio.PlayAt(ProceduralAudio.Clang(), cap, 0.3f, 0.7f);
-        ProceduralAudio.PlayAt(GeneratorAudio.Pour(), cap, 0.8f, Random.Range(0.95f, 1.05f), 1f, 14f);
         surge = 0.45f;
         // 철창 안 불티가 확 날리고 배기관에서 검은 연기가 뭉게뭉게 솟는다
         if (embers != null) embers.Emit(26);

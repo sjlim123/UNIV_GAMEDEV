@@ -92,12 +92,15 @@ public class PlayerController : MonoBehaviour
         slowedNotice = slowed;
     }
 
+    // 1인칭 연출 중(연료 붓기 등): 움직임·시선·상호작용·공격·바꿔 들기를 막는다 (창·일시정지는 그대로)
+    public bool ScriptBusy;
+
     public bool InputBlocked
     {
         get
         {
             var gm = GameManager.Instance;
-            return gm.UI.IsBlocking || gm.IsGameOver || gm.IsTransitioning;
+            return gm.UI.IsBlocking || gm.IsGameOver || gm.IsTransitioning || ScriptBusy;
         }
     }
 

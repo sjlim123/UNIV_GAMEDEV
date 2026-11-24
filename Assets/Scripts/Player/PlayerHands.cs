@@ -41,6 +41,7 @@ public class PlayerHands : MonoBehaviour
     float moveT = 1f, moveTime = 1f;
     UseGesture useKind;
     string useItem; // 쓰는 몸짓 동안 손에 보일 아이템 (소지품 창에서 쓴 것도 손에 들려 보인다)
+    string scriptItem; // 연출 동안 오른손에 들 아이템 (연료 붓기: 연료통). 손을 붙여도(LockRight) 감추지 않는다
     bool useQueued;
 
     // 왼손 (손전등)
@@ -187,6 +188,7 @@ public class PlayerHands : MonoBehaviour
     {
         if (useItem != null) want = useItem;
         if (stowed) want = null; // 연출: 든 것을 내려놓는다 (내렸다가 빈손으로 올라온다)
+        if (scriptItem != null) want = scriptItem;
         UpdateSwap(dt, want);
 
         // 마우스를 돌리면 손이 살짝 늦게 따라오고, 걸으면 흔들리고, 가만히 있으면 숨쉬듯 오르내린다
@@ -524,7 +526,9 @@ public class PlayerHands : MonoBehaviour
         // 손은 turn만큼 돌고, 팔뚝은 그 일부만 돈다
         var forearm = Quaternion.Slerp(Quaternion.identity, turn, ArmShare) * rot;
         var wristBend = Quaternion.Inverse(forearm) * turn * rot * bend;
-        if (heldModel != null && heldModel.activeSelf == lockWeight > 0.3f) heldModel.SetActive(lockWeight <= 0.3f); // 연출로 손을 붙이면 든 물건은 잠시 감춘다
+        // 연출로 손을 붙이면 든 물건은 잠시 감춘다 (연출이 직접 들게 한 물건은 그대로 보인다)
+        bool showHeld = lockWeight <= 0.3f || (scriptItem != null && heldId == scriptItem);
+        if (heldModel != null && heldModel.activeSelf != showHeld) heldModel.SetActive(showHeld);
         if (lockWeight > 0)
         {
             // 연출: 손목을 바깥 세계의 한 점에 붙인다 (카메라 기준 좌표로 바꿔서). 손은 시킨 방향을 보고,
@@ -558,6 +562,19 @@ public class PlayerHands : MonoBehaviour
     }
 
     public Transform RightWrist => right != null ? right.Wrist : null;
+
+    // 연출: 오른손에 id를 들게 한다 (null이면 풀려 단축칸 물건으로 돌아간다). 다 바꿔 들어 손이 올라오면 ScriptItemReady
+    public void HoldForScript(string id)
+    {
+        scriptItem = id;
+        if (id == null) return;
+        // 연출이 손을 쓰면 쓰는 몸짓(마시기·먹기·붕대)은 그만둔다: 연료통으로 마시는 몸짓이 이어지지 않게, 끝나면 단축칸 물건으로 돌아가게
+        useQueued = false;
+        useItem = null;
+        if (move == Move.Use) moveT = 1f;
+    }
+    public bool ScriptItemReady => scriptItem != null && heldId == scriptItem && heldModel != null && lower <= 0.02f;
+    public Transform HeldModel => heldModel != null ? heldModel.transform : null;
 
     // 연출용: 왼손 손목을 월드의 wrist에 두고 손이 rot(월드: +z 손가락, +y 엄지)을 향하게 한다. 든 손전등은 잠시 감춘다. weight 0이면 풀린다
     public void LockLeft(Vector3 wrist, Quaternion rot, float weight, float[] fingers = null)
