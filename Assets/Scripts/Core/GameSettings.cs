@@ -117,8 +117,9 @@ public static class GameSettings
             Distortion = PlayerPrefs.GetInt("set_distortion", Distortion ? 1 : 0) == 1;
             FilmGrain = PlayerPrefs.GetInt("set_filmGrain", FilmGrain ? 1 : 0) == 1;
             Shadows = PlayerPrefs.GetInt("set_shadows", Shadows ? 1 : 0) == 1;
-            Sharpen = PlayerPrefs.GetInt("set_sharpen", Sharpen ? 1 : 0) == 1;
-            SharpenExp = PlayerPrefs.GetInt("set_sharpenExp", SharpenExp ? 1 : 0) == 1;
+            // 선명도 향상·선명도 향상(실험)은 켜는 순간 화면이 멈춰 설정에서 뺐다 (0.4.0 뒤, 사용자 요청 11-24): 예전에 켜 둔 값도 늘 끈다
+            Sharpen = false;
+            SharpenExp = false;
             AntiAlias = Mathf.Clamp(PlayerPrefs.GetInt("set_antiAlias", AntiAlias), 0, AntiAliasNames.Length - 1);
             Aniso = Mathf.Clamp(PlayerPrefs.GetInt("set_aniso", Aniso), 0, AnisoNames.Length - 1);
             // 저장된 세부 값이 지금의 어느 묶음과 같은지 다시 따진다 (묶음 내용이 바뀌었거나 따로 바꾼 값이면 '사용자 지정')

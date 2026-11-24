@@ -675,15 +675,12 @@ public partial class UIManager
                 // 선명도 향상(실험) = STP가 켜져 있으면 안티 앨리어싱을 STP가 맡는다: 줄을 잠근다 (보이지 않는 값을 바꾸지 않게)
                 Selector(c, "안티 앨리어싱", GameSettings.SharpenExp ? "STP (실험)" : GameSettings.AntiAliasNames[GameSettings.AntiAlias], d => { GameSettings.AntiAlias = Cycle(GameSettings.AntiAlias, d, GameSettings.AntiAliasNames.Length); GameSettings.MarkCustom(); }, !GameSettings.SharpenExp);
                 Selector(c, "이방성 필터링", GameSettings.AnisoNames[GameSettings.Aniso], d => { GameSettings.Aniso = Cycle(GameSettings.Aniso, d, GameSettings.AnisoNames.Length); GameSettings.MarkCustom(); });
-                OnOff(c, "선명도 향상", GameSettings.Sharpen, v => { GameSettings.Sharpen = v; GameSettings.MarkCustom(); });
-                OnOff(c, "선명도 향상 (실험)", GameSettings.SharpenExp, v => { GameSettings.SharpenExp = v; GameSettings.MarkCustom(); });
                 OnOff(c, "블룸 효과", GameSettings.Bloom, v => { GameSettings.Bloom = v; GameSettings.MarkCustom(); });
                 OnOff(c, "왜곡", GameSettings.Distortion, v => { GameSettings.Distortion = v; GameSettings.MarkCustom(); });
                 OnOff(c, "필름 그레인", GameSettings.FilmGrain, v => { GameSettings.FilmGrain = v; GameSettings.MarkCustom(); });
                 OnOff(c, "그림자 활성화", GameSettings.Shadows, v => { GameSettings.Shadows = v; GameSettings.MarkCustom(); });
                 Line(c, "물질: 주변 그림자(중간부터)·전구 그림자(높음)·그림자 부드러움 / 텍스처: 낮음 1/4, 중간 1/2, 매우 높음은 고해상도", 16, Dim);
                 Line(c, "세부 묘사: 그림자 거리·단계·해상도, 파티클 양, 먼 아파트 창틀(낮음은 판) / UI: 핫바 유리 흐림 / 왜곡: 색수차", 16, Dim);
-                Line(c, "선명도 향상 (실험): Unity STP. 렌더 해상도를 낮췄을 때 선명하게 되살립니다. 켜면 안티 앨리어싱을 대신합니다.", 16, Dim);
                 Line(c, "저사양 PC: 그래픽 품질 '낮음' + 렌더 해상도 70%를 권장합니다. (그림자·블룸·필름 효과를 끕니다)", 17, Dim);
             }
             else if (settingsTab == 3)
