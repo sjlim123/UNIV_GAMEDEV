@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 새총으로 쏘는 돌멩이 (원거리 좀비와 플레이어가 함께 쓴다). 낮고 빠른 포물선으로 날아가
 // 좀비가 쏜 돌은 플레이어에, 플레이어가 쏜 돌은 좀비·들개에 맞으면 피해를 주고,
-// 벽·바닥에 맞으면 흙먼지를 일으키며 딱 소리와 함께 튕겨 떨어졌다가 잠시 뒤 사라진다.
+// 벽·바닥에 맞으면 맞은 재질의 가루·부스러기를 튀기며 딱 소리와 함께 튕겨 떨어졌다가 잠시 뒤 사라진다.
 public class EnemyProjectile : MonoBehaviour
 {
     // 중력 배율 (작을수록 곧게 날아간다)
@@ -12,22 +12,17 @@ public class EnemyProjectile : MonoBehaviour
     public const float Radius = 0.06f;
     // 떨어진 돌이 바닥에 남아 있는 시간(초)
     const float RestTime = 1.5f;
-    const int DustCount = 6;
-    const float DustTime = 0.5f;
 
     static readonly RaycastHit[] hits = new RaycastHit[16];
     static Mesh sphereMesh;
 
     Vector3 velocity, spin;
-    float damage, age, dustAge;
+    float damage, age;
     string deathReason;
     Transform owner, stone;
     bool spent, resting; // spent: 한 번 부딪힌 돌 (더는 피해를 주지 않는다)
     bool fromPlayer;     // 플레이어가 쏜 돌 (좀비·들개에게 피해를 준다)
     int bounces;
-    Transform[] dust;
-    Vector3[] dustVel;
-    float[] dustSize;
 
     // from에서 target을 향해 포물선으로 쏜다. speed = 수평 속도(m/s), mat = 돌 재질 (null이면 회색 돌)
     public static EnemyProjectile Launch(Vector3 from, Vector3 target, float speed, float damage, string deathReason, Transform owner, Material mat)
@@ -86,7 +81,6 @@ public class EnemyProjectile : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0) return;
         age += dt;
-        UpdateDust(dt);
         if (resting) return;
         if (age > Lifetime) { Destroy(gameObject); return; }
 
@@ -114,7 +108,7 @@ public class EnemyProjectile : MonoBehaviour
             Vector3 point = overlapped ? transform.position : h.point;
             // 부딪힌 자리에 붙인 뒤 살짝 띄워 다음 프레임에 다시 겹치지 않게 한다
             transform.position += dir * h.distance + normal * 0.01f;
-            if (spent) Bounce(normal);
+            if (spent) Bounce(h.collider, point, normal);
             else Impact(h.collider, point, normal);
             return;
         }
@@ -156,21 +150,53 @@ public class EnemyProjectile : MonoBehaviour
             velocity *= -0.12f;
             return;
         }
-        ProceduralAudio.PlayAt3D(ProceduralAudio.StoneHit(), point, 1f, Random.Range(0.9f, 1.15f));
-        if (c.GetComponentInParent<IDamageable>() == null) Dust(point, normal);
-        Bounce(normal);
+        // 웅덩이에 떨어지면 물결·물방울과 첨벙 소리, 아니면 딱 소리와 맞은 재질의 가루
+        bool splashed = c.GetComponentInParent<IDamageable>() == null && SurfaceDust(c, point, normal, false);
+        if (!splashed) ProceduralAudio.PlayAt3D(ProceduralAudio.StoneHit(), point, 1f, Random.Range(0.9f, 1.15f));
+        Bounce(null, point, normal);
+    }
+
+    // 벽·바닥에 맞은 자리: 맞은 재질에 맞는 가루·부스러기 (콘크리트 먼지와 돌 부스러기, 나무 톱밥, 쇠의 녹 가루, 흙 — Vfx.Impact). 웅덩이면 물결과 낮은 물방울을 내고 true.
+    // 세기는 빠르기로 정한다: 플레이어 새총(26 m/s)은 부스러기까지, 좀비가 쏜 돌과 다시 튕길 때는 가루만 조금 (좀비 여럿이 쏘아도 화면이 어지럽지 않게).
+    // 자국은 남기지 않는다 (돌이 많이 날아다녀서)
+    bool SurfaceDust(Collider c, Vector3 point, Vector3 normal, bool rebound)
+    {
+        if (c == null) return false;
+        float speed = velocity.magnitude;
+        var dir = speed > 0.01f ? velocity / speed : -normal;
+        // 맞은 면을 그 물체에 다시 쏴서 얻는다: 벽에 바짝 붙어 쏘면 돌이 처음부터 벽 안에 있어 point가 벽 속이고 normal이 카메라를 향한다.
+        // 면을 못 찾으면 (벽 속에서 시작했고 뒤에서도 안 닿으면) 가루를 내지 않는다
+        if (!c.Raycast(new Ray(point - dir * 0.4f, dir), out var face, 0.8f)) return false;
+        point = face.point;
+        normal = face.normal;
+        if (!ImpactSurface.Visible(c, point)) return false; // 렌더러 없는 투명 벽이면 허공에 먼지가 생기지 않게
+        var kind = ImpactSurface.Classify(c, point, normal, face.triangleIndex);
+        if (kind == Vfx.ImpactKind.Water)
+            return PuddleFx.Step(point, rebound ? 0.15f : 0.35f, true); // 발로 디딘 것보다 작게, 낮게 튀는 물방울
+        float strength = rebound ? Mathf.Clamp(speed / 26f, 0.15f, 0.3f)
+            : fromPlayer ? Mathf.Clamp(speed / 26f * 0.85f, 0.3f, 0.9f) : 0.45f;
+        // 쇠·나무는 가루가 적어 작은 돌로는 거의 안 보이므로 조금 세게 (차·판자에 앉은 먼지와 녹·톱밥이 튄다)
+        if (!rebound && fromPlayer && (kind == Vfx.ImpactKind.Metal || kind == Vfx.ImpactKind.Wood)) strength *= 1.3f;
+        var along = Vector3.ProjectOnPlane(dir, normal);
+        if (along.sqrMagnitude < 1e-4f) along = Vector3.Cross(normal, Vector3.right);
+        if (along.sqrMagnitude < 1e-4f) along = Vector3.forward;
+        Vfx.Impact(kind, point, normal, dir, along.normalized, strength, false, false);
+        return false;
     }
 
     // 튕긴다 (탄성 0.3, 마찰 0.5). 바닥에서 느려지면 멈췄다가 잠시 뒤 사라진다
-    void Bounce(Vector3 normal)
+    void Bounce(Collider c, Vector3 point, Vector3 normal)
     {
         bounces++;
         float into = Vector3.Dot(velocity, normal);
         if (into < 0)
         {
-            // 두 번째부터 튕길 때는 작게 달각거린다
-            if (bounces > 1 && -into > 1.5f)
+            // 두 번째부터 튕길 때는 작게 달각거린다 (웅덩이 안이면 달각 소리 대신 첨벙)
+            bool wet = normal.y > 0.6f && PuddleFx.Inside(point);
+            if (bounces > 1 && -into > 1.5f && !wet)
                 ProceduralAudio.PlayAt3D(ProceduralAudio.StoneHit(), transform.position, Mathf.Clamp01(-into / 8f) * 0.6f, Random.Range(1.2f, 1.4f));
+            // 세게 다시 떨어지면 그 자리에서도 가루(웅덩이면 작은 물방울)가 조금 인다
+            if (bounces > 1 && -into > 2.5f) SurfaceDust(c, point, normal, true);
             velocity = (velocity - into * normal) * 0.5f - into * normal * 0.3f;
         }
         if (normal.y > 0.6f && velocity.magnitude < 1.2f)
@@ -182,41 +208,7 @@ public class EnemyProjectile : MonoBehaviour
         else if (bounces > 5) Destroy(gameObject);
     }
 
-    // 벽·바닥에서 피어오르는 작은 흙먼지
-    void Dust(Vector3 point, Vector3 normal)
-    {
-        var mat = RuntimeVisuals.Mat(new Color(0.46f, 0.43f, 0.38f), 0f);
-        dust = new Transform[DustCount];
-        dustVel = new Vector3[DustCount];
-        dustSize = new float[DustCount];
-        for (int i = 0; i < DustCount; i++)
-        {
-            dustSize[i] = Random.Range(0.04f, 0.08f);
-            dust[i] = Visual("Dust", null, mat, Vector3.one * dustSize[i]);
-            dust[i].position = point + normal * 0.03f;
-            dustVel[i] = (normal * Random.Range(0.5f, 1.2f) + Random.insideUnitSphere * 0.8f) * 1.3f;
-            Destroy(dust[i].gameObject, DustTime + 0.2f); // 돌이 먼저 사라져도 남지 않게
-        }
-        dustAge = 0;
-    }
-
-    void UpdateDust(float dt)
-    {
-        if (dust == null) return;
-        dustAge += dt;
-        float u = Mathf.Clamp01(dustAge / DustTime);
-        for (int i = 0; i < dust.Length; i++)
-        {
-            if (dust[i] == null) continue;
-            dustVel[i] *= 1 - Mathf.Min(1f, 5f * dt); // 공기 저항으로 금방 멈춘다
-            dustVel[i].y += 0.4f * dt;                // 살짝 떠오른다
-            dust[i].position += dustVel[i] * dt;
-            dust[i].localScale = Vector3.one * dustSize[i] * (1 + 1.6f * u) * (1 - u * u); // 퍼지며 옅어진다
-        }
-        if (u >= 1) dust = null;
-    }
-
-    // 콜라이더 없는 공 모양 (돌·먼지). CreatePrimitive는 콜라이더가 프레임 끝까지 남아서 메시만 빌려 쓴다
+    // 콜라이더 없는 공 모양 (돌). CreatePrimitive는 콜라이더가 프레임 끝까지 남아서 메시만 빌려 쓴다
     static Transform Visual(string name, Transform parent, Material mat, Vector3 scale)
     {
         if (sphereMesh == null)
