@@ -799,6 +799,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "아이템 사용 소리 29개 (물 뚜껑 따기·꿀꺽·숨, 통조림 따기·씹기, 구운 고기 베어 물기, 붕대 찢기·감기, 구급상자 걸쇠·달그락) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 30개 생성(거의 무음 1개 다시 만듦) 약 39크레딧 (2026-11-26)",
+        "뚜껑 3, 꿀꺽 3, 숨 2, 캔 따기 3, 씹기 3, 베어 물기 3, 붕대 찢기 3, 붕대 감기 3, 구급상자 걸쇠 3, 달그락 3",
+        "다듬기: 모노로 합침, 소리 3 ms(천·숨·달그락 5 ms) 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/C_아이템사용/소리_higgsfield_원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/Use/",
+      "used_for": "물·통조림·구운 고기·붕대·구급상자를 쓸 때 손 몸짓의 박자에 맞춰 나는 소리 — EffectAudio.Use.cs (PlayerHands). 파일이 없으면 예전 바스락 소리",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

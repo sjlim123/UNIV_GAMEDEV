@@ -176,7 +176,9 @@ public class GameManager : MonoBehaviour
         s.Hunger = Mathf.Min(100, s.Hunger + def.Hunger);
         s.Thirst = Mathf.Min(100, s.Thirst + def.Thirst);
         UI.ShowMessage($"{def.Name} 사용 ({def.Description})");
-        ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.5f);
+        // 손이 쓰는 몸짓을 하면 그 박자에 맞춰 아이템마다 다른 소리가 난다 (EffectAudio.Use). 녹음이 없거나 손이 없으면 예전 바스락 소리
+        bool cued = PlayerHands.Instance != null && EffectAudio.UseCues(id, HeldItems.Get(id).Use).Length > 0;
+        if (!cued) ProceduralAudio.Play2D(ProceduralAudio.Rustle(), 0.5f);
         if (PlayerHands.Instance != null) PlayerHands.Instance.PlayUse(id);
         return true;
     }

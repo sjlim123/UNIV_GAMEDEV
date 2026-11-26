@@ -40,6 +40,9 @@ public class PlayerHands : MonoBehaviour
     Move move;
     float moveT = 1f, moveTime = 1f;
     UseGesture useKind;
+    EffectAudio.UseCue[] useCues; // 지금 쓰는 몸짓의 소리 박자
+    UseGesture queuedKind;        // 기다리는 사용(useQueued)의 몸짓
+    bool handsAway;               // 침대에 눕거나 죽었거나 연출로 손이 감춰졌다 (쓰는 소리를 내지 않는다)
     string useItem; // 쓰는 몸짓 동안 손에 보일 아이템 (소지품 창에서 쓴 것도 손에 들려 보인다)
     string scriptItem; // 연출 동안 오른손에 들 아이템 (연료 붓기: 연료통). 손을 붙여도(LockRight) 감추지 않는다
     bool useQueued;
@@ -149,9 +152,21 @@ public class PlayerHands : MonoBehaviour
     public void PlayShoot() => StartMove(Move.Shoot, 0.35f);
 
     // 아이템을 쓴다: 그 아이템을 손에 들고(핫바에 없어도) 아이템마다 다른 몸짓을 한다
+    // 쓴 아이템마다 소리가 꼭 한 번은 난다: 몸짓을 시작하기 전에 다음 사용에 밀린 것, 연출 중(연료 붓기)이거나 손이 감춰져 몸짓을 못 하는 것은 첫 소리를 바로 낸다
     public void PlayUse(string id)
     {
-        useKind = HeldItems.Get(id).Use;
+        var kind = HeldItems.Get(id).Use;
+        bool hadQueued = useQueued && useItem != null;
+        if (hadQueued) EffectAudio.PlayUseNow(useItem, queuedKind);
+        if (scriptItem != null || handsAway)
+        {
+            EffectAudio.PlayUseNow(id, kind);
+            if (hadQueued) useItem = null; // 밀려난 아이템을 계속 들고 있지 않게 (하던 몸짓이 있으면 그대로 끝낸다)
+            useQueued = false;
+            return;
+        }
+        if (move == Move.Use) useCues = null; // 하던 몸짓의 남은 소리는 내지 않는다 (새 아이템으로 바꿔 드는 동안 엉뚱한 소리가 나지 않게)
+        queuedKind = kind; // 몸짓 모양(useKind)은 새 아이템을 손에 들고 시작할 때 바꾼다
         useItem = id;
         useQueued = true;
     }
@@ -177,6 +192,7 @@ public class PlayerHands : MonoBehaviour
         // 침대에 누우면(그리고 쓰러져 죽으면, 3인칭 연출 동안) 손을 감춘다
         bool asleep = pc.SleepBlend > 0.05f || pc.IsDead || hidden;
         if (handsRoot.gameObject.activeSelf == asleep) handsRoot.gameObject.SetActive(!asleep);
+        handsAway = asleep;
 
         string want = hotbar != null ? hotbar.SelectedId : null;
         if (want == "flashlight") want = null; // 손전등은 왼손 담당
@@ -213,7 +229,13 @@ public class PlayerHands : MonoBehaviour
                 lighterFlame.SetActive(true);
                 ProceduralAudio.Play2D(ProceduralAudio.Ignite(), 0.35f, 1.3f);
             }
-            if (moveT >= 1f && move == Move.Use) useItem = null; // 다 쓰면 원래 들던 것으로 돌아간다
+            // 쓰는 몸짓: 박자를 지날 때마다 그 소리 (뚜껑 따기·꿀꺽·씹기·붕대 감기·구급상자 달그락, EffectAudio.Use)
+            // (죽거나 침대에 누워 손이 감춰지면 남은 소리는 내지 않는다)
+            if (move == Move.Use && useCues != null && !handsAway)
+                foreach (var cue in useCues)
+                    if (before <= cue.At && moveT > cue.At) EffectAudio.PlayUseCue(cue);
+            // 다 쓰면 원래 들던 것으로 돌아간다. 다음 사용이 기다리고 있으면 그 아이템을 계속 든다 (그래야 그 몸짓이 시작된다)
+            if (moveT >= 1f && move == Move.Use && !useQueued) useItem = null;
         }
 
         PoseRight(dt);
@@ -270,9 +292,11 @@ public class PlayerHands : MonoBehaviour
         lower = Mathf.MoveTowards(lower, 0f, dt / 0.24f);
         grab = Mathf.MoveTowards(grab, 1f, dt / 0.3f);
         if (lower > 0.05f) return;
-        if (useQueued && useItem == heldId)
+        if (useQueued && useItem != null && useItem == heldId)
         {
             useQueued = false;
+            useKind = queuedKind;
+            useCues = EffectAudio.UseCues(useItem, useKind);
             StartMove(Move.Use, UseSeconds(useKind));
         }
         else if (flickPending && moveT >= 1f)
@@ -568,7 +592,9 @@ public class PlayerHands : MonoBehaviour
     {
         scriptItem = id;
         if (id == null) return;
-        // 연출이 손을 쓰면 쓰는 몸짓(마시기·먹기·붕대)은 그만둔다: 연료통으로 마시는 몸짓이 이어지지 않게, 끝나면 단축칸 물건으로 돌아가게
+        // 연출이 손을 쓰면 쓰는 몸짓(마시기·먹기·붕대)은 그만둔다: 연료통으로 마시는 몸짓이 이어지지 않게, 끝나면 단축칸 물건으로 돌아가게.
+        // 아직 시작하지 못한 사용은 첫 소리만 바로 낸다 (이미 먹은 아이템이 소리 없이 끝나지 않게)
+        if (useQueued && useItem != null) EffectAudio.PlayUseNow(useItem, queuedKind);
         useQueued = false;
         useItem = null;
         if (move == Move.Use) moveT = 1f;
@@ -896,6 +922,7 @@ public class PlayerHands : MonoBehaviour
         stowed = false;
         move = (Move)moveIndex;
         if (move == Move.Use && id != null) useKind = HeldItems.Get(id).Use;
+        useCues = null; // 미리보기 그림에서는 소리를 내지 않는다
         moveT = move == Move.None ? 1f : t;
         if (lighterFlame != null) lighterFlame.SetActive(move != Move.Flick || t >= 0.45f);
         lowerLeft = lightOn ? 0 : 1;
