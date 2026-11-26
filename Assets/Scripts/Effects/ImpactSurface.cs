@@ -14,19 +14,20 @@ public static class ImpactSurface
         // 천·모래주머니·고무·쓰레기봉투 (푹 꺼지는 것)
         ("M_Cloth", Vfx.ImpactKind.Soft), ("M_Blanket", Vfx.ImpactKind.Soft), ("M_Sandbag", Vfx.ImpactKind.Soft), ("M_TR_city_sandbag", Vfx.ImpactKind.Soft),
         ("M_TR_shelter_bed", Vfx.ImpactKind.Soft), ("M_Awning", Vfx.ImpactKind.Soft), ("M_Banner", Vfx.ImpactKind.Soft),
-        ("M_PH_old_tyre", Vfx.ImpactKind.Soft), ("M_PH_trashbag", Vfx.ImpactKind.Soft), ("M_PH_old_gas_mask", Vfx.ImpactKind.Soft),
+        ("M_PH_old_tyre", Vfx.ImpactKind.Soft), ("M_TR_city_mattress", Vfx.ImpactKind.Soft), ("M_PH_trashbag", Vfx.ImpactKind.Soft), ("M_PH_old_gas_mask", Vfx.ImpactKind.Soft),
         // 흙·풀·재 더미
         ("M_Earth", Vfx.ImpactKind.Dirt), ("M_GrassDry", Vfx.ImpactKind.Dirt), ("M_AshPile", Vfx.ImpactKind.Dirt), ("M_Vine", Vfx.ImpactKind.Dirt),
         // 나무 (상자, 판자, 탁자·의자, 죽은 나무)
         ("M_WoodPlanks", Vfx.ImpactKind.Wood), ("M_Bark", Vfx.ImpactKind.Wood), ("M_ClockWood", Vfx.ImpactKind.Wood), ("M_TR_dead_tree", Vfx.ImpactKind.Wood),
         ("M_TR_city_crate", Vfx.ImpactKind.Wood), ("M_PH_old_military_crate", Vfx.ImpactKind.Wood),
         ("M_TR_shelter_table", Vfx.ImpactKind.Wood), ("M_TR_shelter_chair", Vfx.ImpactKind.Wood),
+        ("M_TR_city_counter", Vfx.ImpactKind.Wood), ("M_TR_city_stump", Vfx.ImpactKind.Wood),
         // 벽돌
         ("M_Brick", Vfx.ImpactKind.Brick), ("M_TR_city_rubble_brick", Vfx.ImpactKind.Brick),
         // 쇠 (칠한 것·녹슨 것 모두. 차, 드럼통, 간판, 철문, 셔터, 난간, 방공호 쇠가구·발전기·화로)
         ("M_TR_wrecked_sedan", Vfx.ImpactKind.Metal), ("M_TR_pickup_truck", Vfx.ImpactKind.Metal), ("M_TR_steel_drum", Vfx.ImpactKind.Metal),
         ("M_TR_lamp_post", Vfx.ImpactKind.Metal), ("M_TR_ac_unit", Vfx.ImpactKind.Metal), ("M_TR_bus_stop", Vfx.ImpactKind.Metal),
-        ("M_TR_fire_hydrant", Vfx.ImpactKind.Metal), ("M_TR_shelter_cabinet", Vfx.ImpactKind.Metal), ("M_TR_shelter_shelf", Vfx.ImpactKind.Metal),
+        ("M_TR_fire_hydrant", Vfx.ImpactKind.Metal), ("M_TR_city_bin", Vfx.ImpactKind.Metal), ("M_TR_city_bollard", Vfx.ImpactKind.Metal), ("M_TR_city_water_tank", Vfx.ImpactKind.Metal), ("M_TR_shelter_cabinet", Vfx.ImpactKind.Metal), ("M_TR_shelter_shelf", Vfx.ImpactKind.Metal),
         ("M_TR_shelter_furnace", Vfx.ImpactKind.Metal), ("M_TR_shelter_generator", Vfx.ImpactKind.Metal), ("M_TR_shelter_workbench", Vfx.ImpactKind.Metal),
         ("M_PH_metal", Vfx.ImpactKind.Metal), ("M_RustyMetal", Vfx.ImpactKind.Metal), ("M_Steel", Vfx.ImpactKind.Metal), ("M_DarkRustDoor", Vfx.ImpactKind.Metal),
         ("M_Rebar", Vfx.ImpactKind.Metal), ("M_Generator", Vfx.ImpactKind.Metal), ("M_StreetGrate", Vfx.ImpactKind.Metal), ("M_StreetManhole", Vfx.ImpactKind.Metal), ("M_StreetFence", Vfx.ImpactKind.Metal), ("M_TreeGrate", Vfx.ImpactKind.Metal),

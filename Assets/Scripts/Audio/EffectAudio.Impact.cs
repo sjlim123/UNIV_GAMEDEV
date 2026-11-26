@@ -14,7 +14,7 @@ public static partial class EffectAudio
         if (kind == Vfx.ImpactKind.Flesh || kind == Vfx.ImpactKind.Water) return null;
         // 흙·천은 쇠 무기 소리를 따로 두지 않았다 (방망이 소리와 같다)
         string mode = fist ? "fist" : hardTool && kind != Vfx.ImpactKind.Dirt && kind != Vfx.ImpactKind.Soft ? "hard" : "bat";
-        var recorded = Recorded(kind.ToString().ToLowerInvariant() + "_" + mode);
+        var recorded = Recorded("Audio/Impact/", kind.ToString().ToLowerInvariant() + "_" + mode);
         if (recorded != null) return recorded;
         int v = rng.Next(3);
         string key = "imp_" + kind + (fist ? "_fist" : hardTool ? "_hard" : "") + v;
@@ -35,15 +35,16 @@ public static partial class EffectAudio
     static readonly Dictionary<string, AudioClip[]> recordedClips = new Dictionary<string, AudioClip[]>();
     static readonly Dictionary<string, int> lastRecorded = new Dictionary<string, int>();
 
-    // 녹음 묶음에서 하나 (바로 앞에 쓴 것은 피한다). 하나도 없으면 null
-    static AudioClip Recorded(string key)
+    // 녹음 묶음(folder + key + "_0", "_1", ...)에서 하나 (바로 앞에 쓴 것은 피한다). 하나도 없으면 null
+    static AudioClip Recorded(string folder, string key)
     {
+        key = folder + key;
         if (!recordedClips.TryGetValue(key, out var clips))
         {
             var list = new List<AudioClip>();
             for (int i = 0; i < 6; i++)
             {
-                var c = Resources.Load<AudioClip>("Audio/Impact/" + key + "_" + i);
+                var c = Resources.Load<AudioClip>(key + "_" + i);
                 if (c != null) list.Add(c);
             }
             clips = list.ToArray();

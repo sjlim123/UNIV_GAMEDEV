@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-26 · 항목 48개
+갱신: 2026-11-26 · 항목 49개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -66,6 +66,7 @@
 | 46 | 3D 모델 | 도시 불탄 나무 밑동 (city_stump_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,316개, 색 텍스처 4K 원본 → 2048로 줄여 넣음, 작업 513105f1-6160-4400-b045-7e4cbfb84a01, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수), 품질 4단계: 낮음 2,744 · 중간 2,744 · 높음 6,000 · 매우 높음 57,316 (텍스처 256 · 512 · 512 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/city_stump_01/ (만든 방법: SOURCE.md)` | 도시 가로수 가운데 부러진 나무 22그루 (높이 1.4~1.9 m). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-26 | 사용 |
 | 47 | 3D 모델 | 도시 인도 볼라드 (city_bollard_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,958개, 색 텍스처 4K 원본 → 2048로 줄여 넣음, 작업 7c87eeeb-4dea-4b1f-a8ba-08d4f3b850f7, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수), 품질 4단계: 낮음 500 · 중간 900 · 높음 2,500 · 매우 높음 57,958 (텍스처 256 · 512 · 512 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/city_bollard_01/ (만든 방법: SOURCE.md)` | 도시 횡단보도 들머리 볼라드 192개 (높이 0.915 m). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-26 | 사용 |
 | 48 | 효과음 | 근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 57개 약 74크레딧 (2026-11-26), 재질 7가지 × 방망이·쇠 무기·맨손 (흙·천은 방망이·맨손만) × 3가지씩. 프롬프트·작업 번호는 효과 세션 기록에 있음, 다듬기: 모노로 합침, 타격 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 80 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/A_벽타격/소리_higgsfield/원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Impact/` | 근접 공격이 벽·물건·바닥에 맞는 소리 — EffectAudio.Impact.cs (PlayerCombat.SurfaceHit). 파일이 없으면 코드 합성 소리로 대신한다 | 2026-11-26 | 사용 |
+| 49 | 효과음 | 근접 무기 소리 48개 (맨손·야구 방망이·못 방망이·쇠 방망이·단검의 휘두르기·적중·처치, 가죽 갑옷 적중) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 48개 약 62크레딧 (2026-11-26), 적중·처치 5무기 × 3가지, 가죽 갑옷 둔기·칼날 × 3가지, 휘두르기 맨손·방망이·쇠 방망이·단검 × 3가지, 다듬기: 모노로 합침, 타격 3 ms(휘두르기 5 ms) 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/B_무기별/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Melee/` | 근접 공격의 휘두르는 소리·적을 맞히는 소리·쓰러뜨리는 소리·가죽 갑옷 좀비를 친 소리 — EffectAudio.Melee.cs (PlayerCombat). 파일이 없으면 코드 합성 소리로 대신한다 | 2026-11-26 | 사용 |
 
 ## 출처 링크
 
@@ -117,6 +118,7 @@
 - 도시 불탄 나무 밑동 (city_stump_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 도시 인도 볼라드 (city_bollard_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
+- 근접 무기 소리 48개 (맨손·야구 방망이·못 방망이·쇠 방망이·단검의 휘두르기·적중·처치, 가죽 갑옷 적중) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 
 ## 메모
 

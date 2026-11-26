@@ -44,7 +44,10 @@ public class PlayerCombat : MonoBehaviour
             else if (weapon != null && weapon.Weapon == WeaponKind.Stab) PlayerHands.Instance.PlaySlash(); // 단검: 대각선 베기를 번갈아
             else PlayerHands.Instance.PlayPunch(); // 주먹·라이터 들이대기
         }
-        source.PlayOneShot(ProceduralAudio.Swoosh(), 0.5f);
+        // 휘두르는 소리는 무기마다 다르다. 방망이는 뒤로 젖혔다가 내려칠 때 바람 소리가 나도록 조금 늦게 낸다
+        var swing = EffectAudio.MeleeSwing(weapon);
+        if (weapon != null && weapon.Weapon == WeaponKind.Swing) StartCoroutine(OneShotLater(swing, 0.4f, 0.1f));
+        else source.PlayOneShot(swing, 0.4f);
         PlayerController.Instance.MakeNoise(1.2f);
         GameManager.Instance.UI.KickCrosshair();
 
@@ -54,9 +57,17 @@ public class PlayerCombat : MonoBehaviour
         var target = struck ? hit.collider.GetComponentInParent<IDamageable>() : null;
         if (target != null)
         {
+            bool armored = target is Zombie armoredZombie && armoredZombie.ArmorLeft; // 맞기 전에 본다 (이번 타격에 조각이 떨어질 수 있다)
             target.TakeDamage(weapon != null ? weapon.Damage : b.playerDamage, cam.transform.forward);
             bool killed = IsDead(target);
-            source.PlayOneShot(killed ? ProceduralAudio.KillHit() : ProceduralAudio.FleshHit(), 1f);
+            // 무기마다 다른 타격음. 쓰러뜨리면 더 무거운 마무리 소리, 가죽 갑옷을 치면 가죽 소리에 살 소리를 작게 겹친다
+            var armorClip = armored && !killed ? EffectAudio.ArmorHit(weapon) : null;
+            if (armorClip != null)
+            {
+                source.PlayOneShot(armorClip, 0.9f);
+                source.PlayOneShot(EffectAudio.MeleeHit(weapon, false), 0.4f);
+            }
+            else source.PlayOneShot(EffectAudio.MeleeHit(weapon, killed), 1f);
             PlayerController.Instance.Shake(killed ? 0.55f : 0.18f); // 처치 때는 크게 흔들린다
             HitEffects.PlayerHit((Component)target, hit.point, cam.transform.forward, killed);
             if (lighter && !killed)
@@ -126,6 +137,12 @@ public class PlayerCombat : MonoBehaviour
     }
 
     static int burnNotices;
+
+    IEnumerator OneShotLater(AudioClip clip, float volume, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (clip != null) source.PlayOneShot(clip, volume);
+    }
 
     static bool IsDead(IDamageable t) => (t is Zombie z && z.IsDead) || (t is Animal a && a.IsDead);
 

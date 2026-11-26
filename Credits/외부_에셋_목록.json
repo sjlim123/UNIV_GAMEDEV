@@ -783,6 +783,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "근접 무기 소리 48개 (맨손·야구 방망이·못 방망이·쇠 방망이·단검의 휘두르기·적중·처치, 가죽 갑옷 적중) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 48개 약 62크레딧 (2026-11-26)",
+        "적중·처치 5무기 × 3가지, 가죽 갑옷 둔기·칼날 × 3가지, 휘두르기 맨손·방망이·쇠 방망이·단검 × 3가지",
+        "다듬기: 모노로 합침, 타격 3 ms(휘두르기 5 ms) 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/B_무기별/소리_higgsfield_원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/Melee/",
+      "used_for": "근접 공격의 휘두르는 소리·적을 맞히는 소리·쓰러뜨리는 소리·가죽 갑옷 좀비를 친 소리 — EffectAudio.Melee.cs (PlayerCombat). 파일이 없으면 코드 합성 소리로 대신한다",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

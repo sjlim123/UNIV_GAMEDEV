@@ -58,6 +58,8 @@ public class Zombie : MonoBehaviour, IDamageable
     bool slingDrawn, slingPosed;
 
     public ZombieKind Kind { get; private set; }
+    // 가죽 좀비가 아직 갑옷 조각을 걸치고 있는가 (맞는 소리가 가죽 갑옷 소리로 바뀐다)
+    public bool ArmorLeft => Kind == ZombieKind.Leather && rig != null && armorLost < rig.Armor.Count;
     public bool IsDead => state == State.Dead;
     public float Health => health;                                    // 남은 체력 (HUD 체력바)
     public float MaxHealth => stats != null ? stats.health : 1f;
