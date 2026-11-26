@@ -121,6 +121,7 @@ public static partial class GameSceneBuilder
         if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 차 {TripoCarColliders(geo)}대의 콜라이더를 모델에 맞춤 (굽기 직전, 배치가 다 끝난 뒤)");
         if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 트럭 {TripoTruckColliders(geo)}대의 긴 짐칸에 콜라이더를 더함 (굽기 직전)");
         if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 남은 소품 1차 (잔해·상자·방호벽·모래주머니): {TripoCityRound1(geo)} (굽기 직전, 겉모습만)");
+        if (kTripoCity) Debug.Log($"[GameSceneBuilder] City: Tripo 남은 소품 2차 (매트리스·계산대·쓰레기통·물탱크·콘크리트 판·볼라드): {TripoCityRound2(geo)} (굽기 직전, 겉모습만)");
         var surface = geo.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;

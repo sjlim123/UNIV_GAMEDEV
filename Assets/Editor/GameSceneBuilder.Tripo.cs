@@ -18,7 +18,8 @@ public static partial class GameSceneBuilder
         public float metallic, smoothness, yaw;
         public string src; // 모델·텍스처 폴더 id (비면 이 항목의 id). 같은 모델에 다른 재질을 쓸 때 (불탄 차)
         public float roll; // 앞뒤 축(Z)으로 더 돌리는 각도: 모델 자체가 뒤집힌 자세인데 대상(뒤집힌 차 몸체)도 뒤집혀 있을 때 180
-        public TripoSpec(Color tint, float metallic, float smoothness, float yaw, string src = null, float roll = 0f) { this.tint = tint; this.metallic = metallic; this.smoothness = smoothness; this.yaw = yaw; this.src = src; this.roll = roll; }
+        public string tex; // 품질별 판 텍스처 이름 끝에 붙는 말 (비면 없음). 같은 모델의 색만 다른 판: "_blue" → {src}_q{n}_diff_blue (11-26 파란 쓰레기통·물탱크)
+        public TripoSpec(Color tint, float metallic, float smoothness, float yaw, string src = null, float roll = 0f, string tex = null) { this.tint = tint; this.metallic = metallic; this.smoothness = smoothness; this.yaw = yaw; this.src = src; this.roll = roll; this.tex = tex; }
     }
 
     static readonly Dictionary<string, TripoSpec> TripoSpecs = new Dictionary<string, TripoSpec>
@@ -56,6 +57,17 @@ public static partial class GameSceneBuilder
         { "city_crate_01",           new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0f, 0.15f, 0f) },
         { "city_barrier_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.15f, 90f) }, // 원본은 긴 쪽이 Z: 코드 방호벽(긴 쪽 X)에 맞춰 90°
         { "city_sandbag_01",         new TripoSpec(new Color(0.4f, 0.4f, 0.4f), 0f, 0.1f, 0f) },
+        // 도시 남은 소품 2차 (11-26 웹 스튜디오 H3.5 프리뷰). 재질 값은 손전등 전후 사진으로 맞춘 것 (Docs/맵모델링_미리보기/18_도시_남은소품_2차)
+        { "city_mattress_01",        new TripoSpec(new Color(0.45f, 0.45f, 0.45f), 0f, 0.1f, 90f) }, // 원본은 긴 쪽이 X: 코드 매트리스(긴 쪽 Z, 베개 +Z)에 맞춰 90° (베개 방향은 넣을 때 확인)
+        { "city_counter_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.15f, 0f) },
+        { "city_bin_01",             new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.3f, 0.3f, 0f) },
+        { "city_water_tank_01",      new TripoSpec(new Color(0.45f, 0.45f, 0.45f), 0f, 0.25f, 0f) },
+        { "city_slab_01",            new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.15f, 0f) },
+        { "city_stump_01",           new TripoSpec(new Color(0.25f, 0.25f, 0.25f), 0f, 0.1f, 0f) },
+        { "city_bollard_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0.5f, 0.35f, 0f) },
+        // 색만 다른 판 (크레딧 0: 텍스처 색상만 돌린 것, Docs/맵모델링_미리보기/18_도시_남은소품_2차/_도구/blue_textures.py). 예전 코드 소품의 두 색(일반·재활용, 노랑·파랑 물탱크)을 잇는다
+        { "city_bin_01_blue",        new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.3f, 0.3f, 0f, "city_bin_01", 0f, "_blue") },
+        { "city_water_tank_01_blue", new TripoSpec(new Color(0.45f, 0.45f, 0.45f), 0f, 0.25f, 0f, "city_water_tank_01", 0f, "_blue") },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
@@ -295,7 +307,7 @@ public static partial class GameSceneBuilder
         if (KKeep(m)) return m;
         var spec = TripoSpecs[matId];
         string src = spec.src ?? matId;
-        string d = $"{TripoModelDir}/{src}/{LpTierDir[q]}/{src}_q{q}_diff";
+        string d = $"{TripoModelDir}/{src}/{LpTierDir[q]}/{src}_q{q}_diff{spec.tex}";
         var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(d + ".png") ?? AssetDatabase.LoadAssetAtPath<Texture2D>(d + ".jpg");
         m.SetTexture("_BaseMap", albedo);
         m.SetTexture("_MainTex", albedo);

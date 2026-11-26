@@ -64,7 +64,7 @@ public static class Footsteps
         if (r == null)
         {
             if (name == "Crate" || name == "Top" || name == "Seat" || name == "Board" || name == "BoardModel") return Surface.Interior;
-            if (name == "Barrier") return Surface.Stone; // 예전 더러운 콘크리트 재질과 같게 (상자·책상·선반 판자는 예전 나무 재질과 같게)
+            if (name == "Barrier" || name == "FallenSlab" || name == "BrokenSlab") return Surface.Stone; // 예전 더러운 콘크리트 재질과 같게 (상자·책상·선반 판자는 예전 나무 재질과 같게). 콘크리트 판은 11-26 2차
         }
         if (name.StartsWith("Debris") || name.StartsWith("Rubble") || name == "Chunk" || name == "Slab" || name.StartsWith("Gravel") || mat.StartsWith("M_AshPile") || mat.StartsWith("M_Scorch") || mat.StartsWith("M_Soot"))
             return Surface.Gravel;
