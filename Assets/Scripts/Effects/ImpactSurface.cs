@@ -15,6 +15,7 @@ public static class ImpactSurface
         ("M_Cloth", Vfx.ImpactKind.Soft), ("M_Blanket", Vfx.ImpactKind.Soft), ("M_Sandbag", Vfx.ImpactKind.Soft), ("M_TR_city_sandbag", Vfx.ImpactKind.Soft),
         ("M_TR_shelter_bed", Vfx.ImpactKind.Soft), ("M_Awning", Vfx.ImpactKind.Soft), ("M_Banner", Vfx.ImpactKind.Soft),
         ("M_PH_old_tyre", Vfx.ImpactKind.Soft), ("M_TR_city_mattress", Vfx.ImpactKind.Soft), ("M_PH_trashbag", Vfx.ImpactKind.Soft), ("M_PH_old_gas_mask", Vfx.ImpactKind.Soft),
+        ("M_TR_apt_sofa", Vfx.ImpactKind.Soft),
         // 흙·풀·재 더미
         ("M_Earth", Vfx.ImpactKind.Dirt), ("M_GrassDry", Vfx.ImpactKind.Dirt), ("M_AshPile", Vfx.ImpactKind.Dirt), ("M_Vine", Vfx.ImpactKind.Dirt),
         // 나무 (상자, 판자, 탁자·의자, 죽은 나무)
@@ -22,6 +23,7 @@ public static class ImpactSurface
         ("M_TR_city_crate", Vfx.ImpactKind.Wood), ("M_PH_old_military_crate", Vfx.ImpactKind.Wood),
         ("M_TR_shelter_table", Vfx.ImpactKind.Wood), ("M_TR_shelter_chair", Vfx.ImpactKind.Wood),
         ("M_TR_city_counter", Vfx.ImpactKind.Wood), ("M_TR_city_stump", Vfx.ImpactKind.Wood),
+        ("M_TR_apt_wardrobe", Vfx.ImpactKind.Wood), ("M_TR_apt_low_table", Vfx.ImpactKind.Wood),
         // 벽돌
         ("M_Brick", Vfx.ImpactKind.Brick), ("M_TR_city_rubble_brick", Vfx.ImpactKind.Brick),
         // 쇠 (칠한 것·녹슨 것 모두. 차, 드럼통, 간판, 철문, 셔터, 난간, 방공호 쇠가구·발전기·화로)
@@ -29,6 +31,7 @@ public static class ImpactSurface
         ("M_TR_lamp_post", Vfx.ImpactKind.Metal), ("M_TR_ac_unit", Vfx.ImpactKind.Metal), ("M_TR_bus_stop", Vfx.ImpactKind.Metal),
         ("M_TR_fire_hydrant", Vfx.ImpactKind.Metal), ("M_TR_city_bin", Vfx.ImpactKind.Metal), ("M_TR_city_bollard", Vfx.ImpactKind.Metal), ("M_TR_city_water_tank", Vfx.ImpactKind.Metal), ("M_TR_shelter_cabinet", Vfx.ImpactKind.Metal), ("M_TR_shelter_shelf", Vfx.ImpactKind.Metal),
         ("M_TR_shelter_furnace", Vfx.ImpactKind.Metal), ("M_TR_shelter_generator", Vfx.ImpactKind.Metal), ("M_TR_shelter_workbench", Vfx.ImpactKind.Metal),
+        ("M_TR_apt_relay_cabinet", Vfx.ImpactKind.Metal), ("M_TR_apt_slide", Vfx.ImpactKind.Metal),
         ("M_PH_metal", Vfx.ImpactKind.Metal), ("M_RustyMetal", Vfx.ImpactKind.Metal), ("M_Steel", Vfx.ImpactKind.Metal), ("M_DarkRustDoor", Vfx.ImpactKind.Metal),
         ("M_Rebar", Vfx.ImpactKind.Metal), ("M_Generator", Vfx.ImpactKind.Metal), ("M_StreetGrate", Vfx.ImpactKind.Metal), ("M_StreetManhole", Vfx.ImpactKind.Metal), ("M_StreetFence", Vfx.ImpactKind.Metal), ("M_TreeGrate", Vfx.ImpactKind.Metal),
         ("M_AptRail", Vfx.ImpactKind.Metal), ("M_AptGate", Vfx.ImpactKind.Metal), ("M_FrameDark", Vfx.ImpactKind.Metal), ("M_Shutter", Vfx.ImpactKind.Metal),
@@ -48,6 +51,7 @@ public static class ImpactSurface
         ("Workbench", Vfx.ImpactKind.Metal), ("WindowGuard", Vfx.ImpactKind.Glass), ("ShardGuard", Vfx.ImpactKind.Glass),
         ("Crate", Vfx.ImpactKind.Wood), ("Top", Vfx.ImpactKind.Wood), ("Seat", Vfx.ImpactKind.Wood), ("Board", Vfx.ImpactKind.Wood),
         ("Pallet", Vfx.ImpactKind.Wood), ("Bench", Vfx.ImpactKind.Wood), ("Counter", Vfx.ImpactKind.Wood),
+        ("WardrobeCollider", Vfx.ImpactKind.Wood), ("Table", Vfx.ImpactKind.Wood), ("SofaCollider", Vfx.ImpactKind.Soft),
         ("Bed", Vfx.ImpactKind.Soft), ("Tire", Vfx.ImpactKind.Soft), ("Wheel", Vfx.ImpactKind.Soft), ("Sandbag", Vfx.ImpactKind.Soft), ("Dirt", Vfx.ImpactKind.Dirt), ("Soil", Vfx.ImpactKind.Dirt), ("Sand", Vfx.ImpactKind.Dirt),
         ("Mud", Vfx.ImpactKind.Dirt), ("Mound", Vfx.ImpactKind.Dirt),
     };

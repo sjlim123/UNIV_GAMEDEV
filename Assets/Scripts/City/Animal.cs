@@ -278,6 +278,7 @@ public class Animal : MonoBehaviour, IDamageable
         // 관절이 풀려 옆으로 힘없이 쓰러진다 (사람이 아니니 옆으로 넘어간다)
         var side = Vector3.Cross(Vector3.up, transform.forward).normalized * (Random.value < 0.5f ? 1f : -1f);
         var parts = Ragdoll.Dog(rig, side * 22f + Vector3.up * 3f);
+        BodyImpact.Attach(parts, true, 1f); // 바닥에 닿는 순간 털썩 소리와 바닥 먼지
         var dropSide = Vector3.Cross(Vector3.up, transform.forward).normalized * 0.35f;
         // 가죽 1개, 고기 1개
         PickupItem.Spawn("leather", 2, transform.position + Vector3.up * 0.5f + dropSide);
@@ -296,6 +297,7 @@ public class Animal : MonoBehaviour, IDamageable
             }
             yield return null;
         }
+        BodyImpact.Settled(parts); // 몸통이 바닥에 닿는 소리를 못 냈으면 여기서 작게
         var torso = body != null ? body.position : transform.position;
         Gore.BloodPool(torso, Random.Range(0.4f, 0.55f));
         yield return Gore.FadeAway(gameObject, rig != null ? rig.Model : transform, rig != null ? rig.Renderers : new Renderer[0], parts, 6f, 4.5f, 3f);

@@ -928,6 +928,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "적 쓰러짐 소리 14개 (사람 몸이 딱딱한 바닥·흙·풀·물웅덩이에 쓰러짐, 팔다리가 툭 닿음, 들개가 쓰러짐) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 14개 약 18크레딧 (2026-11-26)",
+        "딱딱한 바닥 3, 흙·풀 3, 물웅덩이 2, 팔다리 3, 들개 3",
+        "다듬기: 모노로 합침, 소리 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/E_적쓰러짐/소리_higgsfield_원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/Fall/",
+      "used_for": "좀비·약탈자·들개가 쓰러져 몸통·팔다리가 바닥에 닿는 순간의 소리 — EffectAudio.Fall.cs (BodyImpact). 파일이 없으면 코드 합성 쿵 소리",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-26 · 항목 57개
+갱신: 2026-11-26 · 항목 58개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -75,6 +75,7 @@
 | 55 | 효과음 | 근접 무기 소리 48개 (맨손·야구 방망이·못 방망이·쇠 방망이·단검의 휘두르기·적중·처치, 가죽 갑옷 적중) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 48개 약 62크레딧 (2026-11-26), 적중·처치 5무기 × 3가지, 가죽 갑옷 둔기·칼날 × 3가지, 휘두르기 맨손·방망이·쇠 방망이·단검 × 3가지, 다듬기: 모노로 합침, 타격 3 ms(휘두르기 5 ms) 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/B_무기별/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Melee/` | 근접 공격의 휘두르는 소리·적을 맞히는 소리·쓰러뜨리는 소리·가죽 갑옷 좀비를 친 소리 — EffectAudio.Melee.cs (PlayerCombat). 파일이 없으면 코드 합성 소리로 대신한다 | 2026-11-26 | 사용 |
 | 56 | 효과음 | 아이템 사용 소리 29개 (물 뚜껑 따기·꿀꺽·숨, 통조림 따기·씹기, 구운 고기 베어 물기, 붕대 찢기·감기, 구급상자 걸쇠·달그락) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 30개 생성(거의 무음 1개 다시 만듦) 약 39크레딧 (2026-11-26), 뚜껑 3, 꿀꺽 3, 숨 2, 캔 따기 3, 씹기 3, 베어 물기 3, 붕대 찢기 3, 붕대 감기 3, 구급상자 걸쇠 3, 달그락 3, 다듬기: 모노로 합침, 소리 3 ms(천·숨·달그락 5 ms) 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/C_아이템사용/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Use/` | 물·통조림·구운 고기·붕대·구급상자를 쓸 때 손 몸짓의 박자에 맞춰 나는 소리 — EffectAudio.Use.cs (PlayerHands). 파일이 없으면 예전 바스락 소리 | 2026-11-26 | 사용 |
 | 57 | 3D 모델 | 감염자 a·b (일반 좀비, zombie_common_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅, 같은 감염자를 두 얼굴로<br><small>그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 사용자 참고 사진의 분위기(잿빛으로 썩은 피부·피 묻은 입·흙투성이 평상복)를 글로만 옮김, a (그림 5, 단정한 머리·가슴 피): H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 30만), 삼각형 297,220, 작업 6229327f-19ba-48a0-94d5-5d37b5b12602, 60크레딧 → 리토폴로지 쿼드 46,703 10크레딧 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20크레딧 (변환 a98a8f88), b (그림 8, 헝클어진 머리·피 묻은 입): H3.5 프리뷰, 삼각형 286,658, 작업 020f4b1d-ba34-49d4-881c-4d48df2845b4, 60크레딧 → 리토폴로지 쿼드 48,802 10크레딧 → 자동 리깅 뼈 67개 20크레딧 (변환 76810b36), 가중치를 30만 메시로 옮김 (리깅 메시가 0.98배라 맞춰 줄임), 품질 4단계: 낮음 약 6,000 · 중간 24,000 · 높음 약 9.3만 · 매우 높음 약 29만 (텍스처 256 · 512 · 1024 · 2048). Blender 점검 통과 (비침 0 px, 세 자세 찢어짐 없음)</small> | Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Enemies/zombie_common_a·b/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE.md), Assets/Resources/Enemies/ZombieCommon/zombie_common_a·b.prefab` | 일반 좀비(감염자) 몸, 좀비마다 a·b 중 하나 — CharacterModels.Skinned.cs (TripoCommonZombie), 뼈는 SkinnedPlayerDriver가 게임 관절을 따라 돌린다. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-26 | 사용 |
+| 58 | 효과음 | 적 쓰러짐 소리 14개 (사람 몸이 딱딱한 바닥·흙·풀·물웅덩이에 쓰러짐, 팔다리가 툭 닿음, 들개가 쓰러짐) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 14개 약 18크레딧 (2026-11-26), 딱딱한 바닥 3, 흙·풀 3, 물웅덩이 2, 팔다리 3, 들개 3, 다듬기: 모노로 합침, 소리 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/E_적쓰러짐/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Fall/` | 좀비·약탈자·들개가 쓰러져 몸통·팔다리가 바닥에 닿는 순간의 소리 — EffectAudio.Fall.cs (BodyImpact). 파일이 없으면 코드 합성 쿵 소리 | 2026-11-26 | 사용 |
 
 ## 출처 링크
 
@@ -135,6 +136,7 @@
 - 근접 무기 소리 48개 (맨손·야구 방망이·못 방망이·쇠 방망이·단검의 휘두르기·적중·처치, 가죽 갑옷 적중) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 - 아이템 사용 소리 29개 (물 뚜껑 따기·꿀꺽·숨, 통조림 따기·씹기, 구운 고기 베어 물기, 붕대 찢기·감기, 구급상자 걸쇠·달그락) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 - 감염자 a·b (일반 좀비, zombie_common_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅, 같은 감염자를 두 얼굴로 — https://studio.tripo3d.ai/
+- 적 쓰러짐 소리 14개 (사람 몸이 딱딱한 바닥·흙·풀·물웅덩이에 쓰러짐, 팔다리가 툭 닿음, 들개가 쓰러짐) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 
 ## 메모
 

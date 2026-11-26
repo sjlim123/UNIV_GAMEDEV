@@ -661,6 +661,7 @@ public class Zombie : MonoBehaviour, IDamageable
         var flat = new Vector3(direction.x, 0, direction.z).normalized;
         var impulse = (flat * 90f + Vector3.up * 12f) * Mathf.Max(0.6f, size);
         var parts = Ragdoll.Human(rig, impulse);
+        BodyImpact.Attach(parts, false, size); // 몸통·팔다리가 바닥에 닿는 순간 쿵·툭 소리와 바닥 먼지
         DropLoot();
 
         // 몸이 바닥에 늘어진 뒤 그 자리에 피가 번진다
@@ -670,8 +671,8 @@ public class Zombie : MonoBehaviour, IDamageable
             settle += Time.deltaTime;
             yield return null;
         }
+        BodyImpact.Settled(parts); // 몸통이 바닥에 닿는 소리를 못 냈으면 여기서 작게
         var torso = body != null ? body.position : transform.position;
-        ProceduralAudio.PlayAt3D(ProceduralAudio.Bang(), torso, 0.35f, 0.6f);
         Gore.BloodPool(torso, Random.Range(0.55f, 0.8f) * Mathf.Max(0.7f, size));
 
         // 잠시 뒤 색이 어두워지며 땅으로 가라앉아 사라진다
