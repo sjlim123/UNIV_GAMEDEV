@@ -319,6 +319,15 @@ public static class GameSettings
         }
     }
 
+    // 씬이 열린 뒤 코드로 더하거나 바꾼 입자(SmokeFx의 드럼통 연기 등)도 세부 묘사 품질(ParticleScale)을 따르게 원래 양을 등록한다
+    public static void RegisterParticles(ParticleSystem ps, float baseRate)
+    {
+        if (ps == null) return;
+        particleRates[ps] = baseRate;
+        var em = ps.emission;
+        em.rateOverTimeMultiplier = baseRate * ParticleScale;
+    }
+
     // 씬이 열릴 때 그 씬의 원래 밝기·그림자 값을 기억해 둔다
     public static void CaptureScene()
     {

@@ -86,8 +86,9 @@ public class Burning : MonoBehaviour
         var sm = smoke.main;
         sm.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.6f);
         sm.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.2f);
-        sm.startSize = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
-        sm.startColor = new ParticleSystem.MinMaxGradient(new Color(0.1f, 0.09f, 0.08f, 0.5f), new Color(0.2f, 0.18f, 0.16f, 0.35f));
+        sm.startSize = new ParticleSystem.MinMaxCurve(0.45f, 0.8f); // 연기 플립북은 칸의 7할만 차서 예전 흐린 원보다 크게
+        sm.startRotation = SmokeFx.Tilt; // 연기 그림은 위쪽이 밝다: 조금만 기울인다
+        sm.startColor = new ParticleSystem.MinMaxGradient(new Color(0.38f, 0.35f, 0.32f, 0.7f), new Color(0.5f, 0.46f, 0.42f, 0.55f));
         sm.gravityModifier = -0.15f;
         var sem = smoke.emission;
         sem.rateOverTime = 18;
@@ -99,12 +100,15 @@ public class Burning : MonoBehaviour
         var scol = smoke.colorOverLifetime;
         scol.enabled = true;
         var sg = new Gradient();
-        sg.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+        // 불 바로 위에서는 불빛에 주황으로 물들었다가 오르며 잿빛이 된다 (어두운 밤에도 연기가 보이게)
+        sg.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.62f, 0.4f), 0), new GradientColorKey(Color.white, 0.4f), new GradientColorKey(new Color(0.85f, 0.85f, 0.85f), 1) },
             new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.2f), new GradientAlphaKey(0, 1) });
         scol.color = sg;
         var ssize = smoke.sizeOverLifetime;
         ssize.enabled = true;
         ssize.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.6f, 1, 1.8f));
+        // 진짜 연기 영상으로 만든 뭉게뭉게 퍼지는 연기 (SmokeFx)
+        SmokeFx.Apply(smoke, false, 0.1f, 1f);
 
         // 주변을 비추는 일렁이는 불빛
         var lg = new GameObject("BurnLight");

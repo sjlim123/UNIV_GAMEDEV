@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 // 먼지는 빛을 받지 않는 재질이라 그 자리의 조명을 어림해 색에 미리 곱한다 (전구 옆은 따뜻하게, 구석은 어둡게).
 public static partial class Vfx
 {
-    static ParticleSystem dust, chips, sparks, arcs, flash, waves, chipsWood, chipsRust, chipsGold, drops;
+    static ParticleSystem dust, chips, sparks, arcs, flash, waves, chipsWood, chipsRust, chipsGold, drops, smoke;
     static Material dustMat, sparkMat, arcMat, flashMat, chipMat, waveMat, dropMat;
     static VfxRunner runner;
     static readonly List<Light> sceneLights = new List<Light>();
@@ -246,12 +246,12 @@ public static partial class Vfx
             position = pos,
             velocity = vel,
             startLifetime = life,
-            startSize = size,
+            startSize = size * 1.5f, // 연기 플립북은 칸의 7할만 찬다
             startColor = c,
-            rotation = Random.Range(0f, 360f),
-            angularVelocity = Random.Range(-20f, 20f)
+            rotation = Random.Range(-15f, 15f), // 연기 그림은 위쪽이 밝다: 조금만 기울인다
+            angularVelocity = Random.Range(-4f, 4f)
         };
-        dust.Emit(p, 1);
+        smoke.Emit(p, 1);
     }
 
     // 웅덩이 첨벙 (strength 0~1): 물방울이 튀어 오르고 낮게 물보라가 인다
@@ -645,6 +645,36 @@ public static partial class Vfx
             sheet.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
             sheet.startFrame = new ParticleSystem.MinMaxCurve(0f, 1f);
             var r = dust.GetComponent<ParticleSystemRenderer>();
+            r.sortMode = ParticleSystemSortMode.Distance;
+            r.maxParticleSize = 2f;
+        }
+        // 배기 연기: 먼지와 같이 흐르되 진짜 연기 영상 플립북(SmokeFx)을 사는 동안 넘긴다
+        smoke = System("VfxSmoke", SmokeFx.Puff, 400);
+        {
+            var main = smoke.main;
+            main.gravityModifier = 0.02f;
+            var lim = smoke.limitVelocityOverLifetime;
+            lim.enabled = true;
+            lim.drag = 1.4f;
+            lim.multiplyDragByParticleVelocity = true;
+            var noise = smoke.noise;
+            noise.enabled = true;
+            noise.strength = 0.22f;
+            noise.frequency = 0.5f;
+            noise.scrollSpeed = 0.4f;
+            noise.quality = ParticleSystemNoiseQuality.Medium;
+            noise.damping = true;
+            var col = smoke.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.08f), new GradientAlphaKey(0.85f, 0.5f), new GradientAlphaKey(0, 1) });
+            col.color = g;
+            var size = smoke.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0, 0.6f, 1, 1.5f));
+            SmokeFx.Apply(smoke, false, 0.1f, 1f);
+            var r = smoke.GetComponent<ParticleSystemRenderer>();
             r.sortMode = ParticleSystemSortMode.Distance;
             r.maxParticleSize = 2f;
         }

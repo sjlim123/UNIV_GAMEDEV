@@ -944,6 +944,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과 텍스처",
+      "name": "연기 플립북 2장 (뭉게뭉게 커졌다 흩어지는 굵은 연기, 실처럼 꼬이며 오르는 가는 연기) — Higgsfield Seedance 2.5로 글에서 만든 연기 영상을 8×8칸(64장면) 텍스처로 묶음",
+      "items": [
+        "모델 seedance_2_5 (ByteDance Seedance 2.5, Higgsfield), 5초 720p(960×960) 영상 2개, 한 개 35크레딧, 약 70크레딧 (2026-11-26)",
+        "굵은 연기 0.45~4.95초, 가는 연기 0.2~4.95초를 64장면으로 고르게 뽑음 → 검은 바탕의 밝기로 투명도와 음영을 만들고, 칸 가장자리는 부드럽게 줄임, 칸 256 px → 2048×2048 (BC7)",
+        "원본 영상은 저장소 밖 Docs/효과_미리보기/F_연기/영상_higgsfield_원본"
+      ],
+      "author": "Higgsfield AI (Seedance 2.5)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Effects/T_SmokePuff_8x8.png, Assets/Resources/Effects/T_SmokeWisp_8x8.png",
+      "used_for": "도시·102동의 연기 기둥과 폭격 잔해·구덩이 연기, 불 드럼통 위 연기, 불붙은 적의 연기, 방공호 발전기 배기 연기 — SmokeFx.cs (입자가 사는 동안 64장면을 넘긴다)",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }
