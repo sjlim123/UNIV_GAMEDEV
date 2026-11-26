@@ -116,7 +116,7 @@ public class HazardZone : MonoBehaviour
         if (walked < StepMeters) return;
         walked -= StepMeters;
         pc.MakeNoise(NoiseLevel);
-        ProceduralAudio.PlayAt(ProceduralAudio.GlassBreak(), pc.transform.position, 0.22f, Random.Range(1.3f, 1.6f), 1f, 14f);
+        ProceduralAudio.PlayAt(ProceduralAudio.GlassStep(), pc.transform.position, 0.3f, Random.Range(0.95f, 1.1f), 1f, 14f);
     }
 
     // 힌트: 안에 들어오면 한 번 보여 준다. 이미 본 힌트면 (같은 비트를 쓰는 다른 구역이 먼저 보여 줬어도) 더 볼 일이 없다

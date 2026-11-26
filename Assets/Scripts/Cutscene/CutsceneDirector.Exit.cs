@@ -509,13 +509,20 @@ public partial class CutsceneDirector
     }
 
     // 문짝이 스토퍼(열림)나 틀(닫힘)에 부딪힌다: 쾅 소리, 문틀 먼지, 화면 흔들림
+    int doorBangFrame = -1;
+
     void DoorBang(int i, float om)
     {
         var pivot = i == 0 ? exitDoorL : exitDoorR;
         if (pivot == null) return;
         var edge = pivot.TransformPoint(new Vector3(i == 0 ? 1.1f : -1.1f, 1.2f, 0));
         float v = Mathf.Clamp01(om / 420f);
-        ProceduralAudio.PlayAt(ProceduralAudio.DoorBang(), edge, 0.5f + 0.45f * v, Random.Range(0.94f, 1.06f), 1f, 70f);
+        // 두 문짝은 같은 프레임에 부딪힌다: 소리는 한 번만 (녹음이 서로 달라 쾅이 두 번으로 들리지 않게). 닫힐 때 틀에 닿는 약한 소리는 작게
+        if (Time.frameCount != doorBangFrame)
+        {
+            doorBangFrame = Time.frameCount;
+            ProceduralAudio.PlayAt(ProceduralAudio.DoorBang(), edge, 0.2f + 0.75f * v, Random.Range(0.94f, 1.06f), 1f, 70f);
+        }
         if (doorDust != null) { doorDust.Play(); doorDust.Emit(Mathf.RoundToInt(12 + 24 * v)); }
         shake = Mathf.Max(shake, 0.08f + 0.14f * v);
         Sfx($"{(i == 0 ? "왼쪽" : "오른쪽")} 문짝 쾅 (각속도 {om:0}도/초, 각도 {doorAngle[i]:0}도)");

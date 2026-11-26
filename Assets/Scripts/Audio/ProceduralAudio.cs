@@ -650,6 +650,8 @@ public static class ProceduralAudio
     // 거실 TV의 예능 소리 (반복): 웅얼거리는 말소리(음절처럼 끊기는 잡음) 위에 가벼운 배경 음악과 가끔 터지는 웃음
     public static AudioClip TvMurmur()
     {
+        var rec = EffectAudio.World("tv_murmur_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var voice = Biquad.BandPass(900, 1.2f);
         var voice2 = Biquad.BandPass(2200, 2f);
         var laugh = Biquad.BandPass(1400, 0.8f);
@@ -671,6 +673,8 @@ public static class ProceduralAudio
     // 긴급 속보 앵커의 다급한 말소리 (반복): 낮고 빠른 음절, 음악 없음
     public static AudioClip NewsMurmur()
     {
+        var rec = EffectAudio.World("news_murmur_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var voice = Biquad.BandPass(700, 1.4f);
         var voice2 = Biquad.BandPass(1900, 2.2f);
         float syl = 0, sylEnv = 0, phase = 0;
@@ -699,6 +703,8 @@ public static class ProceduralAudio
     // TV 채널이 끊길 때의 지지직 소리
     public static AudioClip Static()
     {
+        var rec = EffectAudio.World("tv_static"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var hp = Biquad.BandPass(3500, 0.4f);
         var lp = Biquad.LowPass(1200);
         return Make("tvstatic", 0.7f, t =>
@@ -711,6 +717,8 @@ public static class ProceduralAudio
     // 핵폭발의 낮은 땅울림 (8초): 아주 낮은 굉음이 천천히 커졌다가 길게 사라진다
     public static AudioClip Rumble()
     {
+        var rec = EffectAudio.World("rumble"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         float brown = 0;
         var lp = Biquad.LowPass(70, 0.9f);
         return Make("rumble", 8f, t =>
@@ -725,6 +733,8 @@ public static class ProceduralAudio
     // 충격파가 닿는 소리 (3초): 날카로운 파열음 → 넓은 굉음 → 낮은 쿵
     public static AudioClip Blast()
     {
+        var rec = EffectAudio.World("blast"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var crack = Biquad.BandPass(2400, 0.7f);
         var roar = Biquad.LowPass(900);
         var body = Biquad.LowPass(160);
@@ -738,8 +748,13 @@ public static class ProceduralAudio
     }
 
     // 창유리가 깨져 흩어지는 소리 (1.4초): 와장창 하는 첫 파열 + 여기저기 떨어지며 쨍그랑거리는 조각들
+    // 깨진 유리 조각을 밟는 바스락·자그락 (녹음, 없으면 합성 유리 깨짐을 높게). GlassBreak는 창이 깨지는 소리라 바닥 유리 조각에는 이것을 쓴다
+    public static AudioClip GlassStep() => EffectAudio.World("glass_step") ?? GlassBreak();
+
     public static AudioClip GlassBreak()
     {
+        var rec = EffectAudio.World("glass_break"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var crash = Biquad.BandPass(3200, 0.6f);
         var rings = new Biquad[6];
         var freqs = new float[6];
@@ -765,6 +780,8 @@ public static class ProceduralAudio
     // 달리며 헐떡이는 숨 (반복 2초): 빠른 들숨·날숨에 목소리가 조금 섞인다
     public static AudioClip RunBreath()
     {
+        var rec = EffectAudio.World("run_breath_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bp = Biquad.BandPass(800, 0.8f);
         var voice = Biquad.BandPass(380, 3f);
         return Make("runbreath", 2f, t =>
@@ -780,6 +797,8 @@ public static class ProceduralAudio
     // 천장에서 먼지·회반죽이 떨어지는 소리 (2초): 자잘한 톡톡 소리와 쏟아지는 모래 소리
     public static AudioClip DebrisFall()
     {
+        var rec = EffectAudio.World("debris_fall"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var sand = Biquad.BandPass(2600, 1f);
         var tap = Biquad.BandPass(1200, 6f);
         float tapEnv = 0;
@@ -795,6 +814,8 @@ public static class ProceduralAudio
     // 배음이 많은 거친 소리에 살짝 어긋난 둘째 소리가 울리고, 회전자가 바람을 끊는 떨림이 있다
     public static AudioClip CivilSiren()
     {
+        var rec = EffectAudio.World("civil_siren_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Biquad.LowPass(3000, 0.8f);
         float phase = 0, phase2 = 0;
         return Make("civilsiren", 10f, t =>
@@ -815,6 +836,8 @@ public static class ProceduralAudio
     // 군 헬기 (반복 4초): 두 날 로터의 '두두두'(초당 10.75번) 펄스 + 몸통 울림 + 꼬리 로터 윙윙 + 터빈 쉭 소리
     public static AudioClip Helicopter()
     {
+        var rec = EffectAudio.World("helicopter_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var thump = Biquad.LowPass(150, 1.1f);
         var slap = Biquad.BandPass(380, 1.4f);
         var tail = Biquad.BandPass(1100, 5f);
@@ -835,6 +858,8 @@ public static class ProceduralAudio
     // 멀리서 건물이 무너지는 소리 (6초): 낮은 땅울림이 커지고, 갈라지는 소리와 콘크리트가 쏟아지는 소리, 2.6초에 큰 쿵과 먼지 쏴아
     public static AudioClip BuildingCollapse()
     {
+        var rec = EffectAudio.World("building_collapse"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         float brown = 0;
         var low = Biquad.LowPass(110, 0.9f);
         var bigLow = Biquad.LowPass(90, 0.9f);
@@ -863,6 +888,8 @@ public static class ProceduralAudio
     // 멀리서 터지는 2차 폭발 (3.5초): 먹먹한 쿵과 낮은 울림, 건물 사이를 굴러오는 긴 꼬리 (0.9초쯤 메아리)
     public static AudioClip FarExplosion()
     {
+        var rec = EffectAudio.World("far_explosion"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var body = Biquad.LowPass(240, 1.0f);
         var tail = Biquad.LowPass(800);
         var sub = Biquad.LowPass(60, 1.2f);
@@ -878,6 +905,8 @@ public static class ProceduralAudio
     // 유리 달린 쇠문이 스토퍼나 틀에 부딪히는 소리 (0.7초): 둔탁한 쿵 + 쇠 울림 + 유리·틀이 덜컹거리는 꼬리
     public static AudioClip DoorBang()
     {
+        var rec = EffectAudio.World("door_burst"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var thud = Biquad.LowPass(520, 1.1f);
         var ring = Biquad.BandPass(2100, 12f);
         var ring2 = Biquad.BandPass(3300, 18f);

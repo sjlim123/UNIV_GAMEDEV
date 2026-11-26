@@ -1056,6 +1056,23 @@
       "added": "2026-11-27",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "도입 컷씬 소리 21개 (TV·뉴스 웅성, TV 잡음, 민방위 사이렌, 땅울림, 가까운 폭발, 유리 깨짐, 잔해, 달리는 숨, 헬기, 건물 무너짐, 먼 폭발, 문 쾅 열림) — Higgsfield Seed Audio 1.0으로 글에서 만든 효과음·환경음",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 22개 생성(거의 무음 TV 웅성 1개 다시 만듦) 약 29크레딧 (2026-11-27)",
+        "반복 소리 5개(TV·뉴스 웅성, 사이렌, 헬기, 달리는 숨)는 끝을 처음에 섞어 이음새 없이, 크기는 예전 합성 소리와 같게. TV·뉴스 목소리는 알아들을 수 없는 웅얼거림. 재난 경보음은 합성 그대로 둠",
+        "게임 장면에 맞춰 다시 자름: 가까운 폭발 하나는 빈 틈을 빼 큰 소리가 바로, 문 쾅 열림 하나는 앞의 약한 소리를 뺌, 건물 무너짐은 땅울림을 앞에 이어 큰 소리가 건물이 내려앉는 2.7초에, 달리는 숨은 크기를 고르게. 깨진 유리 바닥 발소리(glass_step 3개)는 유리 깨짐 녹음의 조각 소리 부분을 잘라 만듦",
+        "원본은 저장소 밖 Docs/효과_미리보기/G_합성소리/3차_소리_higgsfield_원본"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/World/",
+      "used_for": "도입 컷씬(거실 TV, 공습, 탈출)의 소리와 102동 깨진 유리 바닥 발소리 — EffectAudio.World.cs (ProceduralAudio가 먼저 찾는다). 파일이 없으면 예전 합성 소리",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }
