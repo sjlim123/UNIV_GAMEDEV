@@ -484,7 +484,7 @@ public class Zombie : MonoBehaviour, IDamageable
             float before = doorTimer;
             doorTimer += dt;
             if (Mathf.Floor(before / 0.8f) != Mathf.Floor(doorTimer / 0.8f))
-                ProceduralAudio.PlayAt(ProceduralAudio.Bang(), door.transform.position, 0.9f, Random.Range(0.9f, 1.1f));
+                ProceduralAudio.PlayAt(ProceduralAudio.DoorSlam(), door.transform.position, 0.9f, Random.Range(0.9f, 1.1f));
             if (doorTimer > breakTime) { door.ForceOpen(transform.position); doorTimer = 0; }
             return;
         }

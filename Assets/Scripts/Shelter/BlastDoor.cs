@@ -31,7 +31,7 @@ public class BlastDoor : Interactable
     public override void Interact(PlayerInteractor player)
     {
         GameManager.Instance.UI.ShowMessage("발전기 전력으로 잠긴 방폭문이다. 전력이 끊기면… 열려 버린다.", 3.5f);
-        ProceduralAudio.PlayAt(ProceduralAudio.Bang(), leaf.position, 0.35f, 1.3f);
+        ProceduralAudio.PlayAt(ProceduralAudio.DoorSlam(), leaf.position, 0.35f, 1.3f);
     }
 
     void Awake()

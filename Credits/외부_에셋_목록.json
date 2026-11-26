@@ -960,6 +960,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "합성 소리 1차 교체 49개 (바람·비 반복음, 문 삐걱·걸쇠·쾅·쇠 부딪힘, 미닫이문·방폭문, 플레이어 다침·맞음·점프·착지·바스락, 들개 짖음·으르렁·물기·깨갱·낑낑·킁킁) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리·환경음",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 51개 생성(거의 무음 낑낑 2개 다시 만듦) 약 66크레딧 (2026-11-26)",
+        "바람·비·미닫이문 구르기는 반복해도 이음새가 들리지 않게 끝을 처음에 섞음 (바람은 1초 단위 크기를 고르게), 비는 부드러운 리미터",
+        "다듬기: 모노, 소리 3 ms(천·숨·개 5 ms) 앞에서 자름, -48 dB 아래 꼬리 자르고 60 ms 줄임, 크기는 예전 합성 소리와 같게 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/G_합성소리/소리_higgsfield_원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/World/",
+      "used_for": "도시·메인 메뉴 바람, 비, 문·창고·해치·방폭문·미닫이문 소리, 플레이어 다침·맞음·점프·착지·바스락, 들개 소리 — EffectAudio.World.cs (ProceduralAudio·EffectAudio·DogAudio가 먼저 찾는다). 파일이 없으면 예전 합성 소리",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

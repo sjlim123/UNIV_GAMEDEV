@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-26 · 항목 59개
+갱신: 2026-11-26 · 항목 60개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -77,6 +77,7 @@
 | 57 | 3D 모델 | 감염자 a·b (일반 좀비, zombie_common_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅, 같은 감염자를 두 얼굴로<br><small>그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 사용자 참고 사진의 분위기(잿빛으로 썩은 피부·피 묻은 입·흙투성이 평상복)를 글로만 옮김, a (그림 5, 단정한 머리·가슴 피): H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 30만), 삼각형 297,220, 작업 6229327f-19ba-48a0-94d5-5d37b5b12602, 60크레딧 → 리토폴로지 쿼드 46,703 10크레딧 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20크레딧 (변환 a98a8f88), b (그림 8, 헝클어진 머리·피 묻은 입): H3.5 프리뷰, 삼각형 286,658, 작업 020f4b1d-ba34-49d4-881c-4d48df2845b4, 60크레딧 → 리토폴로지 쿼드 48,802 10크레딧 → 자동 리깅 뼈 67개 20크레딧 (변환 76810b36), 가중치를 30만 메시로 옮김 (리깅 메시가 0.98배라 맞춰 줄임), 품질 4단계: 낮음 약 6,000 · 중간 24,000 · 높음 약 9.3만 · 매우 높음 약 29만 (텍스처 256 · 512 · 1024 · 2048). Blender 점검 통과 (비침 0 px, 세 자세 찢어짐 없음)</small> | Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Enemies/zombie_common_a·b/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE.md), Assets/Resources/Enemies/ZombieCommon/zombie_common_a·b.prefab` | 일반 좀비(감염자) 몸, 좀비마다 a·b 중 하나 — CharacterModels.Skinned.cs (TripoCommonZombie), 뼈는 SkinnedPlayerDriver가 게임 관절을 따라 돌린다. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-26 | 사용 |
 | 58 | 효과음 | 적 쓰러짐 소리 14개 (사람 몸이 딱딱한 바닥·흙·풀·물웅덩이에 쓰러짐, 팔다리가 툭 닿음, 들개가 쓰러짐) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 14개 약 18크레딧 (2026-11-26), 딱딱한 바닥 3, 흙·풀 3, 물웅덩이 2, 팔다리 3, 들개 3, 다듬기: 모노로 합침, 소리 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 60 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/E_적쓰러짐/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Fall/` | 좀비·약탈자·들개가 쓰러져 몸통·팔다리가 바닥에 닿는 순간의 소리 — EffectAudio.Fall.cs (BodyImpact). 파일이 없으면 코드 합성 쿵 소리 | 2026-11-26 | 사용 |
 | 59 | 효과 텍스처 | 연기 플립북 2장 (뭉게뭉게 커졌다 흩어지는 굵은 연기, 실처럼 꼬이며 오르는 가는 연기) — Higgsfield Seedance 2.5로 글에서 만든 연기 영상을 8×8칸(64장면) 텍스처로 묶음<br><small>모델 seedance_2_5 (ByteDance Seedance 2.5, Higgsfield), 5초 720p(960×960) 영상 2개, 한 개 35크레딧, 약 70크레딧 (2026-11-26), 굵은 연기 0.45~4.95초, 가는 연기 0.2~4.95초를 64장면으로 고르게 뽑음 → 검은 바탕의 밝기로 투명도와 음영을 만들고, 칸 가장자리는 부드럽게 줄임, 칸 256 px → 2048×2048 (BC7), 원본 영상은 저장소 밖 Docs/효과_미리보기/F_연기/영상_higgsfield_원본</small> | Higgsfield AI (Seedance 2.5)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Effects/T_SmokePuff_8x8.png, Assets/Resources/Effects/T_SmokeWisp_8x8.png` | 도시·102동의 연기 기둥과 폭격 잔해·구덩이 연기, 불 드럼통 위 연기, 불붙은 적의 연기, 방공호 발전기 배기 연기 — SmokeFx.cs (입자가 사는 동안 64장면을 넘긴다) | 2026-11-26 | 사용 |
+| 60 | 효과음 | 합성 소리 1차 교체 49개 (바람·비 반복음, 문 삐걱·걸쇠·쾅·쇠 부딪힘, 미닫이문·방폭문, 플레이어 다침·맞음·점프·착지·바스락, 들개 짖음·으르렁·물기·깨갱·낑낑·킁킁) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리·환경음<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 51개 생성(거의 무음 낑낑 2개 다시 만듦) 약 66크레딧 (2026-11-26), 바람·비·미닫이문 구르기는 반복해도 이음새가 들리지 않게 끝을 처음에 섞음 (바람은 1초 단위 크기를 고르게), 비는 부드러운 리미터, 다듬기: 모노, 소리 3 ms(천·숨·개 5 ms) 앞에서 자름, -48 dB 아래 꼬리 자르고 60 ms 줄임, 크기는 예전 합성 소리와 같게 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/G_합성소리/소리_higgsfield_원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/World/` | 도시·메인 메뉴 바람, 비, 문·창고·해치·방폭문·미닫이문 소리, 플레이어 다침·맞음·점프·착지·바스락, 들개 소리 — EffectAudio.World.cs (ProceduralAudio·EffectAudio·DogAudio가 먼저 찾는다). 파일이 없으면 예전 합성 소리 | 2026-11-26 | 사용 |
 
 ## 출처 링크
 
@@ -139,6 +140,7 @@
 - 감염자 a·b (일반 좀비, zombie_common_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅, 같은 감염자를 두 얼굴로 — https://studio.tripo3d.ai/
 - 적 쓰러짐 소리 14개 (사람 몸이 딱딱한 바닥·흙·풀·물웅덩이에 쓰러짐, 팔다리가 툭 닿음, 들개가 쓰러짐) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 - 연기 플립북 2장 (뭉게뭉게 커졌다 흩어지는 굵은 연기, 실처럼 꼬이며 오르는 가는 연기) — Higgsfield Seedance 2.5로 글에서 만든 연기 영상을 8×8칸(64장면) 텍스처로 묶음 — https://higgsfield.ai/
+- 합성 소리 1차 교체 49개 (바람·비 반복음, 문 삐걱·걸쇠·쾅·쇠 부딪힘, 미닫이문·방폭문, 플레이어 다침·맞음·점프·착지·바스락, 들개 짖음·으르렁·물기·깨갱·낑낑·킁킁) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리·환경음 — https://higgsfield.ai/
 
 ## 메모
 

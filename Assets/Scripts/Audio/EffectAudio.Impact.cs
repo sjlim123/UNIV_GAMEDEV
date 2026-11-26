@@ -36,7 +36,7 @@ public static partial class EffectAudio
     static readonly Dictionary<string, int> lastRecorded = new Dictionary<string, int>();
 
     // 녹음 묶음(folder + key + "_0", "_1", ...)에서 하나 (바로 앞에 쓴 것은 피한다). 하나도 없으면 null
-    static AudioClip Recorded(string folder, string key)
+    internal static AudioClip Recorded(string folder, string key)
     {
         key = folder + key;
         if (!recordedClips.TryGetValue(key, out var clips))

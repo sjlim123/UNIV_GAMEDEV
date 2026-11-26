@@ -206,7 +206,7 @@ public class ShelterDeparture : MonoBehaviour
             hands.LockRight(Vector3.zero, Quaternion.identity, 0f);
             hands.LockLeft(Vector3.zero, Quaternion.identity, 0f);
         }
-        ProceduralAudio.PlayAt(ProceduralAudio.Bang(), door.position, 0.5f, 0.7f);
+        ProceduralAudio.PlayAt(ProceduralAudio.DoorSlam(), door.position, 0.5f, 0.7f);
 
         // 4) 열린 문으로 들어서며 어두워진다 (두 걸음). 넣어 둔 손전등을 다시 꺼낸다 (도시에서 꺼낸 채 시작)
         if (lightWasOut && fl != null && !fl.IsOut) fl.SetOut(true);

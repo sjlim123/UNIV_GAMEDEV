@@ -81,6 +81,8 @@ public static class ProceduralAudio
     // 빗소리 (반복): 쏴아 하는 고른 소음 + 바닥·물웅덩이에 떨어지는 빗방울 톡톡 소리
     public static AudioClip Rain()
     {
+        var rec = EffectAudio.World("rain_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var hiss = Biquad.BandPass(2600, 0.5f);
         var body = Biquad.LowPass(1100);
         var drop = Biquad.BandPass(3400, 3f);
@@ -96,6 +98,8 @@ public static class ProceduralAudio
 
     public static AudioClip Wind()
     {
+        var rec = EffectAudio.World("wind_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         float brown = 0;
         var bp = Biquad.BandPass(380, 0.6f);
         var lp = Biquad.LowPass(900);
@@ -120,6 +124,9 @@ public static class ProceduralAudio
     {
         return Make("scream", 1.1f, MakeVoice(300, 1.1f, 0.6f, new[] { 900f, 1500f, 2900f }, 6f));
     }
+
+    // 플레이어가 다치거나 쓰러질 때의 목소리 (녹음, 없으면 합성). Hurt는 약탈자 목소리에도 쓰여서 플레이어에는 이것을 쓴다
+    public static AudioClip PlayerHurt() => EffectAudio.World("hurt") ?? Hurt();
 
     public static AudioClip Hurt()
     {
@@ -149,6 +156,8 @@ public static class ProceduralAudio
 
     public static AudioClip Hit()
     {
+        var rec = EffectAudio.World("hit"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Biquad.LowPass(1200);
         return Make("hit", 0.3f, t => Mathf.Sin(2 * Mathf.PI * 85 * t) * Mathf.Exp(-t * 22) + lp.Process(Noise()) * Mathf.Exp(-t * 28));
     }
@@ -167,6 +176,8 @@ public static class ProceduralAudio
 
     public static AudioClip Creak()
     {
+        var rec = EffectAudio.World("creak"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var r1 = Biquad.BandPass(650, 12);
         var r2 = Biquad.BandPass(1350, 10);
         float phase = 0;
@@ -180,6 +191,9 @@ public static class ProceduralAudio
             return (r1.Process(imp) + r2.Process(imp) * 0.6f) * env;
         });
     }
+
+    // 문을 세게 닫거나 두드리는 쾅 (녹음, 없으면 합성 쾅). Bang은 처치 연출에도 쓰여서 문에는 이것을 쓴다
+    public static AudioClip DoorSlam() => EffectAudio.World("door_slam") ?? Bang();
 
     public static AudioClip Bang()
     {
@@ -221,6 +235,8 @@ public static class ProceduralAudio
 
     public static AudioClip Rustle()
     {
+        var rec = EffectAudio.World("rustle"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bp = Biquad.BandPass(2400, 1.5f);
         return Make("rustle", 0.25f, t => bp.Process(Noise()) * Mathf.Sin(Mathf.PI * t / 0.25f) * (0.6f + 0.4f * Mathf.Sin(t * 180)), 0.5f);
     }
@@ -233,6 +249,8 @@ public static class ProceduralAudio
 
     public static AudioClip Clang()
     {
+        var rec = EffectAudio.World("clang"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         return Make("clang", 0.8f, t =>
             (Mathf.Sin(2 * Mathf.PI * 523 * t) + 0.7f * Mathf.Sin(2 * Mathf.PI * 1347 * t) + 0.5f * Mathf.Sin(2 * Mathf.PI * 2210 * t) + 0.3f * Mathf.Sin(2 * Mathf.PI * 3530 * t))
             * Mathf.Exp(-t * 7) + Noise() * Mathf.Exp(-t * 90), 0.6f);
@@ -509,11 +527,16 @@ public static class ProceduralAudio
     // 점프할 때 옷이 스치는 소리와 짧은 숨
     public static AudioClip JumpEffort()
     {
+        var rec = EffectAudio.World("jump"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bp = Biquad.BandPass(1100, 1.2f);
         return Make("jump", 0.22f, t => bp.Process(Noise()) * Mathf.Sin(Mathf.PI * t / 0.22f) * (0.7f + 0.3f * Mathf.Sin(t * 90)), 0.5f);
     }
 
     // 착지: 발이 바닥을 쿵 디디는 소리 + 자갈 긁힘
+    // 플레이어가 군화로 착지하는 소리 (녹음, 없으면 합성). Land는 떨어진 아이템에도 쓰여서 플레이어에는 이것을 쓴다
+    public static AudioClip PlayerLand() => EffectAudio.World("land") ?? Land();
+
     public static AudioClip Land()
     {
         var lp = Biquad.LowPass(900);
@@ -526,6 +549,8 @@ public static class ProceduralAudio
     // 무거운 철문·해치가 덜컥 걸리는 소리: 빗장이 철컥 → 묵직한 쿵 → 쇠가 우는 짧은 울림
     public static AudioClip Latch()
     {
+        var rec = EffectAudio.World("latch"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var click = Biquad.BandPass(2800, 3f);
         var body = Biquad.LowPass(240);
         var ring1 = Biquad.BandPass(410, 30f);

@@ -256,7 +256,7 @@ public class PlayerController : MonoBehaviour
                 float impact = Mathf.Clamp01(fallSpeed / 8f);
                 landVelocity -= 0.6f + impact * 1.6f;
                 stepSource.pitch = Random.Range(0.85f, 1.05f);
-                stepSource.PlayOneShot(ProceduralAudio.Land(), 0.35f + impact * 0.5f);
+                stepSource.PlayOneShot(ProceduralAudio.PlayerLand(), 0.35f + impact * 0.5f);
                 MakeNoise(0.8f + impact);
             }
             airTime = 0;

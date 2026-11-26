@@ -185,6 +185,8 @@ public static partial class EffectAudio
     // 미닫이 철문이 레일 위를 굴러가는 소리 (반복): 낮은 우르릉 + 쇠가 긁히는 쉭 + 바퀴가 이음매를 넘는 덜컹
     public static AudioClip DoorRoll()
     {
+        var rec = EffectAudio.World("door_roll"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var rumble = Filter.LowPass(220, 0.9f);
         var grind = Filter.BandPass(900, 1.2f);
         var hp = Filter.HighPass(40);
@@ -201,6 +203,8 @@ public static partial class EffectAudio
     // 문이 끝에 닿아 탁 멈추는 소리: 쇠가 부딪히는 쿵 + 짧은 울림 + 레일이 덜덜거리는 여운
     public static AudioClip DoorStop()
     {
+        var rec = EffectAudio.World("door_stop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.9f;
         var thud = Filter.LowPass(260, 0.9f);
         var ring = Filter.BandPass(1700, 6f);
@@ -221,6 +225,8 @@ public static partial class EffectAudio
     // 방폭문의 공압 장치: 압축 공기가 치이익 빠지는 소리 (연구 시설 기밀문처럼). release: 잠금을 풀 때(길고 거세다) / 아니면 닫혀 밀봉될 때(짧고 끝에 걸쇠가 탁)
     public static AudioClip Pneumatic(bool release)
     {
+        var rec = EffectAudio.World(release ? "pneumatic_out" : "pneumatic_in"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         float dur = release ? 1.5f : 1.05f;
         var hiss = Filter.BandPass(release ? 3000f : 2500f, 0.6f);
         var hiss2 = Filter.BandPass(5400f, 0.8f);
@@ -243,6 +249,8 @@ public static partial class EffectAudio
     // 걸쇠를 풀고 손잡이를 당기는 짧은 철컥
     public static AudioClip DoorUnlatch()
     {
+        var rec = EffectAudio.World("door_unlatch"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.22f;
         var click = Filter.BandPass(2100, 2.5f);
         var tock = Filter.BandPass(420, 3f);

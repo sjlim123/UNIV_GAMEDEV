@@ -65,7 +65,7 @@ public class Door : Interactable
     {
         OpenAwayFrom(from);
         speed = 8f;
-        ProceduralAudio.PlayAt(ProceduralAudio.Bang(), transform.position, 1f, 0.8f);
+        ProceduralAudio.PlayAt(ProceduralAudio.DoorSlam(), transform.position, 1f, 0.8f);
         Debris(2.2f);
     }
 

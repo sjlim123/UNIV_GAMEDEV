@@ -105,6 +105,8 @@ public static class DogAudio
     // 짖기 "웝!": 숨을 터뜨리는 짧고 큰 소리. 음이 확 올라갔다 떨어지고 입이 벌어지며 밝아진다. v 0~2 변형 (높이·길이가 조금씩 다르다)
     public static AudioClip Bark(int v)
     {
+        var rec = EffectAudio.World("bark"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         v = Mathf.Clamp(v, 0, 2);
         float dur = 0.3f + v * 0.04f;
         float baseF = 230f + v * 35f;
@@ -122,6 +124,8 @@ public static class DogAudio
     // 으르렁 (경고): 낮게 떨리는 목소리가 서서히 거세진다. 입술이 부르르 떨린다. v 0~1
     public static AudioClip Growl(int v)
     {
+        var rec = EffectAudio.World("growl"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         v = Mathf.Clamp(v, 0, 1);
         float dur = 1.25f + v * 0.35f;
         var th = new Throat(430f, 1050f, 2300f, 0.75f, 0.35f, 170f);
@@ -140,6 +144,8 @@ public static class DogAudio
     // 물 때: 짧고 사나운 으르렁 (Snap과 함께 낸다)
     public static AudioClip Snarl()
     {
+        var rec = EffectAudio.World("snarl"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.42f;
         var th = new Throat(520f, 1250f, 2600f, 0.7f, 0.45f, 180f);
         return Make("dog_snarl", dur, t =>
@@ -154,6 +160,8 @@ public static class DogAudio
     // 깨갱 (맞았을 때): 높은 소리가 치솟았다 꺾인다
     public static AudioClip Yelp()
     {
+        var rec = EffectAudio.World("yelp"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.36f;
         var th = new Throat(1100f, 2200f, 3400f, 0.3f, 0.45f, 300f);
         return Make("dog_yelp", dur, t =>
@@ -168,6 +176,8 @@ public static class DogAudio
     // 낑낑 (죽어 가며): 약하게 떨며 내려가는 소리
     public static AudioClip Whine()
     {
+        var rec = EffectAudio.World("whine"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.95f;
         var th = new Throat(950f, 1900f, 3100f, 0.35f, 0.6f, 260f);
         return Make("dog_whine", dur, t =>
@@ -182,6 +192,8 @@ public static class DogAudio
     // 킁킁 (배회할 때): 코로 들이쉬는 짧은 숨 두세 번
     public static AudioClip Snuffle()
     {
+        var rec = EffectAudio.World("snuffle"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.55f;
         var nose = Filter.BandPass(1300f, 1.4f);
         var lp = Filter.LowPass(2400f);

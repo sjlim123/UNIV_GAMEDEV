@@ -474,7 +474,7 @@ public class GameManager : MonoBehaviour
             var pc = PlayerController.Instance;
             if (pc != null) pc.PlayDeath(fallSeconds);
             sfx.pitch = 0.75f;
-            sfx.PlayOneShot(ProceduralAudio.Hurt(), 0.9f);
+            sfx.PlayOneShot(ProceduralAudio.PlayerHurt(), 0.9f);
             sfx.PlayOneShot(ProceduralAudio.Heartbeat(), 0.8f);
             var grade = new DeathGrade();
             for (float t = 0; t < fallSeconds; t += Time.unscaledDeltaTime)
