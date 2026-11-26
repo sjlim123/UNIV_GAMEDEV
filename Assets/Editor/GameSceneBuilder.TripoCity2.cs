@@ -60,38 +60,14 @@ public static partial class GameSceneBuilder
             var mat = r.sharedMaterial;
             bool isBox = mf.sharedMesh.vertexCount == 24 && (t.lossyScale - Vector3.one).sqrMagnitude < 1e-4f; // Box(): 크기가 메시에 들어간 상자
             Vector3 size = mf.sharedMesh.bounds.size;
-            if (isBox && (t.name == "Chunk" || t.name == "Rubble" || t.name == "RoofChunk"))
-            {
-                int h = Mathf.Abs(Mathf.RoundToInt(t.position.x * 7.31f) * 31 + Mathf.RoundToInt(t.position.z * 5.17f) * 17 + Mathf.RoundToInt(t.position.y * 3.3f)) % 2;
-                float flat = size.y / Mathf.Max(1e-3f, Mathf.Min(size.x, size.z));
-                if (mat == M["brick"]) id = "city_rubble_brick_01";
-                else if (mat == M["asphalt"]) id = "city_rubble_asphalt_01";
-                else if (mat == M["cracked"]) id = flat < 0.35f ? "city_rubble_slab_01" : "city_rubble_concrete_01";
-                else if (mat == M["aptWall"]) id = flat < 0.3f ? "city_rubble_slab_01" : "city_rubble_wall_01";
-                else if (mat == M["dirty"]) id = flat < 0.3f ? "city_rubble_slab_01" : h == 0 ? "city_rubble_wall_01" : "city_rubble_concrete_01";
-            }
+            if (isBox && (t.name == "Chunk" || t.name == "Rubble" || t.name == "RoofChunk")) id = TcRubbleId(t, mat, size);
             else if (isBox && t.name == "Crate") id = "city_crate_01";
             // 쓰러진 방호벽(Z 80°)은 예전 상자 그대로 둔다: 모델을 상자 축에 맞추면 길쭉한 면을 세워 땅에 반쯤 묻힌 모습이 된다 (11-24 검토)
             else if (isBox && t.name == "Barrier" && Vector3.Dot(t.up, Vector3.up) > 0.9f && Mathf.Abs(size.x - 2f) < 0.05f && Mathf.Abs(size.y - 0.9f) < 0.05f) id = "city_barrier_01";
             else if (isBox && t.name.StartsWith("Sandbag") && t.name.Length == 8) id = "city_sandbag_01";
             if (id != null)
             {
-                bool rubble = id.StartsWith("city_rubble_");
-                // 잔해가 앞뒤(z)로 길쭉하면 모델을 90° 돌려 긴 쪽(x)을 맞춘다 (축마다 늘이면 덩어리 모델이 4배까지 찌그러졌다, 11-24 검토)
-                Transform target = t;
-                if (rubble && size.z > size.x * 1.3f)
-                {
-                    target = new GameObject("ChunkFit").transform;
-                    target.SetParent(t, false);
-                    target.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                }
-                var holder = TripoSwapRenderers(target, id, new List<Renderer> { r }, TripoFit.Box, TripoAlign.Bottom, 0f, null, Vector3.zero);
-                if (holder != null)
-                {
-                    add(id);
-                    if (id == "city_rubble_concrete_01") TcFillRebarBody(holder.transform);
-                }
-                else if (target != t) Object.DestroyImmediate(target.gameObject);
+                if (TcBoxSwap(t, r, id, size) != null) add(id);
                 continue;
             }
             // 눕힌 캡슐 모래주머니: 긴 축(캡슐의 위)을 수평 받침의 X로
@@ -109,6 +85,40 @@ public static partial class GameSceneBuilder
         var parts = new List<string>();
         foreach (var kv in cnt) parts.Add(kv.Key + " " + kv.Value);
         return string.Join(", ", parts);
+    }
+
+    // 잔해 상자 하나에 놓을 모델을 예전 재질로 고른다 (1차의 규칙. 102동 TripoAptPass도 같은 규칙을 쓴다). 잔해 재질이 아니면 null
+    static string TcRubbleId(Transform t, Material mat, Vector3 size)
+    {
+        int h = Mathf.Abs(Mathf.RoundToInt(t.position.x * 7.31f) * 31 + Mathf.RoundToInt(t.position.z * 5.17f) * 17 + Mathf.RoundToInt(t.position.y * 3.3f)) % 2;
+        float flat = size.y / Mathf.Max(1e-3f, Mathf.Min(size.x, size.z));
+        if (mat == M["brick"]) return "city_rubble_brick_01";
+        if (mat == M["asphalt"]) return "city_rubble_asphalt_01";
+        if (mat == M["cracked"]) return flat < 0.35f ? "city_rubble_slab_01" : "city_rubble_concrete_01";
+        if (mat == M["aptWall"]) return flat < 0.3f ? "city_rubble_slab_01" : "city_rubble_wall_01";
+        if (mat == M["dirty"]) return flat < 0.3f ? "city_rubble_slab_01" : h == 0 ? "city_rubble_wall_01" : "city_rubble_concrete_01";
+        return null;
+    }
+
+    // 상자 하나(t의 렌더러 r, 메시 크기 size)의 겉모습을 모델로 바꾼다 (1차의 본체: 잔해·나무 상자·방호벽·모래주머니). 받침을 돌려준다 (못 바꾸면 null)
+    static GameObject TcBoxSwap(Transform t, MeshRenderer r, string id, Vector3 size)
+    {
+        bool rubble = id.StartsWith("city_rubble_");
+        // 잔해가 앞뒤(z)로 길쭉하면 모델을 90° 돌려 긴 쪽(x)을 맞춘다 (축마다 늘이면 덩어리 모델이 4배까지 찌그러졌다, 11-24 검토)
+        Transform target = t;
+        if (rubble && size.z > size.x * 1.3f)
+        {
+            target = new GameObject("ChunkFit").transform;
+            target.SetParent(t, false);
+            target.localRotation = Quaternion.Euler(0f, 90f, 0f);
+        }
+        var holder = TripoSwapRenderers(target, id, new List<Renderer> { r }, TripoFit.Box, TripoAlign.Bottom, 0f, null, Vector3.zero);
+        if (holder != null)
+        {
+            if (id == "city_rubble_concrete_01") TcFillRebarBody(holder.transform);
+        }
+        else if (target != t) Object.DestroyImmediate(target.gameObject);
+        return holder;
     }
 
     // 철근 콘크리트 덩어리: 몸통(모델 x -0.25~0.49, 전체 -0.48~0.49)이 예전 상자를 채우고 철근은 -x 쪽 밖으로 삐져나오게 (11-24 검토:
@@ -209,46 +219,61 @@ public static partial class GameSceneBuilder
             else if (!isBox && ((n == "Shell" && pn == "Tank") || (n == "Tank" && size.y > 1.8f && size.y < 2.2f && size.x > 1.4f && size.x < 1.9f)))
             {
                 var target = n == "Shell" ? t.parent : t; // 가게 옥상: 쓰러진 탱크는 Tank째 돌아가 있다. 아파트: 합친 메시 하나(다리 토막 포함)
-                var ob = TripoLocalBounds(target, new Renderer[] { r }); // 받침은 target과 같은 자리·방향이라 같은 좌표다
-                var h = TripoSwapRenderers(target, "city_water_tank_01", new List<Renderer> { r }, TripoFit.Box, TripoAlign.Bottom, 0f, blue ? "city_water_tank_01_blue" : null, Vector3.zero);
-                if (h != null)
-                {
-                    TcTankRound(h.transform, ob);
-                    add(blue ? "city_water_tank_01(파랑)" : "city_water_tank_01");
-                }
+                if (TcTankSwap(target, r, blue) != null) add(blue ? "city_water_tank_01(파랑)" : "city_water_tank_01");
             }
             else if (isBox && (n == "BrokenSlab" || n == "HangingWall" || (n == "FallenSlab" && Mathf.Max(size.x, size.z) < 3f)))
             {
-                int thin = size.x <= size.y && size.x <= size.z ? 0 : size.y <= size.z ? 1 : 2;
-                int lng = -1;
-                for (int a = 0; a < 3; a++) if (a != thin && (lng < 0 || size[a] > size[lng])) lng = a;
-                int mid = 3 - thin - lng;
-                var fwd = Vector3.zero; fwd[lng] = 1f;
-                var up = Vector3.zero; up[thin] = 1f;
-                var fit = new GameObject("SlabFit").transform;
-                fit.SetParent(t, false);
-                fit.localRotation = Quaternion.LookRotation(fwd, up);
-                var lb = TripoLocalBounds(fit, new Renderer[] { r }); // 받침 기준 예전 상자: x 짧은 쪽, y 얇은 쪽, z 긴 쪽
-                float ratio = size[lng] / Mathf.Max(0.01f, size[mid]);
-                int pieces = ratio > 2.8f ? Mathf.Max(2, Mathf.RoundToInt(ratio / 1.73f)) : 1; // 모델은 긴 쪽이 짧은 쪽의 1.73배
-                float seg = lb.size.z / pieces;
-                int made = 0;
-                for (int k = 0; k < pieces; k++)
+                int pieces = TcSlabSwap(t, r, size);
+                if (pieces > 0)
                 {
-                    var box = new Bounds(new Vector3(lb.center.x, lb.center.y, lb.min.z + seg * (k + 0.5f)), new Vector3(lb.size.x, lb.size.y, seg));
-                    if (TcBoxFit(fit, "city_slab_01", null, box, k % 2 == 1 ? 180f : 0f, new Vector3(1f, 1f, 1f / 0.88f)) != null) made++;
-                }
-                if (made > 0)
-                {
-                    TcStrip(new List<Renderer> { r });
                     add("city_slab_01(" + n + ")"); if (pieces > 1) add("city_slab_01(이어 놓은 장)");
                 }
-                else Object.DestroyImmediate(fit.gameObject);
             }
         }
         var parts = new List<string>();
         foreach (var kv in cnt) parts.Add(kv.Key + " " + kv.Value);
         return string.Join(", ", parts);
+    }
+
+    // 물탱크 하나(target 아래 렌더러 r)를 모델로 바꾼다 (2차의 본체. 102동 꼭대기 물탱크도 쓴다). 받침을 돌려준다 (못 바꾸면 null)
+    static GameObject TcTankSwap(Transform target, MeshRenderer r, bool blue)
+    {
+        var ob = TripoLocalBounds(target, new Renderer[] { r }); // 받침은 target과 같은 자리·방향이라 같은 좌표다
+        var h = TripoSwapRenderers(target, "city_water_tank_01", new List<Renderer> { r }, TripoFit.Box, TripoAlign.Bottom, 0f, blue ? "city_water_tank_01_blue" : null, Vector3.zero);
+        if (h != null) TcTankRound(h.transform, ob);
+        return h;
+    }
+
+    // 콘크리트 판 상자 하나(t의 렌더러 r, 메시 크기 size)를 모델로 바꾼다 (2차의 본체. 102동 잘린 면의 판·매달린 벽도 쓴다).
+    // 놓으려던 장 수를 돌려준다 (0 = 못 바꿈, 2 이상 = 긴 쪽으로 이어 놓음)
+    static int TcSlabSwap(Transform t, MeshRenderer r, Vector3 size)
+    {
+        int thin = size.x <= size.y && size.x <= size.z ? 0 : size.y <= size.z ? 1 : 2;
+        int lng = -1;
+        for (int a = 0; a < 3; a++) if (a != thin && (lng < 0 || size[a] > size[lng])) lng = a;
+        int mid = 3 - thin - lng;
+        var fwd = Vector3.zero; fwd[lng] = 1f;
+        var up = Vector3.zero; up[thin] = 1f;
+        var fit = new GameObject("SlabFit").transform;
+        fit.SetParent(t, false);
+        fit.localRotation = Quaternion.LookRotation(fwd, up);
+        var lb = TripoLocalBounds(fit, new Renderer[] { r }); // 받침 기준 예전 상자: x 짧은 쪽, y 얇은 쪽, z 긴 쪽
+        float ratio = size[lng] / Mathf.Max(0.01f, size[mid]);
+        int pieces = ratio > 2.8f ? Mathf.Max(2, Mathf.RoundToInt(ratio / 1.73f)) : 1; // 모델은 긴 쪽이 짧은 쪽의 1.73배
+        float seg = lb.size.z / pieces;
+        int made = 0;
+        for (int k = 0; k < pieces; k++)
+        {
+            var box = new Bounds(new Vector3(lb.center.x, lb.center.y, lb.min.z + seg * (k + 0.5f)), new Vector3(lb.size.x, lb.size.y, seg));
+            if (TcBoxFit(fit, "city_slab_01", null, box, k % 2 == 1 ? 180f : 0f, new Vector3(1f, 1f, 1f / 0.88f)) != null) made++;
+        }
+        if (made > 0)
+        {
+            TcStrip(new List<Renderer> { r });
+            return pieces;
+        }
+        Object.DestroyImmediate(fit.gameObject);
+        return 0;
     }
 
     // 품질 4단계 모델을 frame(크기 1, 똑바로 선 묶음) 아래에 놓는다: 모델 자체 높이를 height로, frame 기준 상자의 바닥 가운데를 localPos에.

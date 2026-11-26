@@ -10,13 +10,17 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 // GameSceneBuilder의 삼일아파트 102동 씬 (Apt102): 메뉴, 재질 불러오기, 지킴 검사, 씬 조립, 마당, 하늘·빛, 내비메시, 저장.
-// 탑은 GameSceneBuilder.AptTower.cs / .AptTowerRooms.cs, 점검 메뉴는 .Apt102Probe.cs에 있다.
+// 탑은 GameSceneBuilder.AptTower.cs / .AptTowerRooms.cs, 점검 메뉴는 .Apt102Probe.cs, 소품의 Tripo 모델은 .TripoApt.cs / .TripoAptRooms.cs에 있다.
 // 이 생성기는 재질·텍스처·글꼴을 만들거나 고치지 않는다: 도시 생성기가 디스크에 저장해 둔 재질을 불러 쓰기만 하고,
 // 저장하는 것은 자기 씬·메시 묶음·내비메시·후처리 프로파일뿐이다 (SaveAssets를 부르면 메모리에서 틀어진 재질까지 함께 저장된다)
 public static partial class GameSceneBuilder
 {
     // 생성 뒤 지킴 검사에서 달라진 파일 수 (-1 = 이 에디터 세션에서 아직 생성하지 않았다)
     public static int Apt102GuardDiffs = -1;
+
+    // 소품을 Tripo 모델로 바꿔 만든다 (GameSceneBuilder.TripoApt.cs). false면 예전 코드 소품 그대로 만든다: 전후 비교용 기준 씬을 뽑을 때
+    // 스크립트를 고치지 않고 이 값만 끄고 생성한다 (스크립트를 다시 읽으면 true로 돌아온다)
+    public static bool Apt102Tripo = true;
 
     const string Apt102ScenePath = SceneDir + "/Apt102.unity";
     const string Apt102MeshPath = GenDir + "/Apt102Meshes.asset";
@@ -69,6 +73,12 @@ public static partial class GameSceneBuilder
             Debug.LogWarning(abort + "프리팹(Player·Zombie·Dog)이 없습니다. 게임 씬 전체 생성을 먼저 하세요.");
             return;
         }
+        // Tripo 모델의 품질별 판과 재질이 미리 다 있어야 한다: 이 생성기는 재질을 만들지 않는다 (없는 채로 돌리면 생성 중에 재질 파일이 새로 생겨 지킴 검사에 걸린다)
+        if (Apt102Tripo && !TripoAptReady(out string tripoMissing))
+        {
+            Debug.LogWarning(abort + "Tripo 모델의 품질별 판이나 재질 파일이 없습니다 (새 모델의 재질은 메뉴 'Tripo 재질 만들기 (102동 새 모델)'로 먼저 만드세요): " + tripoMissing);
+            return;
+        }
         // 이 생성기가 M에 넣은 재질은 끝나면(거절·실패 때도) 도로 뺀다. 다른 생성기는 M에 든 키를 보고 갈라진다:
         // 같은 에디터 세션에서 도시를 다시 생성하면 "gold"가 있다고 RuinMaterials를 건너뛰고, "doorRust"가 있다고 해치 문짝 재질을 바꾼다
         var kept = new Dictionary<string, Material>(M);
@@ -93,6 +103,18 @@ public static partial class GameSceneBuilder
 
         System.Exception error = null;
         apt102MeshesReplaced = apt102SceneSaved = false;
+        // Tripo 소품을 넣는 동안(kTripoApt) 재질은 불러 쓰기만 한다 (kKeepMaterials: TripoTierMat이 있는 재질에 값을 쓰지 않는다).
+        // '이번에 만든 재질' 목록은 먼저 비운다: 같은 에디터 세션의 앞선 생성이 남긴 재질은 불러 쓰기에서 빠져 다시 쓰인다
+        bool keepWas = kKeepMaterials, tripoWas = kTripoApt;
+        HashSet<Material> createdWas = null, writtenWas = null;
+        if (Apt102Tripo)
+        {
+            createdWas = new HashSet<Material>(kCreated); writtenWas = new HashSet<Material>(kWritten); // 도시 씬만 생성의 2초 뒤 재검사가 이 목록을 쓴다: 끝나면 돌려놓는다
+            kCreated.Clear();
+            kWritten.Clear();
+            kKeepMaterials = true;
+            kTripoApt = true;
+        }
         try
         {
             BuildApt102Scene(player, zombie, dog);
@@ -104,6 +126,9 @@ public static partial class GameSceneBuilder
         }
         finally
         {
+            kTripoApt = tripoWas; // 같은 도우미(가로등·가로수·실외기·차)를 메뉴·컷씬 생성기도 쓴다: 멈췄을 때도 반드시 끈다
+            kKeepMaterials = keepWas;
+            if (createdWas != null) { kCreated.Clear(); kCreated.UnionWith(createdWas); kWritten.Clear(); kWritten.UnionWith(writtenWas); }
             Apt102RestoreM(kept);
             Apt102GuardDiffs = Apt102GuardVerify(guard); // 도중에 멈춰도 재질·도시가 그대로인지는 본다
             SessionState.SetInt(Apt102GuardKey, Apt102GuardDiffs);
@@ -552,6 +577,15 @@ public static partial class GameSceneBuilder
         var fall = new GameObject("FallWatch");
         fall.transform.SetParent(dyn, false);
         fall.AddComponent<FallWatch>();
+
+        // Tripo 소품 (kTripoApt): 마당·탑·방을 다 지은 뒤, 내비메시를 굽기 직전에 이름으로 훑어 겉모습만 바꾼다 (난수를 쓰지 않는다, GameSceneBuilder.TripoApt.cs).
+        // 여기서 콜라이더가 바뀌는 것은 세단 둘뿐이다: 도시처럼 예전 부품 콜라이더를 지우고 모델에 맞춘 상자 하나를 단다 (승합차는 코드 그대로라 콜라이더도 그대로)
+        if (kTripoApt)
+        {
+            Debug.Log($"[GameSceneBuilder] Apt102: Tripo 소품 (잔해·나무 상자·콘크리트 판·물탱크·경비실·미끄럼틀·중계기함): {TripoAptPass(geo)} (굽기 직전, 겉모습만)");
+            Debug.Log($"[GameSceneBuilder] Apt102: Tripo 차 {TripoCarColliders(geo)}대의 콜라이더를 모델에 맞춤 (굽기 직전. 승합차는 코드 그대로)");
+            Debug.Log("[GameSceneBuilder] Apt102: Tripo 모델 받침 — " + TripoAptTally(geo));
+        }
 
         // 내비메시 굽기. 문짝이 없는 씬이라 굽는 동안 꺼 둘 것이 없다 (레이어 2를 빼는 것은 도시와 같게 둔다)
         var lids = Apt102SiteNavCuts(geo.Find("Site"));

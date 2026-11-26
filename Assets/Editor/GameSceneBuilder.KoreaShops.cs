@@ -614,9 +614,9 @@ public static partial class GameSceneBuilder
         bgo.AddComponent<MeshFilter>().sharedMesh = bracket;
         bgo.AddComponent<MeshRenderer>().sharedMaterial = M["steelGrey"];
         GameObjectUtility.SetStaticEditorFlags(bgo, StaticEditorFlags.BatchingStatic);
-        // 도시: 몸통·팬을 품질별 실외기로 (뒷면을 벽 쪽에 붙이고 폭을 맞추고, 다리 끝을 예전 몸통 바닥에. 콜라이더는 그대로, 난수 안 씀).
+        // 도시·102동: 몸통·팬을 품질별 실외기로 (뒷면을 벽 쪽에 붙이고 폭을 맞추고, 다리 끝을 예전 몸통 바닥에. 콜라이더는 그대로, 난수 안 씀).
         // 그림자는 드리우지 않는다: 467개라 그림자 그리기 부담이 크고, 높음·매우 높음 판의 둥근 철망·두꺼운 날개가 손전등 그림자로 팬 자리를 까맣게 덮었다 (11-23 검수)
-        if (kTripoCity)
+        if (kTripoCity || kTripoApt)
         {
             var ach = TripoSwap(g, "ac_unit_01", new[] { "Body", "Fan" }, TripoFit.Width, TripoAlign.BackBottom);
             if (ach != null) foreach (var acr in ach.GetComponentsInChildren<MeshRenderer>(true)) acr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

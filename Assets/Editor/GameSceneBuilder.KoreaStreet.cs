@@ -517,9 +517,10 @@ public static partial class GameSceneBuilder
                 KPart(limbs, new Vector3(0.05f, KF(r, 0.2f, 0.5f), 0.05f), 1f, new Vector3(KF(r, -0.06f, 0.06f), h + 0.1f, KF(r, -0.06f, 0.06f)), Quaternion.Euler(KF(r, -25f, 25f), KF(r, 0, 360), KF(r, -25f, 25f)));
         }
         CombineInto(trunk.transform, "Limbs", limbs, M["bark"]);
-        // 도시: 부러지지 않은 나무는 줄기·가지를 품질별 죽은 나무로 (높이를 이 나무 높이에 맞춘다. 격자 덮개·흙·캡슐 콜라이더는 그대로, 난수는 위에서 다 뽑았다)
-        if (kTripoCity && !stump) TripoSwap(g, "dead_tree_01", new[] { "Trunk" }, TripoFit.Height, TripoAlign.BottomTrunk); // 밑동을 격자 가운데(캡슐 콜라이더 자리)에
+        // 도시·102동: 부러지지 않은 나무는 줄기·가지를 품질별 죽은 나무로 (높이를 이 나무 높이에 맞춘다. 격자 덮개·흙·캡슐 콜라이더는 그대로, 난수는 위에서 다 뽑았다)
+        bool tripoTree = kTripoCity || kTripoApt;
+        if (tripoTree && !stump) TripoSwap(g, "dead_tree_01", new[] { "Trunk" }, TripoFit.Height, TripoAlign.BottomTrunk); // 밑동을 격자 가운데(캡슐 콜라이더 자리)에
         // 부러진 나무(밑동): 불탄 밑동 모델 (11-26 2차). 모델은 높이 1에 뿌리 퍼짐 0.53이라 높이를 1.9 m까지만 (그보다 크면 뿌리가 격자 덮개 1.2 m 밖으로 나간다)
-        else if (kTripoCity) TripoSwap(g, "city_stump_01", new[] { "Trunk" }, TripoFit.Height, TripoAlign.BottomTrunk, Mathf.Min(h, 1.9f));
+        else if (tripoTree) TripoSwap(g, "city_stump_01", new[] { "Trunk" }, TripoFit.Height, TripoAlign.BottomTrunk, Mathf.Min(h, 1.9f));
     }
 }

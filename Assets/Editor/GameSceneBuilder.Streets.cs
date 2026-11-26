@@ -169,7 +169,8 @@ public static partial class GameSceneBuilder
             body.localRotation = Quaternion.Euler(0, 0, 180);
             body.localPosition = Vector3.up * (roofTop + 0.005f);
         }
-        TripoCar(body, flipped, burnt); // 도시: 몸체 겉모습을 Tripo 차로 (난수를 뽑지 않는다, GameSceneBuilder.Tripo.cs)
+        // 102동(kTripoApt)은 승합차를 코드 모습 그대로 둔다 (사용자 결정 11-26: 세단 모델로 바꾸면 키 큰 엄폐물이 사라진다). 도시는 예전처럼 모두 바꾼다
+        if (!kTripoApt || variant != 2) TripoCar(body, flipped, burnt); // 도시·102동: 몸체 겉모습을 Tripo 차로 (난수를 뽑지 않는다, GameSceneBuilder.Tripo.cs)
     }
 
     // 버려진 차들이 땅에 붙었는지 검사하고(렌더러 경계 아랫면이 바닥에서 5cm 넘게 뜨거나 묻히면) 바로잡는다. 결과를 콘솔에 적는다

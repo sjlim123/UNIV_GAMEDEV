@@ -51,6 +51,13 @@ public static partial class GameSceneBuilder
         { "city_slab_01",             new[] { 300, 1000, 5000 } },
         { "city_stump_01",            new[] { 400, 1200, 6000 } },
         { "city_bollard_01",          new[] { 500, 900, 2500 } },   // 192개. 낮음 200(멈춘 312)은 윗부분이 비스듬히 잘렸고, 높음 2000은 이음매 지키기에서 둥근 머리가 깨졌다 → 높음도 새로 굽는다 (11-26 품질 사진)
+        // 102동 새 모델 6종 (11-26 웹 스튜디오 H3.5 프리뷰, 원본 5.4만~5.8만). 한두 개씩만 놓이는 큰 소품이라 낮은 단계도 넉넉히
+        { "apt_relay_cabinet_01",     new[] { 16000, 16000, 24000 } }, // 보스 보상 상자 하나뿐: 안에 선반·무전기가 있어 새로 구우면 껍데기가 무너지고(3,474), 이음매 지키기 8,000은 몸통이 구겨졌다 → 넉넉히
+        { "apt_guard_booth_01",       new[] { 600, 1500, 6000 } },
+        { "apt_slide_01",             new[] { 1500, 3000, 8000 } }, // 가는 난간·사다리: 너무 줄이면 무너진다
+        { "apt_sofa_01",              new[] { 8000, 10000, 16000 } }, // 새로 구운 1,574는 팔걸이가 접혔고 이음매 지키기 4,500은 쿠션이 울퉁불퉁 구겨졌다 → 넉넉히 (방 하나에 하나뿐)
+        { "apt_wardrobe_01",          new[] { 300, 800, 4000 } },
+        { "apt_low_table_01",         new[] { 300, 800, 4000 } },
     };
 
     // 품질별 텍스처 크기 {낮음, 중간, 높음}. 없으면 256·512·512. 2차 두 모델은 매우 높음이 2048이라 1024·512·256으로 한 단계씩
@@ -65,6 +72,11 @@ public static partial class GameSceneBuilder
     static readonly HashSet<string> TtCity2 = new HashSet<string>
     {
         "city_mattress_01", "city_counter_01", "city_bin_01", "city_water_tank_01", "city_slab_01", "city_stump_01", "city_bollard_01",
+    };
+    // 102동 새 모델 (11-26): 메뉴가 따로다
+    static readonly HashSet<string> TtApt1 = new HashSet<string>
+    {
+        "apt_relay_cabinet_01", "apt_guard_booth_01", "apt_slide_01", "apt_sofa_01", "apt_wardrobe_01", "apt_low_table_01",
     };
     // 도시 남은 소품 1차 (11-24): 메뉴가 따로다
     static readonly HashSet<string> TtCity1 = new HashSet<string>
@@ -92,6 +104,7 @@ public static partial class GameSceneBuilder
         "city_rubble_concrete_01", "city_rubble_slab_01", "city_rubble_asphalt_01", "city_rubble_wall_01", "city_rubble_brick_01",
         "city_crate_01", "city_barrier_01", "city_sandbag_01",
         "city_mattress_01", "city_counter_01", "city_bin_01", "city_water_tank_01", "city_slab_01", "city_stump_01", "city_bollard_01",
+        "apt_relay_cabinet_01", "apt_guard_booth_01", "apt_slide_01", "apt_sofa_01", "apt_wardrobe_01", "apt_low_table_01",
     };
 
     // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
@@ -108,7 +121,9 @@ public static partial class GameSceneBuilder
     };
     static readonly Dictionary<string, int[]> TtForceRebake = new Dictionary<string, int[]> { { "shelter_shelf_01", new[] { 1 } }, { "city_bollard_01", new[] { 2 } },
         // 11-26 H3.5 모델: 이음매를 지키며 6천으로 줄인 높음 판이 중간(새로 구운 것)보다 찌그러져 보였다 (계산대 모서리·쓰레기통 옆면·물탱크 띠) → 높음도 새로 굽는다
-        { "city_counter_01", new[] { 2 } }, { "city_bin_01", new[] { 2 } }, { "city_water_tank_01", new[] { 2 } } };
+        { "city_counter_01", new[] { 2 } }, { "city_bin_01", new[] { 2 } }, { "city_water_tank_01", new[] { 2 } },
+        // 102동 새 모델도 같다: 경비실 지붕 모서리·옷장 옆면·밥상 상판이 이음매 지키기 높음에서 구겨졌다
+        { "apt_guard_booth_01", new[] { 2 } }, { "apt_wardrobe_01", new[] { 2 } }, { "apt_low_table_01", new[] { 2 } } };
     static readonly HashSet<string> TtKeepParts = new HashSet<string> { "shelter_bed_01" };
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (방공호 가구 6종)")]
@@ -116,7 +131,7 @@ public static partial class GameSceneBuilder
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         var log = new List<string>();
-        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id) && !TtCity1.Contains(id) && !TtCity2.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
+        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id) && !TtCity1.Contains(id) && !TtCity2.Contains(id) && !TtApt1.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
         log.Add(WbMakeHigh());
         log.Add(WbMakeLow());
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 가구): " + string.Join(" / ", log));
@@ -147,6 +162,15 @@ public static partial class GameSceneBuilder
         var log = new List<string>();
         foreach (var id in TtCity2) log.Add(TtMake(id, TtTargets[id]));
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (도시 남은 소품 2차): " + string.Join(" / ", log));
+    }
+
+    [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (102동 새 모델: 중계함·경비실·미끄럼틀·소파·옷장·낮은 밥상)")]
+    static void TtBuildApt1()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
+        var log = new List<string>();
+        foreach (var id in TtApt1) log.Add(TtMake(id, TtTargets[id]));
+        Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (102동 새 모델): " + string.Join(" / ", log));
     }
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (차·뒤집힌 차·소화전·드럼통·정류장·트럭)")]

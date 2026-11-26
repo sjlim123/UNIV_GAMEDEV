@@ -68,6 +68,13 @@ public static partial class GameSceneBuilder
         // 색만 다른 판 (크레딧 0: 텍스처 색상만 돌린 것, Docs/맵모델링_미리보기/18_도시_남은소품_2차/_도구/blue_textures.py). 예전 코드 소품의 두 색(일반·재활용, 노랑·파랑 물탱크)을 잇는다
         { "city_bin_01_blue",        new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.3f, 0.3f, 0f, "city_bin_01", 0f, "_blue") },
         { "city_water_tank_01_blue", new TripoSpec(new Color(0.45f, 0.45f, 0.45f), 0f, 0.25f, 0f, "city_water_tank_01", 0f, "_blue") },
+        // 102동 새 모델 6종 (11-26 웹 스튜디오 H3.5 프리뷰, Docs/맵모델링_미리보기/19_102동_소품). 방향(yaw)·재질 값은 넣을 때 사진으로 맞춘다
+        { "apt_relay_cabinet_01",    new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.4f, 0.3f, 0f) },
+        { "apt_guard_booth_01",      new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0f, 0.15f, 0f) },
+        { "apt_slide_01",            new TripoSpec(new Color(0.55f, 0.55f, 0.55f), 0.4f, 0.3f, 0f) },
+        { "apt_sofa_01",             new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.1f, 0f) },
+        { "apt_wardrobe_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.2f, 0f) },
+        { "apt_low_table_01",        new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.2f, 0f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
@@ -102,7 +109,7 @@ public static partial class GameSceneBuilder
     // (그 전에는 길가 잔해·아이템 자리가 콜라이더를 보고 자리를 고르므로, 바꾸면 배치가 달라진다)
     static void TripoCar(Transform body, bool flipped, bool burnt)
     {
-        if (!kTripoCity || body == null) return;
+        if ((!kTripoCity && !kTripoApt) || body == null) return;
         // 뒤집힌 차는 바닥 부품이 보이는 전용 모델 (원본 FBX 길이 0.996 → 3.49배 = 똑바로 선 차와 같은 길이 3.48 m)
         string id = flipped ? "wrecked_sedan_flipped_01" : "wrecked_sedan_01";
         var h = TripoSwap(body, id, null, TripoFit.Length, flipped ? TripoAlign.Top : TripoAlign.Bottom, flipped ? 3.49f : 3.5f, burnt ? id + "_burnt" : null);

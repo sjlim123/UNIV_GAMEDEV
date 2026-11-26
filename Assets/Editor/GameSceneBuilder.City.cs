@@ -864,9 +864,9 @@ public static partial class GameSceneBuilder
         CombineInto(pole, "Post", parts, steel);
         Box("Head", pole, new Vector3(0, 8.38f, 1.65f), new Vector3(0.34f, 0.1f, 0.62f), M.ContainsKey("lampHead") ? M["lampHead"] : M["tire"], 1f, false);
         ColliderBox("PoleCollider", pole, new Vector3(0, 4f, 0), new Vector3(0.22f, 8f, 0.22f), Vector3.zero);
-        // 도시: 기둥·등 머리를 품질별 가로등으로 (같은 치수·원점으로 짰으므로 크기·자리 맞춤 없이 배율 1. 휜 기둥(Pole 그룹)을 따라 기울고,
+        // 도시·102동: 기둥·등 머리를 품질별 가로등으로 (같은 치수·원점으로 짰으므로 크기·자리 맞춤 없이 배율 1. 휜 기둥(Pole 그룹)을 따라 기울고,
         // 빛 판·점광·콜라이더는 그대로. 난수를 뽑지 않으므로 아래 켜짐 난수 순서도 그대로. GameSceneBuilder.TripoLamp.cs)
-        if (kTripoCity) TripoSwap(pole, "lamp_post_01", new[] { "Post", "Head" }, TripoFit.Height, TripoAlign.None, 1f);
+        if (kTripoCity || kTripoApt) TripoSwap(pole, "lamp_post_01", new[] { "Post", "Head" }, TripoFit.Height, TripoAlign.None, 1f);
         if (!bent && (forceLit || Chance(0.3)))
         {
             Box("Glow", pole, new Vector3(0, 8.325f, 1.65f), new Vector3(0.28f, 0.01f, 0.52f), M["bulb"], 1f, false);

@@ -52,6 +52,16 @@ public static partial class GameSceneBuilder
         const int MaxVertices = 150000, MaxLights = 20, MaxShadowPointLights = 2;
         const long MaxFileBytes = 20L * 1024 * 1024, MinMeshBytes = 512L * 1024;
 
+        // Tripo 품질별 모델 (2026-11-26, 102동 소품). 이름 약속: 받침 'Tripo_<id>' 아래 'Model'(LODGroup + QualityLod)과 판 넷 LOD0_q3 … LOD3_q0.
+        // 판 메시는 모델 폴더의 품질 폴더(Q{n}_…)에 든 에셋을 그대로 가리키고 (이 씬의 메시 묶음에 들지 않는다), 재질은 M_TR_…_q{n}
+        const string TripoHolderPrefix = "Tripo_", TripoModelName = "Model", TripoMeshRoot = "Assets/ThirdParty/Tripo/Models/", TripoMatPrefix = "M_TR_";
+        // B3.tripo: 코드로 지은 메시의 한도(MaxVertices)와 따로 센다. 둘 다 어림 한도라 넘으면 경고만 한다 (판마다의 면 수는 사진으로 통과시킨 값이다).
+        //  - 낮음 판의 합 (놓인 것 기준): 세부 묘사 품질 '낮음'에서는 거리와 상관없이 이 판만 그린다. 코드로 지은 씬 한도의 두 배를 넘으면
+        //    가장 낮은 설정에서도 소품이 건물 전체보다 무거워진다. 계획(약 190곳)의 어림은 11만~14만
+        //  - 서로 다른 판 메시의 합: 판 넷은 품질 설정과 상관없이 씬과 함께 모두 메모리에 올라온다 (QualityLod는 렌더러만 끄고 켠다).
+        //    정점 하나에 약 48바이트(자리·법선·접선·UV)라 200만이면 약 96MB. 계획(20가지 × 판 넷)의 어림은 90만~130만
+        const int MaxTripoLowVertices = 300000, MaxTripoMeshVertices = 2000000;
+
         struct Pt
         {
             public readonly string name;
@@ -354,6 +364,8 @@ public static partial class GameSceneBuilder
         static Transform root, geo, site, tower, facade, points, dyn, player;
         static bool navOk, rampOk;
         static Vector3 rampOn;
+        static readonly List<Transform> tripoHolders = new List<Transform>();     // 이름이 Tripo_로 시작하는 받침 (경로·자리 순)
+        static readonly HashSet<Transform> tripoParts = new HashSet<Transform>(); // 받침의 Model과 그 아래 전부 (품질별 판)
 
         // ================= 보고 =================
 
@@ -363,12 +375,15 @@ public static partial class GameSceneBuilder
             pass = fail = warn = 0;
             root = geo = site = tower = facade = points = dyn = player = null;
             navOk = rampOk = false;
+            tripoHolders.Clear();
+            tripoParts.Clear();
 
             bool open = false;
             Step("B0", () => open = OpenScene());
             if (open)
             {
                 Physics.SyncTransforms(); // 편집 모드의 물리 질의가 지금 씬의 콜라이더 자리를 보게 한다
+                Step("B0", TripoScan);
                 Step("A.guard", GuardResult);
                 Step("B1", Conventions);
                 Step("B1.director", DirectorCheck);
@@ -381,6 +396,7 @@ public static partial class GameSceneBuilder
                 Step("B2.items", ItemTables);
                 Step("B2.hazard", HazardTable);
                 Step("B3", Budgets);
+                Step("B3.tripo", TripoBudget);
                 Step("B4", MeshesAndFiles);
                 Step("B5.mesh", NavPrep);
                 Step("B5", Sampling);
@@ -393,6 +409,8 @@ public static partial class GameSceneBuilder
                 Step("B12", RoofEdges);
                 Step("B13", BuildList);
                 Step("B14", CoplanarAndZFight);
+                Step("B15", TripoModels);
+                Step("B15.props", TripoProps);
             }
 
             string done = "[Apt102Probe] DONE pass=" + pass + " fail=" + fail + " warn=" + warn;
@@ -465,6 +483,102 @@ public static partial class GameSceneBuilder
             foreach (var t in under.GetComponentsInChildren<Transform>(true))
                 if (t.name == name && (skip == null || !t.IsChildOf(skip))) list.Add(t);
             return list;
+        }
+
+        // ---- Tripo 품질별 모델 ----
+
+        // 씬의 Tripo 받침과 그 모델 조각을 모아 둔다 (B3·B4·B15와 수 세기가 쓴다). Tripo 모델이 없는 씬에서는 둘 다 빈다
+        static void TripoScan()
+        {
+            tripoHolders.Clear();
+            tripoParts.Clear();
+            var order = new Dictionary<Transform, string>();
+            foreach (var t in InScene<Transform>())
+                if (t.name.StartsWith(TripoHolderPrefix)) { tripoHolders.Add(t); order[t] = PathOf(t) + " " + V(t.position); }
+            tripoHolders.Sort((a, b) => string.CompareOrdinal(order[a], order[b]));
+            foreach (var h in tripoHolders)
+            {
+                var model = h.Find(TripoModelName);
+                if (model == null) continue;
+                foreach (var c in model.GetComponentsInChildren<Transform>(true)) tripoParts.Add(c);
+            }
+        }
+
+        static bool InTripoModel(Transform t) => tripoParts.Contains(t);
+
+        // 모델의 판 넷을 품질 순으로 (q = 0 낮음 … 3 매우 높음). 이름 약속 LOD{3 - q}_q{q}. 없는 칸은 null
+        static Transform[] TripoTiers(Transform model)
+        {
+            var tiers = new Transform[4];
+            for (int q = 0; q < 4; q++) tiers[q] = model.Find("LOD" + (3 - q) + "_q" + q);
+            return tiers;
+        }
+
+        static Mesh MeshOf(Transform t)
+        {
+            var mf = t == null ? null : t.GetComponent<MeshFilter>();
+            return mf == null ? null : mf.sharedMesh;
+        }
+
+        // t 아래에 그려지는 메시가 하나라도 있는가 (켜진 MeshRenderer + 메시). 윤곽선도 이런 메시에만 붙는다
+        static bool HasLook(Transform t)
+        {
+            foreach (var r in t.GetComponentsInChildren<MeshRenderer>())
+                if (r.enabled && MeshOf(r.transform) != null) return true;
+            return false;
+        }
+
+        // 받침의 모델이 차지하는 월드 상자 (가장 좋은 판 기준). 판이 없으면 false
+        static bool TripoBounds(Transform holder, out Bounds b)
+        {
+            b = new Bounds();
+            var model = holder.Find(TripoModelName);
+            if (model == null) return false;
+            var tiers = TripoTiers(model);
+            for (int q = 3; q >= 0; q--)
+            {
+                var r = tiers[q] == null ? null : tiers[q].GetComponent<MeshRenderer>();
+                if (r == null || MeshOf(tiers[q]) == null) continue;
+                b = r.bounds;
+                return true;
+            }
+            return false;
+        }
+
+        struct TripoSum
+        {
+            public int models, kinds, meshes;   // 모델(받침) 수, 받침 이름 가짓수, 서로 다른 판 메시 수
+            public long meshVertices;           // 서로 다른 판 메시의 정점 합 (메모리에 올라오는 양)
+            public long lowPlaced, highPlaced;  // 놓인 모델마다 가장 낮은 판 / 가장 좋은 판의 정점을 더한 것
+        }
+
+        static TripoSum TripoCount()
+        {
+            var sum = new TripoSum();
+            var kinds = new HashSet<string>();
+            var meshes = new HashSet<Mesh>();
+            foreach (var h in tripoHolders)
+            {
+                var model = h.Find(TripoModelName);
+                if (model == null) continue;
+                sum.models++;
+                kinds.Add(h.name);
+                foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true))
+                    if (mf.sharedMesh != null) meshes.Add(mf.sharedMesh);
+                Mesh low = null, high = null;
+                foreach (var tier in TripoTiers(model))
+                {
+                    var m = MeshOf(tier);
+                    if (m == null) continue;
+                    if (low == null) low = m;
+                    high = m;
+                }
+                if (low != null) { sum.lowPlaced += low.vertexCount; sum.highPlaced += high.vertexCount; }
+            }
+            sum.kinds = kinds.Count;
+            sum.meshes = meshes.Count;
+            foreach (var m in meshes) sum.meshVertices += m.vertexCount;
+            return sum;
         }
 
         // 여러 개를 한 줄에 적을 때: 앞의 몇 개만 적고 나머지는 수로
@@ -693,6 +807,13 @@ public static partial class GameSceneBuilder
             if (c.name != "Body" || c.transform.parent == null || c.transform.parent.name != "RelayCabinet") bad.Add("LootCache가 RelayCabinet/Body가 아니라 " + PathOf(c.transform) + "에 붙어 있다");
             if (c.destinationId != Destinations.Apt102Id) bad.Add("destinationId '" + c.destinationId + "' (기대 '" + Destinations.Apt102Id + "')");
             if (c.door == null) bad.Add("door 비어 있음");
+            else
+            {
+                // 문짝은 코드 그대로 남아 경첩과 함께 돌아야 한다. 몸통을 Tripo 모델로 바꾸면서 문짝 겉모습까지 지우거나 모델을 경첩 아래에 두면 여기서 걸린다
+                if (!HasLook(c.door)) bad.Add("door (" + PathOf(c.door) + ") 아래에 보이는 문짝이 없다 (열어도 움직이는 것이 없다)");
+                foreach (var h in tripoHolders)
+                    if (h.IsChildOf(c.door)) { bad.Add("Tripo 받침 " + PathOf(h) + "이 door 아래에 있다 (문을 열면 모델째 돈다)"); break; }
+            }
             if (c.led == null) bad.Add("led 비어 있음");
             if (c.ledBulb == null) bad.Add("ledBulb 비어 있음");
             if (c.dropPoints == null || c.dropPoints.Length != 3) bad.Add("dropPoints " + (c.dropPoints == null ? 0 : c.dropPoints.Length) + "개 (기대 3)");
@@ -1057,11 +1178,15 @@ public static partial class GameSceneBuilder
 
         static void Budgets()
         {
+            // 한도는 코드로 지은 메시에 건다. Tripo 품질별 모델의 판 메시는 모델 폴더의 에셋이라 이 씬의 메시 묶음에 들지 않고,
+            // 판 넷 가운데 하나만 그려지므로 넷을 다 더하면 한도의 뜻(이 씬이 새로 만든 메시의 크기)과 어긋난다. 그쪽은 B3.tripo가 따로 센다
             var meshes = new HashSet<Mesh>();
             long instanced = 0;
+            int tripoFilters = 0;
             foreach (var mf in InScene<MeshFilter>())
             {
                 if (mf.sharedMesh == null) continue;
+                if (InTripoModel(mf.transform)) { tripoFilters++; continue; }
                 meshes.Add(mf.sharedMesh);
                 instanced += mf.sharedMesh.vertexCount;
             }
@@ -1073,6 +1198,7 @@ public static partial class GameSceneBuilder
             foreach (var o in AssetDatabase.LoadAllAssetsAtPath(MeshPath))
                 if (o is Mesh m) { stored++; storedVertices += m.vertexCount; }
             string text = "씬이 쓰는 서로 다른 메시 " + meshes.Count + "개의 정점 합 " + unique + ", 메시 묶음 파일의 메시 " + stored + "개의 정점 합 " + storedVertices + " (한도 " + MaxVertices + " 미만) · 놓인 물체 기준 합 " + instanced;
+            if (tripoFilters > 0) text += " · Tripo 품질별 모델의 판 " + tripoFilters + "개는 빼고 셌다 (B3.tripo)";
             if (unique >= MaxVertices || storedVertices >= MaxVertices) Fail("B3.vertices", text);
             else Pass("B3.vertices", text);
 
@@ -1097,7 +1223,23 @@ public static partial class GameSceneBuilder
                 objects++;
                 if (t.gameObject.activeInHierarchy) active++;
             }
-            Pass("B3.objects", "오브젝트 " + objects + "개 (켜진 것 " + active + "), 렌더러 " + InScene<Renderer>().Count + ", 콜라이더 " + InScene<Collider>().Count + ", 파티클 " + InScene<ParticleSystem>().Count + " (설계 어림 2,000개)");
+            Pass("B3.objects", "오브젝트 " + objects + "개 (켜진 것 " + active + "), 렌더러 " + InScene<Renderer>().Count + ", 콜라이더 " + InScene<Collider>().Count + ", 파티클 " + InScene<ParticleSystem>().Count + " (설계 어림 2,000개)"
+                + (tripoHolders.Count > 0 ? " · 그 가운데 Tripo 받침·모델·판 " + (tripoHolders.Count + tripoParts.Count) + "개" : ""));
+        }
+
+        // Tripo 품질별 모델의 정점 (코드로 지은 메시의 한도와 따로. 어림 한도를 넘으면 경고)
+        static void TripoBudget()
+        {
+            var t = TripoCount();
+            if (t.models == 0)
+            {
+                Pass("B3.tripo", "Tripo 품질별 모델 없음 (코드로 지은 소품만 있는 씬)");
+                return;
+            }
+            string text = "Tripo 품질별 모델 " + t.models + "개 (" + t.kinds + "가지), 서로 다른 판 메시 " + t.meshes + "개의 정점 합 " + t.meshVertices + " (어림 한도 " + MaxTripoMeshVertices + " 미만: 품질 설정과 상관없이 모두 메모리에 올라온다)"
+                + " · 놓인 것 기준 합: 낮음 판만 그릴 때 " + t.lowPlaced + " (어림 한도 " + MaxTripoLowVertices + " 미만), 매우 높음 판만 그릴 때 " + t.highPlaced + " (가까운 몇 개만 이 판으로 그려진다)";
+            if (t.lowPlaced >= MaxTripoLowVertices || t.meshVertices >= MaxTripoMeshVertices) Warn("B3.tripo", text + " — 어림 한도를 넘었다. 같은 모델을 너무 많이 놓았거나 낮음 판이 무겁다");
+            else Pass("B3.tripo", text);
         }
 
         // ================= B4: 메시가 살아 있는가, 파일 크기 =================
@@ -1106,14 +1248,17 @@ public static partial class GameSceneBuilder
         {
             // 씬을 다시 열었을 때 메시가 비는 것을 잡는다. 주 작업 흐름이 씬을 다시 연 뒤에 이 점검을 돌린다
             var empty = new List<string>();
-            int filters = 0, meshColliders = 0, embedded = 0;
+            int filters = 0, meshColliders = 0, embedded = 0, tierMeshes = 0;
             var foreign = new Dictionary<string, int>(); // 다른 씬의 메시 묶음
             var others = new Dictionary<string, int>();  // 그 밖의 메시 에셋
-            void Source(Mesh m)
+            void Source(Mesh m, bool tripoModel)
             {
                 string path = AssetDatabase.GetAssetPath(m);
                 if (string.IsNullOrEmpty(path)) { embedded++; return; }
                 if (path == MeshPath || !path.StartsWith("Assets/")) return; // 이 씬의 메시 묶음, 또는 유니티 기본 도형
+                // Tripo 품질별 모델의 판은 모델 폴더의 메시를 그대로 가리키는 것이 맞다 (씬을 다시 생성해도 사라지지 않는 에셋. 판마다의 폴더는 B15.tripo가 본다).
+                // 모델 밖(코드 소품의 MeshFilter·MeshCollider)에서 그 메시를 쓰면 예전처럼 아래에서 경고한다
+                if (tripoModel && path.StartsWith(TripoMeshRoot)) { tierMeshes++; return; }
                 var into = path.StartsWith("Assets/Generated/") ? foreign : others;
                 into.TryGetValue(path, out int n);
                 into[path] = n + 1;
@@ -1122,13 +1267,13 @@ public static partial class GameSceneBuilder
             {
                 filters++;
                 if (mf.sharedMesh == null) empty.Add("MeshFilter " + PathOf(mf.transform));
-                else Source(mf.sharedMesh);
+                else Source(mf.sharedMesh, InTripoModel(mf.transform));
             }
             foreach (var mc in InScene<MeshCollider>())
             {
                 meshColliders++;
                 if (mc.sharedMesh == null) empty.Add("MeshCollider " + PathOf(mc.transform));
-                else Source(mc.sharedMesh);
+                else Source(mc.sharedMesh, false);
             }
             empty.Sort(string.CompareOrdinal);
             if (empty.Count > 0) Fail("B4.mesh", "메시가 빈 것 " + empty.Count + "개 (메시 묶음이 저장되지 않았을 수 있다): " + Some(empty, 5));
@@ -1141,7 +1286,7 @@ public static partial class GameSceneBuilder
                 list.Sort(string.CompareOrdinal);
                 Fail("B4.source", "다른 씬의 메시 묶음을 가리키는 메시가 있다 (그 씬을 다시 생성하면 사라진다): " + Some(list, 4));
             }
-            else Pass("B4.source", "다른 씬의 메시 묶음을 가리키는 메시 없음 (이 씬의 묶음 " + MeshPath + ")");
+            else Pass("B4.source", "다른 씬의 메시 묶음을 가리키는 메시 없음 (이 씬의 묶음 " + MeshPath + ")" + (tierMeshes > 0 ? " · Tripo 품질별 모델의 판 " + tierMeshes + "곳은 모델 폴더 " + TripoMeshRoot + "의 메시를 그대로 쓴다" : ""));
             if (others.Count > 0)
             {
                 var list = new List<string>();
@@ -1880,6 +2025,196 @@ public static partial class GameSceneBuilder
             else Pass("B14.outline", "상호작용 물체는 모두 정적 배칭에서 빠져 있다");
         }
 
+        // ================= B15: Tripo 품질별 모델 =================
+
+        static void TripoModels()
+        {
+            if (tripoHolders.Count == 0)
+            {
+                Pass("B15.tripo", "Tripo 받침(" + TripoHolderPrefix + "…) 없음: 코드로 지은 소품만 있는 씬이라 모델 점검은 건너뛴다");
+                return;
+            }
+
+            // --- 받침마다: Model + LODGroup + QualityLod, 판 넷의 메시·재질·텍스처 ---
+            var bad = new List<string>();
+            var kinds = new SortedDictionary<string, int>(System.StringComparer.Ordinal);
+            foreach (var h in tripoHolders)
+            {
+                string id = h.name.Substring(TripoHolderPrefix.Length);
+                kinds.TryGetValue(id, out int n);
+                kinds[id] = n + 1;
+                string why = TripoFault(h);
+                if (why != null) bad.Add(PathOf(h) + " @" + V(h.position) + ": " + why);
+            }
+            var list = new List<string>();
+            foreach (var kv in kinds) list.Add(kv.Key + " " + kv.Value);
+            if (bad.Count > 0) Fail("B15.tripo", "Tripo 받침 " + tripoHolders.Count + "개 가운데 " + bad.Count + "개가 품질별 모델의 약속과 다르다: " + Some(bad, 5));
+            else Pass("B15.tripo", "Tripo 받침 " + tripoHolders.Count + "개 모두 Model(LODGroup 4칸 + QualityLod)과 판 넷(메시는 그 품질 폴더, 재질 " + TripoMatPrefix + "…_q0~3, _BaseMap은 같은 폴더의 텍스처)을 갖췄다: " + string.Join(", ", list));
+
+            // --- 정적 배칭: 묶이면 놓인 모델마다 판 넷의 꼭짓점이 묶음 버퍼에 복사된다 (메모리가 크게 늘고, 같은 메시를 함께 그리는 인스턴싱도 풀린다) ---
+            var batched = new List<string>();
+            int renderers = 0;
+            foreach (var t in tripoParts)
+            {
+                if (t.GetComponent<Renderer>() == null) continue;
+                renderers++;
+                if ((GameObjectUtility.GetStaticEditorFlags(t.gameObject) & StaticEditorFlags.BatchingStatic) != 0) batched.Add(PathOf(t) + " @" + V(t.position));
+            }
+            batched.Sort(string.CompareOrdinal);
+            if (batched.Count > 0) Fail("B15.static", "정적 배칭에 든 Tripo 모델의 판 " + batched.Count + "개 (판 넷이 모두 묶음 버퍼에 복사된다): " + Some(batched));
+            else Pass("B15.static", "Tripo 모델의 판 " + renderers + "개는 모두 정적 배칭에서 빠져 있다");
+        }
+
+        // 받침 하나가 품질별 모델의 약속대로인가. 맞으면 null, 아니면 처음 걸린 까닭
+        static string TripoFault(Transform holder)
+        {
+            var model = holder.Find(TripoModelName);
+            if (model == null) return TripoModelName + "이 없다 (품질별 판을 찾지 못해 원본 FBX 하나로 대신했거나 받침이 비었다)";
+            var lg = model.GetComponent<LODGroup>();
+            if (lg == null) return TripoModelName + "에 LODGroup이 없다";
+            var lods = lg.GetLODs();
+            if (lods.Length != 4) return "LOD 칸이 " + lods.Length + "개다 (기대 4)";
+            var ql = model.GetComponent<QualityLod>();
+            if (ql == null) return TripoModelName + "에 QualityLod가 없다 (세부 묘사 품질을 바꿔도 판이 바뀌지 않는다)";
+            if (ql.tiers == null || ql.tiers.Length != 4) return "QualityLod.tiers가 " + (ql.tiers == null ? 0 : ql.tiers.Length) + "칸이다 (기대 4)";
+            if (ql.heights == null || ql.heights.Length != 4) return "QualityLod.heights가 " + (ql.heights == null ? 0 : ql.heights.Length) + "칸이다 (기대 4)";
+            var tiers = TripoTiers(model);
+            for (int q = 0; q < 4; q++)
+            {
+                string name = "LOD" + (3 - q) + "_q" + q;
+                if (tiers[q] == null) return name + " 판이 없다";
+                var r = tiers[q].GetComponent<MeshRenderer>();
+                if (r == null) return name + "에 MeshRenderer가 없다";
+                if (!r.enabled) return name + "의 렌더러가 꺼져 있다";
+                var mesh = MeshOf(tiers[q]);
+                if (mesh == null) return name + "의 메시가 비었다";
+                // 판 메시는 모델 폴더의 그 품질 폴더(Q{q}_…)에 든 에셋이어야 한다 (다른 품질의 메시가 들어가면 그 판의 텍스처와 맞지 않는다)
+                string meshPath = AssetDatabase.GetAssetPath(mesh);
+                if (string.IsNullOrEmpty(meshPath)) return name + "의 메시가 에셋이 아니다 (씬 파일 안에 저장된다)";
+                string dir = meshPath.Substring(0, meshPath.LastIndexOf('/') + 1);
+                if (!meshPath.StartsWith(TripoMeshRoot) || !dir.Contains("/Q" + q + "_")) return name + "의 메시가 " + meshPath + "에 있다 (기대 " + TripoMeshRoot + "<모델>/Q" + q + "_…)";
+                var mats = r.sharedMaterials;
+                if (mats.Length == 0) return name + "에 재질 칸이 없다";
+                foreach (var m in mats)
+                {
+                    if (m == null) return name + "의 재질이 비었다";
+                    if (!m.name.StartsWith(TripoMatPrefix) || !m.name.EndsWith("_q" + q)) return name + "의 재질이 " + m.name + "이다 (기대 " + TripoMatPrefix + "…_q" + q + ")";
+                    var tex = m.HasProperty("_BaseMap") ? m.GetTexture("_BaseMap") : null;
+                    if (tex == null) return name + "의 재질 " + m.name + "에 _BaseMap이 비었다 (텍스처 없이 민색으로 보인다)";
+                    string texPath = AssetDatabase.GetAssetPath(tex);
+                    if (string.IsNullOrEmpty(texPath) || !texPath.StartsWith(dir)) return name + "의 재질 " + m.name + "이 그 판의 폴더 밖 텍스처 " + texPath + "를 쓴다 (메시는 " + dir + ")";
+                }
+                var slot = lods[3 - q].renderers;
+                if (slot == null || slot.Length != 1 || slot[0] != r) return "LOD 칸 " + (3 - q) + "이 " + name + " 판 하나를 가리키지 않는다";
+                if (ql.tiers[q] != r) return "QualityLod.tiers[" + q + "]이 " + name + "의 렌더러가 아니다";
+            }
+            // 축마다 맞춘 상자의 한 변이 0이면 모델이 납작하게 눌려 보이지 않는다
+            var size = tiers[3].GetComponent<MeshRenderer>().bounds.size;
+            if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) < 0.001f) return "모델이 한 축으로 0에 가깝게 눌렸다 (크기 " + V(size) + ")";
+            return null;
+        }
+
+        // under 아래의 Tripo 받침
+        static List<Transform> HoldersUnder(Transform under)
+        {
+            var list = new List<Transform>();
+            foreach (var h in tripoHolders)
+                if (h.IsChildOf(under)) list.Add(h);
+            return list;
+        }
+
+        // 겉모습을 바꾼 코드 소품의 약속: 승합차는 코드 그대로, 세단은 모델에 맞춘 상자 콜라이더 하나, 소파·옷장의 새 콜라이더, 상호작용 물체의 윤곽선
+        static void TripoProps()
+        {
+            bool on = tripoHolders.Count > 0;
+
+            // --- 차: 탄 승합차(몸체 아래 Cab·Cargo)는 코드 모습 그대로 (사용자 결정 2026-11-26: 세단 모델로 바꾸지 않는다) ---
+            int vans = 0, sedans = 0, swapped = 0;
+            string vanText = "";
+            var vanBad = new List<string>();
+            var carBad = new List<string>();
+            var carOdd = new List<string>();
+            foreach (var car in Named(geo, "WreckedCar", facade))
+            {
+                var body = car.Find("Body");
+                var holders = HoldersUnder(car);
+                var solid = new List<Collider>();
+                foreach (var c in car.GetComponentsInChildren<Collider>(true))
+                    if (!c.isTrigger) solid.Add(c);
+                if (body != null && (body.Find("Cargo") != null || body.Find("Cab") != null))
+                {
+                    vans++;
+                    if (holders.Count > 0) vanBad.Add("승합차 " + V(car.position) + "에 Tripo 받침 " + holders[0].name + "이 붙어 있다 (세단 모델로 바뀌었다)");
+                    foreach (string part in new[] { "Lower", "Cab", "Cargo" })
+                    {
+                        var p = body.Find(part);
+                        var r = p == null ? null : p.GetComponent<MeshRenderer>();
+                        if (p != null && (r == null || !r.enabled || MeshOf(p) == null)) vanBad.Add("승합차 " + V(car.position) + "의 Body/" + part + " 겉모습이 지워졌다");
+                    }
+                    if (solid.Count == 0) vanBad.Add("승합차 " + V(car.position) + "에 콜라이더가 없다");
+                    vanText = V(car.position) + " (몸체 렌더러 " + body.GetComponentsInChildren<MeshRenderer>().Length + "개, 콜라이더 " + solid.Count + "개)";
+                    continue;
+                }
+                sedans++;
+                Transform model = null;
+                foreach (var h in holders)
+                    if (h.name.StartsWith(TripoHolderPrefix + "wrecked_sedan")) model = h;
+                if (model == null) continue;
+                swapped++;
+                // 모델을 든 차: 예전 부품 콜라이더(코드 세단 길이)는 지우고 받침에 모델 크기의 상자 하나 (도시의 TripoCarColliders와 같다)
+                if (solid.Count == 0) carBad.Add(V(car.position) + ": 콜라이더가 없다 (차를 뚫고 지나간다)");
+                else if (solid.Count != 1 || !(solid[0] is BoxCollider) || solid[0].transform != model)
+                    carOdd.Add(V(car.position) + ": 받침의 상자 하나가 아니라 콜라이더 " + solid.Count + "개 (" + PathOf(solid[0].transform) + " 등. 예전 부품 콜라이더가 남으면 모델보다 긴 보이지 않는 벽이 된다)");
+            }
+            if (vans != 1) vanBad.Add("승합차(몸체 아래 Cab·Cargo가 있는 WreckedCar)가 " + vans + "대다 (기대 1: 주차 칸의 탄 승합차)");
+            if (vanBad.Count > 0) Fail("B15.van", Some(vanBad, 6));
+            else Pass("B15.van", "탄 승합차 " + vanText + "는 코드 모습 그대로다 (Tripo 받침 없음)");
+            if (carBad.Count > 0) Fail("B15.car", "Tripo 차: " + Some(carBad));
+            else if (swapped == 0) Pass("B15.car", "세단 " + sedans + "대 모두 코드 모습이다 (Tripo 차 없음)");
+            else Pass("B15.car", "세단 " + sedans + "대 가운데 Tripo 차 " + swapped + "대, 저마다 콜라이더가 있다");
+            if (carOdd.Count > 0) Warn("B15.car", "Tripo 차의 콜라이더가 약속(받침의 상자 하나)과 다르다: " + Some(carOdd));
+            if (on && swapped < sedans) Warn("B15.car", "Tripo 모델이 있는 씬인데 세단 " + (sedans - swapped) + "대가 코드 모습이다 (계획: 세단 둘은 wrecked_sedan_01)");
+
+            // --- 새 가구 콜라이더 (사용자 결정: 소파·옷장만 막는다). 모델이 없는 씬에는 있으면 안 된다 (보이지 않는 벽) ---
+            var bad = new List<string>();
+            FurnitureColliders(bad, "SofaCollider", TripoHolderPrefix + "apt_sofa_01", on ? 1 : 0);
+            FurnitureColliders(bad, "WardrobeCollider", TripoHolderPrefix + "apt_wardrobe_01", on ? 2 : 0);
+            if (bad.Count > 0) Fail("B15.collider", Some(bad, 6));
+            else if (on) Pass("B15.collider", "SofaCollider 1개 (402호 소파)·WardrobeCollider 2개 (403호 옷장, 204호 넘어진 장)가 저마다 자기 모델과 겹쳐 있다");
+            else Pass("B15.collider", "Tripo 모델이 없는 씬: SofaCollider·WardrobeCollider도 없다");
+
+            // --- 윤곽선: 상호작용 물체 아래의 메시에만 붙는다 (InteractOutline). 겉모습을 지우고 받침을 그 물체 옆에 두면 조준해도 빛나지 않는다 ---
+            if (!on) return;
+            var dark = new List<string>();
+            foreach (var it in InScene<Interactable>())
+            {
+                if (HasLook(it.transform) || it.transform.parent == null) continue;
+                // 처음부터 콜라이더뿐인 것은 그대로 둔다. 같은 부모 아래에 받침이 나란히 놓인 것만 적는다
+                foreach (var h in tripoHolders)
+                    if (h.parent == it.transform.parent) { dark.Add(PathOf(it.transform) + " (받침 " + h.name + ")"); break; }
+            }
+            dark.Sort(string.CompareOrdinal);
+            if (dark.Count > 0) Warn("B15.outline", "겉모습이 Tripo 모델로 바뀌었는데 자기 아래에 메시가 없는 상호작용 물체 " + dark.Count + "개 (조준해도 윤곽선이 생기지 않는다. 받침을 그 물체의 자식으로 둔다): " + Some(dark));
+            else Pass("B15.outline", "겉모습을 Tripo 모델로 바꾼 상호작용 물체는 자기 아래에 메시가 있다 (윤곽선이 붙는다)");
+        }
+
+        // 이름이 name인 콜라이더가 want개이고, 저마다 트리거가 아닌 상자이며 그 모델(받침 holderName)과 겹쳐 있는가
+        static void FurnitureColliders(List<string> bad, string name, string holderName, int want)
+        {
+            var list = new List<Collider>();
+            foreach (var c in InScene<Collider>())
+                if (c.name == name) list.Add(c);
+            if (list.Count != want) bad.Add(name + " " + list.Count + "개 (기대 " + want + ")");
+            foreach (var c in list)
+            {
+                if (!(c is BoxCollider) || c.isTrigger) { bad.Add(name + " " + V(c.bounds.center) + "가 트리거가 아닌 상자 콜라이더가 아니다"); continue; }
+                bool onModel = false;
+                foreach (var h in tripoHolders)
+                    if (h.name == holderName && TripoBounds(h, out var b) && b.Intersects(c.bounds)) { onModel = true; break; }
+                if (!onModel) bad.Add(name + " " + V(c.bounds.center) + "가 " + holderName + " 모델과 겹치지 않는다 (보이지 않는 벽이 된다)");
+            }
+        }
+
         static void AddPair(Dictionary<string, int> kinds, Dictionary<string, string> spots, MeshRenderer a, MeshRenderer b, string detail)
         {
             string key = string.CompareOrdinal(a.name, b.name) <= 0 ? a.name + " | " + b.name : b.name + " | " + a.name;
@@ -1973,6 +2308,7 @@ public static partial class GameSceneBuilder
             scene = SceneManager.GetActiveScene();
             var players = InScene<PlayerController>();
             player = players.Count > 0 ? players[0].transform : null;
+            TripoScan();
 
             int objects = 0, active = 0;
             foreach (var t in InScene<Transform>())
@@ -1983,14 +2319,16 @@ public static partial class GameSceneBuilder
             var meshes = new HashSet<Mesh>();
             long instanced = 0, unique = 0;
             int filters = 0;
+            // uniqueMeshes·uniqueVertices·instancedVertices는 B3.vertices와 같이 코드로 지은 메시만 센다. Tripo 품질별 모델은 아래 tripo… 칸
             foreach (var mf in InScene<MeshFilter>())
             {
                 filters++;
-                if (mf.sharedMesh == null) continue;
+                if (mf.sharedMesh == null || InTripoModel(mf.transform)) continue;
                 meshes.Add(mf.sharedMesh);
                 instanced += mf.sharedMesh.vertexCount;
             }
             foreach (var m in meshes) unique += m.vertexCount;
+            var tripo = TripoCount();
             int lights = 0, pointLights = 0, shadowLights = 0;
             foreach (var l in InScene<Light>())
             {
@@ -2022,6 +2360,12 @@ public static partial class GameSceneBuilder
             Add("uniqueMeshes", meshes.Count);
             Add("uniqueVertices", unique);
             Add("instancedVertices", instanced);
+            Add("tripoModels", tripo.models);
+            Add("tripoKinds", tripo.kinds);
+            Add("tripoMeshes", tripo.meshes);
+            Add("tripoMeshVertices", tripo.meshVertices);
+            Add("tripoLowVertices", tripo.lowPlaced);
+            Add("tripoHighVertices", tripo.highPlaced);
             Add("lights", lights);
             Add("pointLights", pointLights);
             Add("shadowLights", shadowLights);

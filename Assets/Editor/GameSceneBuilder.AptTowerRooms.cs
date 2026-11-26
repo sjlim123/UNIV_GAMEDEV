@@ -6,6 +6,9 @@ using UnityEngine;
 // 좌표는 모두 탑 로컬 (원점 = 건물 바닥 가운데, +z = 발코니 쪽, +x = 부서진 끝). 벽·바닥판·계단·옥상 벽은 GameSceneBuilder.AptTower.cs가 먼저 짓는다.
 // 꾸밈에는 콜라이더를 달지 않는다 (콜라이더는 내비메시와 바닥 구멍 아래 내려설 자리를 바꾼다).
 // 콜라이더가 있는 것: 칸막이, 바리케이드, 모닥불 통, 야영지 상자, 잠긴 문, 중계기함, 시체, 303호 탁자와 쪽지, 403호 조리대
+// 102동 Tripo(kTripoApt, 2026-11-26): 매트리스·이부자리·낮은 탁자·소파·넘어진 옷장과 장·303호 탁자·공구 상자·낮은 상자·벽 터진 곳의 덩어리는
+// 합친 덩어리에 넣지 않고 같은 자리에 모델을 놓는다 (GameSceneBuilder.TripoAptRooms.cs. 난수 순서는 그대로).
+// 이때만 402호 소파(SofaCollider)와 403호·204호 넘어진 옷장(WardrobeCollider)에 예전 상자 크기의 콜라이더가 더 생긴다 (사용자 결정: 소파·옷장만 막는다)
 public static partial class GameSceneBuilder
 {
     // 아이템 자리에서 나올 것 (같은 것을 여러 번 적으면 그만큼 잘 나온다). 임시 수치
@@ -202,25 +205,28 @@ public static partial class GameSceneBuilder
         KPart(bag["wood"], new Vector3(2.0f, 0.14f, 0.03f), 1f, new Vector3(x, cy, wallZ + inward * 0.036f), Quaternion.Euler(0, 0, lean));
     }
 
-    // 매트리스와 베개 (높이 0.2)
-    static void AptRmMattress(AptRmParts bag, float x, float y, float z, float yaw)
+    // 매트리스와 베개 (높이 0.2). 102동 Tripo면 요+베개 전체(베개 윗면 0.3)에 매트리스 모델
+    static void AptRmMattress(AptRmParts bag, Transform room, float x, float y, float z, float yaw)
     {
+        if (kTripoApt && TaRmMattress(room, x, y, z, yaw, 0.3f)) return;
         AptRmPart(bag["blanket"], x, y + 0.1f, z, 0.9f, 0.2f, 1.9f, yaw);
         var head = Quaternion.Euler(0, yaw, 0) * new Vector3(0, 0, 0.72f);
         AptRmPart(bag["cloth"], x + head.x, y + 0.25f, z + head.z, 0.5f, 0.1f, 0.3f, yaw + 6f);
     }
 
-    // 바닥에 편 이부자리와 베개 (높이 0.12)
-    static void AptRmBedroll(AptRmParts bag, float x, float y, float z, float yaw)
+    // 바닥에 편 이부자리와 베개 (높이 0.12). 102동 Tripo면 같은 매트리스 모델을 요+베개 전체(베개 윗면 0.22)에 납작하게
+    static void AptRmBedroll(AptRmParts bag, Transform room, float x, float y, float z, float yaw)
     {
+        if (kTripoApt && TaRmMattress(room, x, y, z, yaw, 0.22f)) return;
         AptRmPart(bag["blanket"], x, y + 0.06f, z, 0.9f, 0.12f, 1.9f, yaw);
         var head = Quaternion.Euler(0, yaw, 0) * new Vector3(0, 0, 0.68f);
         AptRmPart(bag["cloth"], x + head.x, y + 0.17f, z + head.z, 0.5f, 0.1f, 0.3f, yaw - 5f);
     }
 
-    // 낮은 탁자 (높이 0.38): 상판과 다리 넷
-    static void AptRmLowTable(AptRmParts bag, float x, float y, float z, float w, float d, float yaw)
+    // 낮은 탁자 (높이 0.38): 상판과 다리 넷. 102동 Tripo면 낮은 밥상 모델 (콜라이더는 여전히 없다)
+    static void AptRmLowTable(AptRmParts bag, Transform room, float x, float y, float z, float w, float d, float yaw)
     {
+        if (kTripoApt && TaRmLowTable(room, x, y, z, w, d, yaw)) return;
         var q = Quaternion.Euler(0, yaw, 0);
         AptRmPart(bag["wood"], x, y + 0.355f, z, w, 0.05f, d, yaw);
         foreach (float lx in new[] { -w / 2f + 0.06f, w / 2f - 0.06f })
@@ -229,6 +235,33 @@ public static partial class GameSceneBuilder
                 var o = q * new Vector3(lx, 0, lz);
                 AptRmPart(bag["wood"], x + o.x, y + 0.165f, z + o.z, 0.05f, 0.33f, 0.05f, yaw);
             }
+    }
+
+    // 벽이 터진 곳의 콘크리트 덩어리 하나 (key = 재질, 기울어진 상자). 102동 Tripo면 도시와 같은 규칙의 잔해 모델로, 기울기는 그대로
+    static void AptRmLump(AptRmParts bag, Transform room, string key, float x, float y, float z, float sx, float sy, float sz, float yaw, float pitch = 0f, float roll = 0f)
+    {
+        if (kTripoApt && TaRmLump(room, key, new Vector3(x, y, z), new Vector3(sx, sy, sz), Quaternion.Euler(pitch, yaw, roll))) return;
+        AptRmPart(bag[key], x, y, z, sx, sy, sz, yaw, pitch, roll);
+    }
+
+    // 나무 상자 하나 (공구 상자·낮은 상자). 102동 Tripo면 나무 상자 모델을 같은 크기에 맞춘다 (콜라이더는 여전히 없다)
+    static void AptRmCrate(AptRmParts bag, Transform room, float x, float y, float z, float sx, float sy, float sz, float yaw)
+    {
+        if (kTripoApt && TaRmFit(room, "city_crate_01", new Vector3(x, y, z), new Vector3(sx, sy, sz), Quaternion.Euler(0, yaw, 0)) != null) return;
+        AptRmPart(bag["wood"], x, y, z, sx, sy, sz, yaw);
+    }
+
+    // 넘어진 옷장·장 (나무 상자 하나). 102동 Tripo면 옷장 모델을 등으로 눕혀 놓고, 예전 상자 크기 그대로 콜라이더를 단다 (사용자 결정: 옷장은 막는다)
+    static void AptRmWardrobe(AptRmParts bag, Transform room, float x, float y, float z, float sx, float sy, float sz, float yaw)
+    {
+        if (kTripoApt && TaRmWardrobeDown(room, new Vector3(x, y, z), new Vector3(sx, sy, sz), yaw))
+        {
+            // 높이는 0.46 m 아래로 내리지 않는다: 204호 넘어진 장(0.4 m)은 플레이어가 한 걸음에 올라서는 높이(0.4)와 같아 막히지 않았다 (11-26 검토). 바닥은 그대로 둔다
+            float ch = Mathf.Max(sy, 0.46f);
+            ColliderBox("WardrobeCollider", room, new Vector3(x, y + (ch - sy) / 2f, z), new Vector3(sx, ch, sz), new Vector3(0, yaw, 0));
+            return;
+        }
+        AptRmPart(bag["wood"], x, y, z, sx, sy, sz, yaw);
     }
 
     // 4호 줄 방의 공통 꾸밈: 바닥 잔해(바닥 구멍은 피한다)와 앞뒤 벽의 막힌 창 넷
@@ -277,16 +310,18 @@ public static partial class GameSceneBuilder
         var rr = new System.Random(20401);
         AptRm04Base(bag, rr, y, 10, 4);
         // 뚫린 벽 남쪽 옆과 북동 구석의 덩어리 (들어오는 길 z 2.2~5.0과 위층 구멍 아래 x 9.6~11.6, z 2.6~4.6에는 두지 않는다)
-        AptRmPart(bag["dirty"], 12.42f, y + 0.11f, 1.75f, 0.5f, 0.22f, 0.4f, 25f, 4f, -6f);
-        AptRmPart(bag["dirty"], 12.5f, y + 0.08f, 1.2f, 0.3f, 0.16f, 0.3f, 60f, 0f, 5f);
-        AptRmPart(bag["dirty"], 11.9f, y + 0.07f, 1.5f, 0.35f, 0.14f, 0.25f, -30f, 3f, 0f);
-        AptRmPart(bag["dirty"], 12.35f, y + 0.1f, 5.08f, 0.5f, 0.2f, 0.3f, 10f, -5f, 4f);
+        AptRmLump(bag, room, "dirty", 12.42f, y + 0.11f, 1.75f, 0.5f, 0.22f, 0.4f, 25f, 4f, -6f);
+        AptRmLump(bag, room, "dirty", 12.5f, y + 0.08f, 1.2f, 0.3f, 0.16f, 0.3f, 60f, 0f, 5f);
+        AptRmLump(bag, room, "dirty", 11.9f, y + 0.07f, 1.5f, 0.35f, 0.14f, 0.25f, -30f, 3f, 0f);
+        AptRmLump(bag, room, "dirty", 12.35f, y + 0.1f, 5.08f, 0.5f, 0.2f, 0.3f, 10f, -5f, 4f);
         // 뚫린 자리 위턱·옆턱에서 삐져나온 철근 (머리 위)
         Rebar(room, new Vector3(12.86f, y + 2.4f, 2.9f), new Vector3(-0.5f, -1f, 0.2f), 0.45f, rr);
         Rebar(room, new Vector3(12.9f, y + 2.4f, 4.2f), new Vector3(-0.4f, -1f, -0.3f), 0.4f, rr);
         Rebar(room, new Vector3(12.88f, y + 2.05f, 2.2f), new Vector3(-0.6f, -0.4f, 0.5f), 0.3f, rr);
-        AptRmMattress(bag, 9.0f, y, -0.95f, 3f);
-        AptRmPart(bag["wood"], 12.47f, y + 0.2f, -2.9f, 0.45f, 0.4f, 1.3f, -4f); // 넘어진 낮은 장
+        AptRmMattress(bag, room, 9.0f, y, -0.95f, 3f);
+        // 넘어진 낮은 장. Tripo 옷장이면 콜라이더가 생긴다 (x 12.20~12.74, z -3.56~-2.24, 동쪽 벽에 붙어 있다): 뚫린 벽에서 계단실 문(x 8.35, z -4.5~-2.9)으로 가는 길과 2.9,
+        // 지킴이 G1(10.2, -3.4)과 2.0, 아이템 자리 Item_204_2(12.2, -1.0)와 1.2 떨어져 있다
+        AptRmWardrobe(bag, room, 12.47f, y + 0.2f, -2.9f, 0.45f, 0.4f, 1.3f, -4f);
         Stain("Scorch", room, new Vector3(11.8f, y + 0.012f, 3.6f), 1.2f, 1.5f, M["scorch"], 4711, Vector3.zero);
         bag.Flush(room);
 
@@ -305,8 +340,8 @@ public static partial class GameSceneBuilder
         AptRm04Base(bag, rr, y, 9, 4, AptRmH2);
         Stain("BloodOld", room, new Vector3(10.55f, y + 0.012f, -2.75f), 0.6f, 0.45f, M["bloodOld"], 4721);
         Stain("BloodOld", room, new Vector3(11.15f, y + 0.013f, -2.2f), 0.18f, 0.14f, M["bloodOld"], 4722);
-        AptRmMattress(bag, 9.0f, y, -0.75f, -2f);                                  // 떨어져 내려서는 자리(z -3.8~-1.8) 옆은 비운다
-        AptRmPart(bag["wood"], 11.35f, y + 0.21f, -4.92f, 0.9f, 0.42f, 0.5f, 5f);  // 공구 상자
+        AptRmMattress(bag, room, 9.0f, y, -0.75f, -2f);                            // 떨어져 내려서는 자리(z -3.8~-1.8) 옆은 비운다
+        AptRmCrate(bag, room, 11.35f, y + 0.21f, -4.92f, 0.9f, 0.42f, 0.5f, 5f);   // 공구 상자
         AptRmPart(bag["metal"], 12.5f, y + 0.22f, -0.6f, 0.4f, 0.44f, 1.1f, 2f);   // 쓰러진 철제 선반
         bag.Flush(room);
     }
@@ -327,7 +362,7 @@ public static partial class GameSceneBuilder
         AptRmPart(bag["soot"], 11.3f, y + 0.06f, 4.0f, 0.5f, 0.12f, 0.9f, 35f);
         Stain("Scorch", room, new Vector3(10.6f, y + 0.012f, 4.1f), 1.5f, 0.95f, M["scorch"], 4731, Vector3.zero);
         Stain("Soot", room, new Vector3(10.6f, y + 1.45f, 5.238f), 1.4f, 1.0f, M["soot"], 4732, new Vector3(-90f, 0, 0)); // 앞벽에 번진 그을음 (방 안쪽을 본다)
-        AptRmLowTable(bag, 8.8f, y, 1.5f, 0.55f, 1.0f, -3f);
+        AptRmLowTable(bag, room, 8.8f, y, 1.5f, 0.55f, 1.0f, -3f);
         bag.Flush(room);
     }
 
@@ -339,8 +374,8 @@ public static partial class GameSceneBuilder
         var bag = new AptRmParts();
         var rr = new System.Random(50401);
         AptRm04Base(bag, rr, y, 9, 4, AptRmH4);
-        AptRmMattress(bag, 9.0f, y, 1.3f, 2f);
-        AptRmLowTable(bag, 12.42f, y, -4.45f, 0.55f, 0.9f, 4f);
+        AptRmMattress(bag, room, 9.0f, y, 1.3f, 2f);
+        AptRmLowTable(bag, room, 12.42f, y, -4.45f, 0.55f, 0.9f, 4f);
         Stain("Scorch", room, new Vector3(10.6f, y + 0.012f, 4.1f), 1.3f, 0.9f, M["scorch"], 4771, Vector3.zero); // 바로 아래층(404호)이 타고 있다: 그 위 바닥이 그을었다
         bag.Flush(room);
 
@@ -357,8 +392,8 @@ public static partial class GameSceneBuilder
         var bag = new AptRmParts();
         var rr = new System.Random(60401);
         AptRm04Base(bag, rr, y, 9, 4, AptRmH5);
-        AptRmBedroll(bag, 12.25f, y, 1.2f, 0f);
-        AptRmPart(bag["wood"], 12.4f, y + 0.2f, 4.9f, 0.5f, 0.4f, 0.5f, 7f); // 낮은 상자 (북동 구석)
+        AptRmBedroll(bag, room, 12.25f, y, 1.2f, 0f);
+        AptRmCrate(bag, room, 12.4f, y + 0.2f, 4.9f, 0.5f, 0.4f, 0.5f, 7f); // 낮은 상자 (북동 구석)
         Stain("Soot", room, new Vector3(12.738f, y + 1.4f, -2.0f), 0.9f, 1.1f, M["soot"], 4772, new Vector3(0, 0, 90f)); // 동쪽 벽의 그을음 (-x, 방 안쪽을 본다)
         bag.Flush(room);
     }
@@ -381,7 +416,7 @@ public static partial class GameSceneBuilder
             float a = i * Mathf.PI * 2f / 10f, b = (i + 1) * Mathf.PI * 2f / 10f;
             KRod(bag["tire"], new Vector3(9.1f + Mathf.Cos(a) * 0.25f, y + 0.02f, 3.5f + Mathf.Sin(a) * 0.25f), new Vector3(9.1f + Mathf.Cos(b) * 0.25f, y + 0.02f, 3.5f + Mathf.Sin(b) * 0.25f), 0.015f);
         }
-        AptRmLowTable(bag, 8.8f, y, -3.9f, 0.6f, 1.4f, 2f);
+        AptRmLowTable(bag, room, 8.8f, y, -3.9f, 0.6f, 1.4f, 2f);
         Stain("Scorch", room, new Vector3(10.6f, y + 0.012f, 3.5f), 1.0f, 0.8f, M["scorch"], 4773, Vector3.zero); // 위층 구멍(H7) 아래 바닥의 그을음
         bag.Flush(room);
     }
@@ -395,9 +430,9 @@ public static partial class GameSceneBuilder
         var rr = new System.Random(80401);
         AptRm04Base(bag, rr, y, 10, 4, AptRmH7);
         // 내려서는 자리(x 10.6~12.6, z -4.9~-2.9) 둘레의 덩어리
-        AptRmPart(bag["dirty"], 12.45f, y + 0.12f, -1.9f, 0.45f, 0.24f, 0.5f, 15f, 5f, 0f);
-        AptRmPart(bag["dirty"], 12.5f, y + 0.08f, -1.2f, 0.3f, 0.16f, 0.35f, -40f, 0f, 6f);
-        AptRmPart(bag["dirty"], 10.15f, y + 0.1f, -5.0f, 0.5f, 0.2f, 0.35f, 8f, -4f, 0f);
+        AptRmLump(bag, room, "dirty", 12.45f, y + 0.12f, -1.9f, 0.45f, 0.24f, 0.5f, 15f, 5f, 0f);
+        AptRmLump(bag, room, "dirty", 12.5f, y + 0.08f, -1.2f, 0.3f, 0.16f, 0.35f, -40f, 0f, 6f);
+        AptRmLump(bag, room, "dirty", 10.15f, y + 0.1f, -5.0f, 0.5f, 0.2f, 0.35f, 8f, -4f, 0f);
         Stain("Scorch", room, new Vector3(11.6f, y + 0.012f, -3.9f), 1.1f, 1.1f, M["scorch"], 4741, Vector3.zero);
         // 구덩이 가장자리(옥상 바닥판 밑면 y 22.2)에서 늘어진 철근
         Rebar(room, new Vector3(10.6f, 22.2f, -3.4f), new Vector3(0.3f, -1f, 0.1f), 0.4f, rr);
@@ -436,10 +471,13 @@ public static partial class GameSceneBuilder
         Stain("BloodWall", go.transform, new Vector3(-0.06f, 0.8f, -0.35f + 0.012f), 0.25f, 0.35f, M["bloodOld"], 1304, new Vector3(90, 0, 0));
 
         // 앞벽 앞 탁자 위의 쪽지와 촛불. 상판에만 콜라이더를 둔다 (쪽지만 허공에서 몸에 걸리지 않게)
-        Box("Table", room, new Vector3(2.2f, y + 0.72f, 4.9f), new Vector3(1.1f, 0.04f, 0.5f), M["wood"], 1.2f);
-        foreach (float lx in new[] { 1.72f, 2.68f })
-            foreach (float lz in new[] { 4.7f, 5.1f })
-                AptRmPart(bag["wood"], lx, y + 0.35f, lz, 0.05f, 0.7f, 0.05f);
+        // 102동 Tripo면 상판+다리 전체(1.1 × 0.74 × 0.5. 가운데는 상판 가운데에서 0.35 아래)에 방공호 탁자 모델을 놓고 다리는 합치지 않는다.
+        // 상판 상자(이름·콜라이더)와 윗면 높이 0.74는 그대로라 쪽지·촛불·깡통 자리가 바뀌지 않는다
+        var table = Box("Table", room, new Vector3(2.2f, y + 0.72f, 4.9f), new Vector3(1.1f, 0.04f, 0.5f), M["wood"], 1.2f);
+        if (!(kTripoApt && TaRmTable(table.transform, new Bounds(new Vector3(0, -0.35f, 0), new Vector3(1.1f, 0.74f, 0.5f)))))
+            foreach (float lx in new[] { 1.72f, 2.68f })
+                foreach (float lz in new[] { 4.7f, 5.1f })
+                    AptRmPart(bag["wood"], lx, y + 0.35f, lz, 0.05f, 0.7f, 0.05f);
         var note = Box("Note", room, new Vector3(2.2f, y + 0.75f, 4.9f), new Vector3(0.3f, 0.02f, 0.2f), M["cloth"], 1f, true, new Vector3(0, 12f, 0));
         var noteCol = note.GetComponent<BoxCollider>(); // 얇은 종이라 조준하기 쉽게 판정을 키운다
         noteCol.center = new Vector3(0, 0.04f, 0);
@@ -458,7 +496,7 @@ public static partial class GameSceneBuilder
         Flicker(candle, 0.2f, 6f, false);
 
         // 버티던 흔적: 이부자리, 빈 깡통 (탁자 위 둘, 바닥에 하나)
-        AptRmBedroll(bag, 3.9f, y, 1.3f, 4f);
+        AptRmBedroll(bag, room, 3.9f, y, 1.3f, 4f);
         KCylAt(bag["metal"], new Vector3(1.8f, y + 0.795f, 4.82f), 0.04f, 0.11f, Quaternion.identity);
         KCylAt(bag["metal"], new Vector3(1.92f, y + 0.795f, 4.98f), 0.04f, 0.11f, Quaternion.identity);
         KCylAt(bag["metal"], new Vector3(3.2f, y + 0.04f, 1.9f), 0.04f, 0.11f, Quaternion.Euler(90f, 40f, 0));
@@ -498,8 +536,9 @@ public static partial class GameSceneBuilder
         Stain("Soot", room, new Vector3(0.112f, y + 1.55f, 0.1f), 0.85f, 1.0f, M["soot"], 4753, new Vector3(0, 0, -90f)); // 조리대 위 벽 그을음 (+x를 본다)
         AptRmScatter(bag["cracked"], rr, 0.9f, 4.25f, -1.3f, 1.3f, y, 3, new Rect(1.6f, -0.7f, 1.4f, 1.4f));
 
-        // 남쪽 방: 칸막이에 기대 넘어진 옷장 (칸막이 문 앞은 비운다)
-        AptRmPart(bag["wood"], 1.5f, y + 0.25f, -2.05f, 1.6f, 0.5f, 0.55f, 4f);
+        // 남쪽 방: 칸막이에 기대 넘어진 옷장 (칸막이 문 앞은 비운다). Tripo 옷장이면 콜라이더가 생긴다 (x 0.68~2.32, z -2.38~-1.72):
+        // 칸막이 문(x 2.7~4.3)의 서쪽 문설주와 0.38, 계단실 문(x 4.65, z -4.5~-2.9)에서 칸막이 문으로 가는 길과 1.2, 지킴이 G3a(2.6, -3.6)와 1.2, 아이템 자리 Item_403_1(0.8, -4.6)과 2.2 떨어져 있다
+        AptRmWardrobe(bag, room, 1.5f, y + 0.25f, -2.05f, 1.6f, 0.5f, 0.55f, 4f);
         AptRmScatter(bag["cracked"], rr, 0.45f, 4.25f, -4.95f, -2.0f, y, 4);
         AptRmScatter(bag["wood"], rr, 0.45f, 4.25f, -4.95f, -2.0f, y, 2);
         AptRmWindow(bag, rr, 1.25f, y, -5.25f, 1f);
@@ -530,26 +569,33 @@ public static partial class GameSceneBuilder
         DoorCasing(south, 3.45f, 1.6f, 2.2f, 0.1f, M["wood"]);
 
         // 뚫은 벽 구멍(x 0, z 2.4~4.2) 가장자리: 깨져 나온 덩어리와 철근. 지나는 자리(구멍 안)는 비우고 철근은 머리 위에만 둔다
-        AptRmPart(bag["cracked"], -0.35f, y + 0.1f, 4.45f, 0.4f, 0.2f, 0.3f, -15f, 0f, 5f);
-        AptRmPart(bag["cracked"], -0.3f, y + 0.07f, 2.15f, 0.28f, 0.14f, 0.26f, 30f);
-        AptRmPart(bag["cracked"], 0.32f, y + 0.09f, 2.18f, 0.35f, 0.18f, 0.3f, 20f, 0f, 6f);
-        AptRmPart(bag["cracked"], 0.3f, y + 0.06f, 4.42f, 0.25f, 0.12f, 0.3f, -40f);
+        AptRmLump(bag, room, "cracked", -0.35f, y + 0.1f, 4.45f, 0.4f, 0.2f, 0.3f, -15f, 0f, 5f);
+        AptRmLump(bag, room, "cracked", -0.3f, y + 0.07f, 2.15f, 0.28f, 0.14f, 0.26f, 30f);
+        AptRmLump(bag, room, "cracked", 0.32f, y + 0.09f, 2.18f, 0.35f, 0.18f, 0.3f, 20f, 0f, 6f);
+        AptRmLump(bag, room, "cracked", 0.3f, y + 0.06f, 4.42f, 0.25f, 0.12f, 0.3f, -40f);
         Rebar(room, new Vector3(0.02f, y + 2.4f, 2.75f), new Vector3(0.4f, -1f, 0.2f), 0.3f, rr);
         Rebar(room, new Vector3(-0.03f, y + 2.4f, 3.85f), new Vector3(-0.3f, -1f, -0.1f), 0.35f, rr);
         Rebar(room, new Vector3(0f, y + 2.15f, 2.4f), new Vector3(0.2f, -0.5f, 1f), 0.22f, rr);
 
-        // 북쪽 방: 앞벽 아래 주저앉은 소파
-        AptRmPart(bag["blanket"], -2.0f, y + 0.21f, 4.88f, 1.8f, 0.42f, 0.6f);
-        AptRmPart(bag["blanket"], -2.0f, y + 0.57f, 5.12f, 1.8f, 0.3f, 0.14f);
+        // 북쪽 방: 앞벽 아래 주저앉은 소파. 102동 Tripo면 앉는 자리+등받이 전체(1.8 × 0.72 × 0.61)에 소파 모델을 놓고 (모델은 앉는 쪽이 +Z라 180° 돌려 등받이를 벽 쪽에)
+        // 앉는 자리 상자 크기의 콜라이더를 단다 (사용자 결정: 소파는 막는다. x -2.9~-1.1, z 4.58~5.18, 높이 0.42).
+        // 벽 구멍(x 0, z 2.4~4.2)에서 북쪽 칸막이 문으로 가는 길과 1.0, 아이템 자리 Item_402_1(-3.9, 4.6)과 1.0 떨어져 있다
+        if (kTripoApt && TaRmFit(room, "apt_sofa_01", new Vector3(-2.0f, y + 0.36f, 4.885f), new Vector3(1.8f, 0.72f, 0.61f), Quaternion.Euler(0, 180f, 0)) != null)
+            ColliderBox("SofaCollider", room, new Vector3(-2.0f, y + 0.21f, 4.88f), new Vector3(1.8f, 0.42f, 0.6f), Vector3.zero);
+        else
+        {
+            AptRmPart(bag["blanket"], -2.0f, y + 0.21f, 4.88f, 1.8f, 0.42f, 0.6f);
+            AptRmPart(bag["blanket"], -2.0f, y + 0.57f, 5.12f, 1.8f, 0.3f, 0.14f);
+        }
         AptRmScatter(bag["cracked"], rr, -4.25f, -0.45f, 2.0f, 4.4f, y, 4);
         AptRmScatter(bag["wood"], rr, -4.25f, -0.45f, 2.0f, 4.4f, y, 2);
         AptRmWindow(bag, rr, -1.25f, y, 5.25f, -1f);
         AptRmWindow(bag, rr, -3.4f, y, 5.25f, -1f);
         // 가운데 방: 낮은 탁자 (지킴이 자리와 두 문을 잇는 길에서 벗어난 서쪽 벽 앞)
-        AptRmLowTable(bag, -3.85f, y, -0.3f, 0.6f, 1.1f, 3f);
+        AptRmLowTable(bag, room, -3.85f, y, -0.3f, 0.6f, 1.1f, 3f);
         AptRmScatter(bag["cracked"], rr, -4.25f, -0.45f, -1.3f, 1.3f, y, 3);
         // 남쪽 방: 뒷벽 아래 매트리스
-        AptRmMattress(bag, -2.2f, y, -4.72f, 90f);
+        AptRmMattress(bag, room, -2.2f, y, -4.72f, 90f);
         AptRmScatter(bag["cracked"], rr, -4.25f, -0.45f, -4.95f, -2.0f, y, 3);
         AptRmScatter(bag["wood"], rr, -4.25f, -0.45f, -4.95f, -2.0f, y, 2);
         AptRmWindow(bag, rr, -1.25f, y, -5.25f, 1f);
@@ -604,8 +650,8 @@ public static partial class GameSceneBuilder
         Stain("Soot", hall, new Vector3(2.6f, y + 2.588f, 2.4f), 1.1f, 1.1f, M["soot"], 4762, new Vector3(180f, 0, 0));
 
         // 북동 구석 야영지: 이부자리 둘 (콜라이더 없음), 상자 둘. 아이템 자리(북쪽·동쪽 벽 앞)와 지킴이 자리는 비운다
-        AptRmBedroll(bag, 2.75f, y, 3.75f, 86f);
-        AptRmBedroll(bag, 0.75f, y, 2.9f, -8f);
+        AptRmBedroll(bag, hall, 2.75f, y, 3.75f, 86f);
+        AptRmBedroll(bag, hall, 0.75f, y, 2.9f, -8f);
         Box("Crate", hall, new Vector3(4.14f, y + 0.25f, 3.95f), new Vector3(0.7f, 0.5f, 0.7f), M["wood"], 1f, true, new Vector3(0, 8f, 0));
         Box("Crate", hall, new Vector3(1.4f, y + 0.25f, 4.83f), new Vector3(0.7f, 0.5f, 0.7f), M["wood"], 1f, true, new Vector3(0, -10f, 0));
         // 불가의 냄비와 빈 깡통

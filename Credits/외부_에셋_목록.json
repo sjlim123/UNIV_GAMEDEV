@@ -769,6 +769,102 @@
       "source": "https://studio.tripo3d.ai/"
     },
     {
+      "kind": "3D 모델",
+      "name": "102동 옥상 통신 중계함 (apt_relay_cabinet_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,200개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 a1e0168f-95fe-48d3-95cb-26bd055fe391, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 16,000 · 중간 16,000 · 높음 24,000 · 매우 높음 57,200 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_relay_cabinet_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 옥상의 통신 중계함 1개 (보스 보상 상자). 몸통과 덮개만 모델이고 문짝·손잡이·명판은 코드 그대로 (열려야 한다). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "102동 아파트 경비실 (apt_guard_booth_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 55,282개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 a6e20bfb-432b-4ea7-8d27-22e75e373890, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 600 · 중간 1,500 · 높음 6,000 · 매우 높음 55,282 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_guard_booth_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 정문 안 경비실 1개 (조사 지점, 콜라이더·조사 글은 코드 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "102동 놀이터 미끄럼틀 (apt_slide_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,220개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 448f9f55-eb98-4ada-89e4-2896088fd434, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 1,500 · 중간 3,000 · 높음 8,000 · 매우 높음 57,220 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_slide_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 놀이터 미끄럼틀 1개 (콜라이더는 코드 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "102동 낡은 소파 (apt_sofa_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,120개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 dcba428f-200a-479f-be6d-6028f5d8f5d3, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 8,000 · 중간 10,000 · 높음 16,000 · 매우 높음 58,120 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_sofa_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 402호 소파 1개 (콜라이더를 새로 더함). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "102동 옷장 (apt_wardrobe_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 54,450개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 055a2f83-ba11-4106-b118-3029fe5cfde1, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 300 · 중간 800 · 높음 4,000 · 매우 높음 54,450 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_wardrobe_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 403호 넘어진 옷장과 204호 넘어진 장 2곳 (눕혀 놓음, 콜라이더를 새로 더함). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "102동 낮은 밥상 (apt_low_table_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 56,194개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 b942a27f-a9f8-4ecc-a47c-47155aa372bb, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 300 · 중간 800 · 높음 4,000 · 매우 높음 56,194 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/apt_low_table_01/ (만든 방법: SOURCE.md)",
+      "used_for": "102동 방 4곳의 낮은 밥상 (콜라이더 없음: 예전처럼 지나간다). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
       "kind": "효과음",
       "name": "근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
       "items": [
