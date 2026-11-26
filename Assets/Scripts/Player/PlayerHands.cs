@@ -227,7 +227,7 @@ public class PlayerHands : MonoBehaviour
             if (move == Move.Flick && before < 0.45f && moveT >= 0.45f && lighterFlame != null)
             {
                 lighterFlame.SetActive(true);
-                ProceduralAudio.Play2D(ProceduralAudio.Ignite(), 0.35f, 1.3f);
+                ProceduralAudio.Play2D(ProceduralAudio.LighterFlick(), 0.35f, 1.3f);
             }
             // 쓰는 몸짓: 박자를 지날 때마다 그 소리 (뚜껑 따기·꿀꺽·씹기·붕대 감기·구급상자 달그락, EffectAudio.Use)
             // (죽거나 침대에 누워 손이 감춰지면 남은 소리는 내지 않는다)

@@ -976,6 +976,22 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "합성 소리 2차 교체 64개 (화로·제작대, 발전기, 라디오·전기, 철문·해치·트럭, 사이렌·심장·보급 상자 웅웅, 라이터·불붙음·불타는 소리, 약탈자 외침·기합, 무거운 발, 휘두름, 새총, 돌, 첨벙, 딸깍, 종이) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리·환경음",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 64개 약 83크레딧 (2026-11-27)",
+        "반복 소리 7개(화로 타닥·불길, 발전기, 라디오 잡음, 철문 모터, 웅웅, 불타는 소리)는 끝을 처음에 섞어 이음새 없이, 심장 소리는 박동 하나를 1초 길이로",
+        "다듬기: 모노, 앞을 자르고 긴 꼬리를 줄임, 크기는 예전 합성 소리와 같게 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/G_합성소리/2차_소리_higgsfield_원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/World/",
+      "used_for": "방공호 화로·제작대·발전기·라디오, 방폭문·해치, 트럭 수리, 도시 사이렌·심장 소리·보급 상자, 라이터와 불, 약탈자·적 공격·새총·돌·웅덩이, UI 딸깍과 종이 — EffectAudio.World.cs. 파일이 없으면 예전 합성 소리",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

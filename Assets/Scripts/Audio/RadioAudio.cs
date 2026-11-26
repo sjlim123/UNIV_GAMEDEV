@@ -69,6 +69,8 @@ public static class RadioAudio
     // 반복 재생하는 잡음: 쉬익 하는 소리 + 탁탁 튀는 소리, 신호가 약해졌다 강해졌다 한다
     public static AudioClip Static()
     {
+        var rec = EffectAudio.World("radio_static_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var hp = Filter.HighPass(300);
         var lp = Filter.LowPass(4500);
         var band = Filter.BandPass(1700, 0.5f);
@@ -92,6 +94,8 @@ public static class RadioAudio
     // 켤 때 다이얼을 돌리는 소리: 높은 휘파람이 내려오며 주파수가 맞는다
     public static AudioClip Tune()
     {
+        var rec = EffectAudio.World("radio_tune"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.4f;
         var band = Filter.BandPass(1500, 0.7f);
         float phase = 0;
@@ -109,6 +113,8 @@ public static class RadioAudio
     // 알아들을 수 없게 뭉개진 사람 목소리 (변형 3가지)
     public static AudioClip Garble()
     {
+        var rec = EffectAudio.World("radio_garble"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         int v = rng.Next(3);
         return Make("radio_voice" + v, 2.4f, MakeGarble(v, 2.4f), 0.75f);
     }
@@ -156,6 +162,8 @@ public static class RadioAudio
     // 문이 움직이는 동안 반복: 낮은 모터 웅웅거림 + 쇠 긁히는 소리 + 톱니 덜컹거림
     public static AudioClip DoorGrind()
     {
+        var rec = EffectAudio.World("door_grind_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var rumble = Filter.LowPass(200);
         var scrape = Filter.BandPass(850, 2.5f);
         var squeal = Filter.BandPass(2100, 6f);
@@ -177,6 +185,8 @@ public static class RadioAudio
     // 문이 끝까지 열리거나 닫힐 때 나는 묵직한 쿵 소리
     public static AudioClip DoorBoom()
     {
+        var rec = EffectAudio.World("door_boom"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Filter.LowPass(260);
         float phase = 0;
         return Make("blastdoor_boom", 1.6f, t =>

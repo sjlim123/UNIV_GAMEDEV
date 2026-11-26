@@ -91,6 +91,8 @@ public static partial class EffectAudio
     // 쾅: 무거운 쇠붙이가 바닥에 놓인다. 음이 떨어지는 낮은 쿵 + 둔탁한 잡음 + 쇠가 울리는 여운 + 흩날리는 먼지의 쉬익
     public static AudioClip Slam()
     {
+        var rec = EffectAudio.World("heavy_slam"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.8f;
         var thud = Filter.LowPass(170, 0.8f);
         var rattle = Filter.BandPass(430, 2.5f);
@@ -114,6 +116,8 @@ public static partial class EffectAudio
     // 망치질: 쇠 머리가 쇠판을 때리는 날카로운 땅 + 상 전체가 울리는 둔탁한 쿵
     public static AudioClip HammerHit()
     {
+        var rec = EffectAudio.World("hammer"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.6f;
         var wood = Filter.LowPass(240, 1.1f);
         var click = Filter.BandPass(3200, 1.5f);
@@ -134,6 +138,8 @@ public static partial class EffectAudio
     // 불꽃이 튄다: 잘게 터지는 치직 소리 + 잦아드는 쉬익
     public static AudioClip Sparks()
     {
+        var rec = EffectAudio.World("sparks"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.1f;
         var hiss = Filter.BandPass(5200, 0.7f);
         var fine = new Pops(3800, 1.8f, 90f);
@@ -148,6 +154,8 @@ public static partial class EffectAudio
     // 전기가 튄다: 4ms마다 끊겼다 이어지는 지직 + 전원 주파수의 윙 + 높은 삐 (variant 0~2로 조금씩 다르다)
     public static AudioClip Zap(int variant = 0)
     {
+        var rec = EffectAudio.World("zap"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         variant = Mathf.Clamp(variant, 0, 2);
         float dur = 0.36f + variant * 0.06f;
         float toneFreq = 2600f + variant * 700f;
@@ -169,6 +177,8 @@ public static partial class EffectAudio
     // 고기가 굽힌다: 지글거리는 쉬익 + 가끔 튀는 기름
     public static AudioClip Sizzle()
     {
+        var rec = EffectAudio.World("sizzle"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 2.4f;
         var hiss = Filter.BandPass(4200, 0.5f);
         var pops = new Pops(2600, 1.2f, 30f);

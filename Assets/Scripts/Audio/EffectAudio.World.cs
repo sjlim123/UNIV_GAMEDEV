@@ -5,7 +5,8 @@ using UnityEngine;
 //   door_roll·door_stop·door_unlatch·pneumatic_in/out (미닫이문·방폭문), hurt·hit·jump·land·rustle (플레이어), bark·growl·snarl·yelp·whine·snuffle (들개)
 // ProceduralAudio·EffectAudio·DogAudio의 해당 함수가 먼저 이것을 찾고, 없으면 예전 합성 소리를 낸다. 크기는 예전 합성 소리와 같게 맞춰 두었다.
 // 같은 합성 소리를 다른 뜻으로도 쓰던 곳은 따로 둔다: 문 쾅 DoorSlam(처치 연출은 합성 Bang), 플레이어 착지 PlayerLand(떨어진 아이템은 합성 Land),
-// 플레이어 목소리 PlayerHurt(약탈자는 합성 Hurt)
+// 플레이어 목소리 PlayerHurt(약탈자는 합성 Hurt), 라이터 LighterFlick(적에게 불이 붙는 소리는 Ignite). 2차(11-27): 화로·발전기·라디오·철문·트럭·사이렌·심장·
+// 보급 상자 웅웅·불·약탈자·무거운 발·휘두름·새총·돌·첨벙·딸깍·종이 — 반복 소리는 *_loop
 public static partial class EffectAudio
 {
     const string WorldFolder = "Audio/World/";

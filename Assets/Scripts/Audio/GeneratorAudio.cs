@@ -95,6 +95,8 @@ public static class GeneratorAudio
     // 엔진 반복음 (4초 루프): 초당 29번 터지는 실린더의 덜덜거림 + 밸브 덜걱임 + 쇠판 떨림 + 바닥의 웅웅거림. 천천히 세졌다 약해진다
     public static AudioClip Rumble()
     {
+        var rec = EffectAudio.World("gen_rumble_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var e = new Engine();
         var hp = Filter.HighPass(36);
         float brown = 0;
@@ -109,6 +111,8 @@ public static class GeneratorAudio
     // 시동 (1.8초): 스타터가 끼릭끼릭 느리게 돌리다 점점 빨라지며 걸린다. 걸리는 순간 크게 털털거리고 안정된다
     public static AudioClip StartUp()
     {
+        var rec = EffectAudio.World("gen_startup"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.8f;
         var e = new Engine();
         var whine = Filter.BandPass(340, 6f);
@@ -132,6 +136,8 @@ public static class GeneratorAudio
     // 꺼짐 (1.7초): 박자가 느려지며 쿨럭 몇 번 하고 멈춘다. 마지막에 쇠가 쿵 내려앉는다
     public static AudioClip ShutDown()
     {
+        var rec = EffectAudio.World("gen_shutdown"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.7f;
         var e = new Engine();
         var thud = Filter.LowPass(180, 1f);
@@ -150,6 +156,8 @@ public static class GeneratorAudio
     // 힘이 달려 쿨럭인다 (0.9초): 두어 박자를 거르고 쿨럭, 배기관에서 퍽 하고 터진다
     public static AudioClip Sputter()
     {
+        var rec = EffectAudio.World("gen_sputter"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.9f;
         var e = new Engine();
         var pop = Filter.LowPass(260, 0.9f);
@@ -169,6 +177,8 @@ public static class GeneratorAudio
     // 연료를 붓는다 (1.5초): 통 안에서 꿀렁꿀렁 올라오는 거품 + 쏟아지는 기름의 쉬익
     public static AudioClip Pour()
     {
+        var rec = EffectAudio.World("fuel_pour"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.5f;
         var lp = Filter.LowPass(700, 1.0f);
         var hiss = Filter.BandPass(3000, 0.8f);

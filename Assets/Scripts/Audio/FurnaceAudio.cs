@@ -97,6 +97,8 @@ public static class FurnaceAudio
     // 평소(반복): 숯불이 낮게 웅웅거리고 가끔 탁탁 튄다
     public static AudioClip Crackle()
     {
+        var rec = EffectAudio.World("furnace_crackle_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bed = Filter.LowPass(260);
         var air = Filter.BandPass(900, 0.6f);
         var hp = Filter.HighPass(70);
@@ -117,6 +119,8 @@ public static class FurnaceAudio
     // 녹이는 동안(반복): 불길이 세게 일렁이며 쏴아 하고 빨려 올라가는 소리 + 잦은 탁탁 소리
     public static AudioClip Roar()
     {
+        var rec = EffectAudio.World("furnace_roar_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var body = Filter.LowPass(480, 0.9f);
         var rumble = Filter.BandPass(110, 1.2f);
         var draft = Filter.BandPass(1300, 0.7f);
@@ -137,6 +141,8 @@ public static class FurnaceAudio
     // 녹이기를 시작할 때: 땔감에 불이 확 붙는 소리 (쿵 + 높아지는 쏴아)
     public static AudioClip Ignite()
     {
+        var rec = EffectAudio.World("furnace_ignite"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 1.1f;
         var lp = Filter.LowPass(380);
         var pops = new Pops(1800, 1.3f, 22f);

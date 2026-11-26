@@ -164,6 +164,8 @@ public static class ProceduralAudio
 
     public static AudioClip Swoosh()
     {
+        var rec = EffectAudio.World("swoosh"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         float f = 600;
         Biquad bp = Biquad.BandPass(f, 2);
         int i = 0;
@@ -203,6 +205,8 @@ public static class ProceduralAudio
 
     public static AudioClip Siren()
     {
+        var rec = EffectAudio.World("siren"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Biquad.LowPass(1500);
         float phase = 0;
         return Make("siren", 4f, t =>
@@ -216,6 +220,8 @@ public static class ProceduralAudio
 
     public static AudioClip Hum()
     {
+        var rec = EffectAudio.World("hum_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Biquad.LowPass(300);
         return Make("hum", 2f, t =>
             Mathf.Sin(2 * Mathf.PI * 50 * t) + 0.5f * Mathf.Sin(2 * Mathf.PI * 100 * t) + 0.3f * Mathf.Sin(2 * Mathf.PI * 150 * t)
@@ -224,6 +230,8 @@ public static class ProceduralAudio
 
     public static AudioClip Heartbeat()
     {
+        var rec = EffectAudio.World("heartbeat"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         return Make("heart", 1f, t =>
         {
             float lub = Mathf.Sin(2 * Mathf.PI * 55 * t) * Mathf.Exp(-t * 18);
@@ -243,6 +251,8 @@ public static class ProceduralAudio
 
     public static AudioClip Click()
     {
+        var rec = EffectAudio.World("click"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bp = Biquad.BandPass(3200, 2);
         return Make("click", 0.06f, t => bp.Process(Noise()) * Mathf.Exp(-t * 250), 0.5f);
     }
@@ -301,6 +311,8 @@ public static class ProceduralAudio
     // 약탈자 고함 ("야!")
     public static AudioClip RaiderShout()
     {
+        var rec = EffectAudio.World("raider_shout"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         int v = rng.Next(2);
         return Make("rshout" + v, 0.7f, MakeVoice(150 + v * 25, 0.7f, 0.25f, new[] { 730f, 1150f + v * 100, 2500f }, 3.5f), 0.95f);
     }
@@ -308,6 +320,8 @@ public static class ProceduralAudio
     // 약탈자 기합·신음 (짧은 사람 목소리)
     public static AudioClip Grunt()
     {
+        var rec = EffectAudio.World("raider_grunt"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         return Make("grunt", 0.3f, MakeVoice(125, 0.3f, -0.2f, new[] { 600f, 1050f, 2500f }, 4f), 0.9f);
     }
 
@@ -332,6 +346,8 @@ public static class ProceduralAudio
     // 거대 좀비 발소리: 쿵 + 부서지는 소리
     public static AudioClip Stomp()
     {
+        var rec = EffectAudio.World("stomp"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var lp = Biquad.LowPass(700);
         var bp = Biquad.BandPass(900, 1.2f);
         return Make("stomp", 0.4f, t =>
@@ -360,6 +376,8 @@ public static class ProceduralAudio
     // 새총 고무줄을 당기는 소리: 고무가 늘어나며 끼이익 하고 가죽 주머니가 사각거린다 (원거리 좀비가 겨눌 때)
     public static AudioClip SlingStretch()
     {
+        var rec = EffectAudio.World("sling_stretch"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         const float dur = 0.6f;
         var r1 = Biquad.BandPass(950, 10);
         var r2 = Biquad.BandPass(2100, 8);
@@ -381,6 +399,8 @@ public static class ProceduralAudio
     // 새총 고무줄을 놓는 소리: 탁! 튕기며 짧게 부르르 떨린다
     public static AudioClip SlingSnap()
     {
+        var rec = EffectAudio.World("sling_snap"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var click = Biquad.BandPass(2800, 1.5f);
         var air = Biquad.BandPass(900, 1.2f);
         float phase = 0;
@@ -399,6 +419,8 @@ public static class ProceduralAudio
     // 돌멩이가 벽·바닥에 부딪히는 소리: 딱 + 둔탁한 쿵, 작게 한 번 더 튄다
     public static AudioClip StoneHit()
     {
+        var rec = EffectAudio.World("stone_hit"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         int v = rng.Next(3);
         return Make("stonehit" + v, 0.3f, MakeStoneHit(v), 0.9f);
     }
@@ -458,6 +480,8 @@ public static class ProceduralAudio
     // 웅덩이를 밟는 첨벙 (3가지): 낮은 퐁 + 물이 갈라지는 쏴 + 떨어지는 물방울 몇 개
     public static AudioClip Splash()
     {
+        var rec = EffectAudio.World("splash"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         int v = rng.Next(3);
         var body = Biquad.BandPass(1400 + v * 300, 0.7f);
         var fine = Biquad.BandPass(4200, 1.0f);
@@ -479,8 +503,13 @@ public static class ProceduralAudio
     // ---------- 전투·이동·출입 소리 ----------
 
     // 불이 확 붙는 소리 (훅 하는 바람 + 낮은 울림)
+    // 라이터를 켜는 딸깍·칙 (녹음, 없으면 합성). Ignite는 적에게 불이 붙는 확 소리로 쓰여서 라이터에는 이것을 쓴다
+    public static AudioClip LighterFlick() => EffectAudio.World("lighter") ?? Ignite();
+
     public static AudioClip Ignite()
     {
+        var rec = EffectAudio.World("catch_fire"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var bp = Biquad.BandPass(900, 0.8f);
         var lp = Biquad.LowPass(300);
         return Make("ignite", 0.7f, t =>
@@ -493,6 +522,8 @@ public static class ProceduralAudio
     // 타닥타닥 타는 소리 (반복 재생). 낮은 화르르 소리 위에 불규칙한 탁 소리
     public static AudioClip Crackle()
     {
+        var rec = EffectAudio.World("burn_crackle_loop"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var roar = Biquad.LowPass(500);
         var pop = Biquad.BandPass(2600, 1.5f);
         float popEnv = 0;
@@ -571,6 +602,8 @@ public static class ProceduralAudio
     // 수첩·양피지를 펼치는 소리: 종이가 바스락 구겨지며 펴지는 짧은 소리 여러 번
     public static AudioClip PaperUnfold()
     {
+        var rec = EffectAudio.World("paper"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         var hi = Biquad.BandPass(3800, 0.9f);
         var lo = Biquad.BandPass(1200, 1.2f);
         float crinkle = 0;

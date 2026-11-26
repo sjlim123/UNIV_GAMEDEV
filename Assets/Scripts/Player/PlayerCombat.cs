@@ -165,7 +165,7 @@ public class PlayerCombat : MonoBehaviour
         s.SlingShots--;
         cooldown = sling.AttackDelay;
         if (PlayerHands.Instance != null) PlayerHands.Instance.PlayShoot();
-        ProceduralAudio.Play2D(ProceduralAudio.Swoosh(), 0.35f, 1.5f); // 고무줄이 튕기는 짧고 높은 소리
+        ProceduralAudio.Play2D(ProceduralAudio.SlingSnap(), 0.35f, 1.5f); // 고무줄이 튕기는 짧고 높은 소리
         PlayerController.Instance.MakeNoise(0.6f);
 
         // 오른손 앞에서 조준한 곳(화면 가운데)을 향해 쏜다

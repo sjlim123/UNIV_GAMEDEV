@@ -12,6 +12,8 @@ public static class TruckAudio
 
     public static AudioClip Ratchet()
     {
+        var rec = EffectAudio.World("ratchet"); // 녹음(Resources/Audio/World)이 있으면 그것을 쓴다
+        if (rec != null) return rec;
         if (ratchet != null) return ratchet;
         const float dur = 1.15f;
         int n = (int)(dur * SR);
