@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 // 텍스처·재질·입자 시스템은 처음 쓸 때 코드로 만들고 씬이 바뀌어도 그대로 둔다 (HitEffects의 피와 같은 방식).
 // 입자는 모두 EmitParams로 하나씩 내보내므로 위치·속도·색을 그 자리의 상황(벽 방향, 조명)에 맞춘다.
 // 먼지는 빛을 받지 않는 재질이라 그 자리의 조명을 어림해 색에 미리 곱한다 (전구 옆은 따뜻하게, 구석은 어둡게).
-public static class Vfx
+public static partial class Vfx
 {
     static ParticleSystem dust, chips, sparks, arcs, flash, waves, chipsWood, chipsRust, chipsGold, drops;
     static Material dustMat, sparkMat, arcMat, flashMat, chipMat, waveMat, dropMat;

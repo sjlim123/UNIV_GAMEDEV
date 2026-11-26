@@ -4,7 +4,7 @@ using UnityEngine;
 // 방공호 장치 이펙트 소리를 코드로 합성한다 (FurnaceAudio와 같은 방식):
 // 무거운 것이 바닥에 쾅 놓이는 소리, 망치질, 불꽃이 튀는 치직 소리, 전기가 튀는 지직 소리, 고기가 지글거리는 소리,
 // 미닫이 철문이 레일 위를 구르는 소리·걸쇠·끝에서 탁 멈추는 소리, 방폭문의 공압 치이익
-public static class EffectAudio
+public static partial class EffectAudio
 {
     const int SR = 44100;
     static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();

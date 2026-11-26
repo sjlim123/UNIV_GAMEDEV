@@ -1,6 +1,6 @@
 # 벙커랩 (BUNKER LAB) — 외부 에셋 목록
 
-갱신: 2026-11-23 · 항목 40개
+갱신: 2026-11-26 · 항목 41개
 
 > 게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.
 
@@ -58,6 +58,7 @@
 | 38 | 3D 모델 | 도시 나무 상자 (city_crate_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 51,260개, 색 텍스처 4K 원본 → 2048로 줄여 넣음, 작업 627cb2e7-f8bc-4bb2-83ef-5c903a77b6a2, 55크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 800 · 중간 1,600 · 높음 6,000 · 매우 높음 51,260 (텍스처 256 · 512 · 512 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/city_crate_01/ (만든 방법: SOURCE.md)` | 도시 나무 상자 139개 (가게·2층 방·폭격 건물·트럭 짐칸, 위에 아이템). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-24 | 사용 |
 | 39 | 3D 모델 | 도시 도로 방호벽 (city_barrier_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 57,793개, 색 텍스처 4K 원본 → 2048로 줄여 넣음, 작업 04b13475-68ff-4510-b99d-909ed2beb111, 55크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 1,200 · 중간 2,000 · 높음 6,000 · 매우 높음 57,793 (텍스처 256 · 512 · 512 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/city_barrier_01/ (만든 방법: SOURCE.md)` | 도시 도로 콘크리트 방호벽 18개 (쓰러진 것은 쓰러진 채). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-24 | 사용 |
 | 40 | 3D 모델 | 도시 모래주머니 (city_sandbag_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델<br><small>H3.1 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,292개, 색 텍스처 4K 원본 → 2048로 줄여 넣음, 작업 f2bf9dd0-c578-427c-96cb-145944dbce01, 55크레딧 (그림은 구독 무료 횟수), 품질 4단계: 낮음 150 · 중간 600 · 높음 3,000 · 매우 높음 58,292 (텍스처 256 · 512 · 512 · 2048)</small> | Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션 | Tripo-유료 | `Assets/ThirdParty/Tripo/Models/city_sandbag_01/ (만든 방법: SOURCE.md)` | 도시 모래주머니 43개 (방공호 해치·벙커 옥상·검문소). 겉모습만 바꾸고 콜라이더·자리는 코드 그대로. Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦 | 2026-11-24 | 사용 |
+| 41 | 효과음 | 근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리<br><small>모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 57개 약 74크레딧 (2026-11-26), 재질 7가지 × 방망이·쇠 무기·맨손 (흙·천은 방망이·맨손만) × 3가지씩. 프롬프트·작업 번호는 효과 세션 기록에 있음, 다듬기: 모노로 합침, 타격 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 80 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/A_벽타격/소리_higgsfield/원본)</small> | Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션 | Higgsfield | `Assets/Resources/Audio/Impact/` | 근접 공격이 벽·물건·바닥에 맞는 소리 — EffectAudio.Impact.cs (PlayerCombat.SurfaceHit). 파일이 없으면 코드 합성 소리로 대신한다 | 2026-11-26 | 사용 |
 
 ## 출처 링크
 
@@ -101,6 +102,7 @@
 - 도시 나무 상자 (city_crate_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 도시 도로 방호벽 (city_barrier_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
 - 도시 모래주머니 (city_sandbag_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델 — https://studio.tripo3d.ai/
+- 근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리 — https://higgsfield.ai/
 
 ## 메모
 

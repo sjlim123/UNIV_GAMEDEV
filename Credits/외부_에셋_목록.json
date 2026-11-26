@@ -1,6 +1,6 @@
 {
   "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
-  "updated": "2026-11-23",
+  "updated": "2026-11-26",
   "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
   "licenses": {
     "CC0": {
@@ -655,6 +655,22 @@
       "added": "2026-11-24",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 1.3크레딧, 57개 약 74크레딧 (2026-11-26)",
+        "재질 7가지 × 방망이·쇠 무기·맨손 (흙·천은 방망이·맨손만) × 3가지씩. 프롬프트·작업 번호는 효과 세션 기록에 있음",
+        "다듬기: 모노로 합침, 타격 3 ms 앞에서 자름, -48 dB 아래 꼬리는 자르고 80 ms 동안 줄임, 최고 -1 dBFS로 맞춤 (원본은 저장소 밖 Docs/효과_미리보기/A_벽타격/소리_higgsfield/원본)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/Impact/",
+      "used_for": "근접 공격이 벽·물건·바닥에 맞는 소리 — EffectAudio.Impact.cs (PlayerCombat.SurfaceHit). 파일이 없으면 코드 합성 소리로 대신한다",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }
