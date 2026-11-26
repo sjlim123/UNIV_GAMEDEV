@@ -27,7 +27,16 @@ public static partial class GameSceneBuilder
     // 지금 만드는 모델 (PmBuildFor가 바꾼다). PmDir·PmRig 상수는 방독면 모델(1인칭 팔·그림자 몸 도구가 쓴다)
     static string pmCur = "player_survivor_02";
     static bool pmDarkenMask = true;
-    static string PmCurDir => "Assets/ThirdParty/Tripo/Player/" + pmCur + "/";
+    static string pmBase = "Assets/ThirdParty/Tripo/Player/"; // 감염자 Tripo 모델은 Assets/ThirdParty/Tripo/Enemies/
+    static string PmCurDir => pmBase + pmCur + "/";
+
+    // baseDir 아래 name 모델의 품질 4단계 (감염자: 마스크 칠하기 없음)
+    public static string PmBuildFor(string name, bool darkenMask, string baseDir)
+    {
+        pmBase = baseDir;
+        try { return PmBuildFor(name, darkenMask); }
+        finally { pmBase = "Assets/ThirdParty/Tripo/Player/"; }
+    }
 
     [MenuItem("Tools/핵폭발 생존/플레이어 모델: 얼굴 모델(집 차림) 품질 4단계")]
     static void PmBuildCivilianMenu()

@@ -363,9 +363,9 @@
       "author": "Higgsfield AI(컨셉·3D 생성), Tripo H3.1 모델, Blender 손질은 적 모델링 세션",
       "license": "Higgsfield",
       "location": "Assets/Resources/Enemies/ZombieCommon/ (원본·만든 방법: 저장소 밖 ModelWork/Enemies/zombie_common/)",
-      "used_for": "일반 좀비(감염자) 몸 — CharacterModels.Skinned.cs, SkinnedZombieDriver.cs. 약관 확인 11-23: 상업적 사용·공개 배포 가능, 소유권 주장 없음",
+      "used_for": "일반 좀비(감염자) 몸 — CharacterModels.Skinned.cs, SkinnedZombieDriver.cs. 약관 확인 11-23: 상업적 사용·공개 배포 가능, 소유권 주장 없음 — 2026-11-26부터 Tripo 감염자 a·b로 바뀌어, Tripo 모델 파일이 없을 때만 쓰인다",
       "added": "2026-11-23",
-      "status": "시험",
+      "status": "예비",
       "source": "https://higgsfield.ai/"
     },
     {
@@ -815,6 +815,23 @@
       "added": "2026-11-26",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "감염자 a·b (일반 좀비, zombie_common_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅, 같은 감염자를 두 얼굴로",
+      "items": [
+        "그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 사용자 참고 사진의 분위기(잿빛으로 썩은 피부·피 묻은 입·흙투성이 평상복)를 글로만 옮김",
+        "a (그림 5, 단정한 머리·가슴 피): H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 30만), 삼각형 297,220, 작업 6229327f-19ba-48a0-94d5-5d37b5b12602, 60크레딧 → 리토폴로지 쿼드 46,703 10크레딧 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20크레딧 (변환 a98a8f88)",
+        "b (그림 8, 헝클어진 머리·피 묻은 입): H3.5 프리뷰, 삼각형 286,658, 작업 020f4b1d-ba34-49d4-881c-4d48df2845b4, 60크레딧 → 리토폴로지 쿼드 48,802 10크레딧 → 자동 리깅 뼈 67개 20크레딧 (변환 76810b36)",
+        "가중치를 30만 메시로 옮김 (리깅 메시가 0.98배라 맞춰 줄임), 품질 4단계: 낮음 약 6,000 · 중간 24,000 · 높음 약 9.3만 · 매우 높음 약 29만 (텍스처 256 · 512 · 1024 · 2048). Blender 점검 통과 (비침 0 px, 세 자세 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/zombie_common_a·b/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE.md), Assets/Resources/Enemies/ZombieCommon/zombie_common_a·b.prefab",
+      "used_for": "일반 좀비(감염자) 몸, 좀비마다 a·b 중 하나 — CharacterModels.Skinned.cs (TripoCommonZombie), 뼈는 SkinnedPlayerDriver가 게임 관절을 따라 돌린다. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

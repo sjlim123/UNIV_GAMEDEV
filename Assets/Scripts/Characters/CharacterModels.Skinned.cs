@@ -7,6 +7,75 @@ using UnityEngine;
 // 모델: ModelWork/Enemies/zombie_common (AI 원본을 잘라 다듬은 것, export/manifest.json). 파일이 없으면 예전처럼 관(ProcMesh)으로 짓는다.
 public static partial class CharacterModels
 {
+    // ---- Tripo 감염자 (2026-11-26, 사용자 "힉스필드에서 Tripo로", "5번 8번 둘 다 — 시각적 다양성") ----
+    // 사실적으로 썩은 감염자 두 가지 (a 단정한 머리·가슴 피, b 헝클어진 머리·피 묻은 입). 뼈 67개(Tripo 사람형 리깅), 품질 4단계 LOD.
+    // 플레이어 모델 몸(CharacterModels.Player.cs)과 같은 규칙: 게임 관절은 쉬는 회전 = 팔다리가 -y로 곧게, 모델 뼈 자리에 세우고
+    // SkinnedPlayerDriver가 매 프레임 관절 → 뼈로 옮긴다. 키는 눈 높이로 맞춘다. 이 모델에는 아래턱 뼈가 없어 Jaw 관절은 움직여도 보이지 않는다.
+    // 모델: Resources/Enemies/ZombieCommon/zombie_common_a·b.prefab (편집기 '감염자 Tripo 모델: 가중치·품질 4단계·프리팹'). 없으면 아래 예전 피부 메시
+    public static bool UseTripoZombie = true;
+    const float ZombieEyeH = 1.62f;
+    static readonly string[] TripoZombieRes = { "zombie_common_a", "zombie_common_b" };
+    static readonly GameObject[] tripoZombiePrefab = new GameObject[2];
+    static bool tripoZombieLoaded;
+
+    static bool TripoCommonZombie(Builder b, int variant)
+    {
+        if (!UseTripoZombie) return false;
+        if (!tripoZombieLoaded)
+        {
+            tripoZombieLoaded = true;
+            for (int i = 0; i < 2; i++) tripoZombiePrefab[i] = Resources.Load<GameObject>(SkinnedDir + TripoZombieRes[i]);
+        }
+        int k = Mathf.Abs(variant) % 2;
+        var prefab = tripoZombiePrefab[k] != null ? tripoZombiePrefab[k] : tripoZombiePrefab[1 - k];
+        if (prefab == null) return false;
+
+        var rig = b.Rig;
+        var skin = Object.Instantiate(prefab, rig.Model, false);
+        skin.name = "Skin";
+        skin.transform.localPosition = Vector3.zero; skin.transform.localRotation = Quaternion.identity; skin.transform.localScale = Vector3.one;
+        var anim = skin.GetComponent<Animator>(); if (anim != null) Object.Destroy(anim);
+        var bones = new Dictionary<string, Transform>();
+        foreach (var t in skin.GetComponentsInChildren<Transform>(true)) bones[t.name] = t;
+        string[] need = { "Hips", "Spine", "Neck", "Head", "Left_Eye", "Right_Eye", "Left_UpperArm", "Left_LowerArm", "Left_Hand", "Right_UpperArm", "Right_LowerArm", "Right_Hand",
+            "Left_UpperLeg", "Left_LowerLeg", "Left_Foot", "Right_UpperLeg", "Right_LowerLeg", "Right_Foot", "Left_MiddleProximal", "Right_MiddleProximal" };
+        foreach (var n in need)
+            if (!bones.ContainsKey(n)) { Object.Destroy(skin); return false; }
+        foreach (var r in skin.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
+        // 키: 눈 높이를 맞춘다 (Tripo 모델은 키 약 1 단위로 나온다)
+        Vector3 P(string n) => rig.Model.InverseTransformPoint(bones[n].position);
+        float eye = (P("Left_Eye").y + P("Right_Eye").y) * 0.5f;
+        skin.transform.localScale = Vector3.one * (ZombieEyeH / Mathf.Max(0.1f, eye));
+
+        // 관절: 쉬는 회전 = 팔다리가 아래(-y)로 곧게. 자식 관절은 부모 바로 아래 뼈 길이만큼 (SkinnedPlayer와 같다)
+        float upper = (P("Left_LowerArm") - P("Left_UpperArm")).magnitude, fore = (P("Left_Hand") - P("Left_LowerArm")).magnitude;
+        float thigh = (P("Left_LowerLeg") - P("Left_UpperLeg")).magnitude, shin = (P("Left_Foot") - P("Left_LowerLeg")).magnitude;
+        var hips = b.Joint("Hips", rig.Model, P("Hips"));
+        rig.Body = b.Joint("Body", rig.Model, P("Spine"));
+        rig.Head = b.Joint("Head", rig.Body, P("Head") - P("Spine"));
+        rig.Jaw = b.Joint("Jaw", rig.Head, Vector3.zero);
+        foreach (var s in new[] { "L", "R" })
+        {
+            string pre = s == "L" ? "Left_" : "Right_";
+            var arm = b.Joint("Arm" + s, rig.Body, P(pre + "UpperArm") - P("Spine"));
+            var fo = b.Joint("Fore" + s, arm, new Vector3(0, -upper, 0));
+            var hand = b.Joint("Hand" + s, fo, new Vector3(0, -fore, 0));
+            var leg = b.Joint("Leg" + s, rig.Model, P(pre + "UpperLeg"));
+            var sh = b.Joint("Shin" + s, leg, new Vector3(0, -thigh, 0));
+            if (s == "L") { rig.ArmL = arm; rig.ForeL = fo; rig.HandL = hand; rig.LegL = leg; rig.ShinL = sh; }
+            else { rig.ArmR = arm; rig.ForeR = fo; rig.HandR = hand; rig.LegR = leg; rig.ShinR = sh; }
+        }
+        rig.ThighLen = thigh; rig.ShinLen = shin; rig.UpperArmLen = upper; rig.ForearmLen = fore;
+        rig.BodyY = P("Spine").y;
+        rig.Shoulder = P("Right_UpperArm") - P("Spine");
+        rig.AnkleH = P("Left_Foot").y;
+        rig.CurlL = rig.CurlR = 0.7f; // 할퀴려는 갈고리 손 (1 = 느슨한 주먹)
+        skin.AddComponent<SkinnedPlayerDriver>().Init(rig, hips, bones);
+        return true;
+    }
+
     public static bool UseSkinnedCommonZombie = true;
     const string SkinnedDir = "Enemies/ZombieCommon/";
     static GameObject skinnedPrefab;

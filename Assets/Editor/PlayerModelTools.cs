@@ -11,7 +11,11 @@ public static class PlayerModelTools
 {
     // 모델 이름 (폴더·파일 이름 앞부분): player_survivor_02 = 방독면 탐험 차림, player_civilian_01 = 얼굴 있는 집 차림 (도입 컷씬)
     static string Name = "player_survivor_02";
-    static string Dir => "Assets/ThirdParty/Tripo/Player/" + Name + "/";
+    // 모델 폴더의 부모 (감염자 Tripo 모델은 Assets/ThirdParty/Tripo/Enemies/). Fit: 원본 메시를 리깅 메시 크기로 맞추는 배율
+    // (감염자 리깅 메시는 원본의 0.98배로 나왔다 — Blender에서 0.98배로 줄이면 평균 0.43 mm로 겹침, 11-26)
+    static string Base = "Assets/ThirdParty/Tripo/Player/";
+    static float Fit = 1f;
+    static string Dir => Base + Name + "/";
     static string HiFbx => Dir + Name + "_tex.fbx";
     static string RigFbx => Dir + "_리깅5만/" + Name + "_rig50k.fbx";
 
@@ -36,6 +40,14 @@ public static class PlayerModelTools
         Name = name;
         try { return TransferCur(); }
         finally { Name = "player_survivor_02"; }
+    }
+
+    // baseDir 아래 name 모델 (예: 감염자 "Assets/ThirdParty/Tripo/Enemies/", 0.98)
+    public static string TransferFor(string name, string baseDir, float fit)
+    {
+        Base = baseDir; Fit = fit;
+        try { return TransferFor(name); }
+        finally { Base = "Assets/ThirdParty/Tripo/Player/"; Fit = 1f; }
     }
 
     static string TransferCur()
@@ -82,7 +94,7 @@ public static class PlayerModelTools
             var lv = new Vector3[hv.Length]; var ln = new Vector3[hv.Length];
             for (int i = 0; i < hv.Length; i++)
             {
-                lv[i] = smr.transform.InverseTransformPoint(mf.transform.TransformPoint(hv[i]));
+                lv[i] = smr.transform.InverseTransformPoint(mf.transform.TransformPoint(hv[i] * Fit));
                 ln[i] = smr.transform.InverseTransformDirection(mf.transform.TransformDirection(hn[i])).normalized;
             }
 

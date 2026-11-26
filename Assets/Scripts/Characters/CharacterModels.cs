@@ -56,7 +56,7 @@ public static partial class CharacterModels
             case FigureKind.Merchant: Merchant(b); break;
             case FigureKind.Civilian: if (!SkinnedPlayer(b, variant)) Civilian(b, variant); break; // 플레이어 모델: 0 집 차림 얼굴 모델, 1 방독면 탐험 차림 (CharacterModels.Player.cs)
             case FigureKind.Corpse: Corpse(b, variant); break;
-            default: if (!SkinnedCommonZombie(b)) CommonZombie(b, variant); break; // 새 감염자 피부 메시 (CharacterModels.Skinned.cs), 없으면 예전 관 몸
+            default: if (!TripoCommonZombie(b, variant) && !SkinnedCommonZombie(b)) CommonZombie(b, variant); break; // Tripo 감염자 a·b → 예전 피부 메시 → 관 몸 (CharacterModels.Skinned.cs)
         }
         b.Finish();
         return b.Rig;

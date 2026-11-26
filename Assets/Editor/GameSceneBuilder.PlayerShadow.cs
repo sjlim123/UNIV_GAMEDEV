@@ -114,12 +114,17 @@ public static partial class GameSceneBuilder
     public static string PbBuild() => PbBuildFor("player_survivor_02", PbOut);
 
     // name 모델(Assets/ThirdParty/Tripo/Player/name/)의 품질 4판을 한 프리팹으로 (outPath: Resources 안 경로)
-    public static string PbBuildFor(string name, string outPath)
+    public static string PbBuildFor(string name, string outPath) => PbBuildFor(name, outPath, "Assets/ThirdParty/Tripo/Player/");
+
+    // baseDir 아래 name 모델 (감염자: Assets/ThirdParty/Tripo/Enemies/ → Resources/Enemies/ZombieCommon/)
+    public static string PbBuildFor(string name, string outPath, string baseDir)
     {
-        string dir = "Assets/ThirdParty/Tripo/Player/" + name + "/";
+        string dir = baseDir + name + "/";
         var rigAsset = AssetDatabase.LoadAssetAtPath<GameObject>(dir + "_리깅5만/" + name + "_rig50k.fbx");
         if (rigAsset == null) return "리깅 FBX 없음";
         if (!AssetDatabase.IsValidFolder("Assets/Resources/Player")) AssetDatabase.CreateFolder("Assets/Resources", "Player");
+        string outDir = System.IO.Path.GetDirectoryName(outPath).Replace('\\', '/');
+        if (!AssetDatabase.IsValidFolder(outDir)) return "출력 폴더 없음: " + outDir;
         var meshes = new Mesh[4]; var mats = new Material[4];
         for (int q = 0; q < 4; q++)
         {
