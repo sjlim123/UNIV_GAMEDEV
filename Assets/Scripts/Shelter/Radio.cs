@@ -28,8 +28,9 @@ public class Radio : Interactable
 
     public override string Prompt => playing ? "라디오 끄기" : "라디오 듣기";
 
-    // 스피커 그릴 자리와 앞면 방향 (앞면이 -Z)
-    Vector3 GrillePos => transform.TransformPoint(new Vector3(-0.085f, 0.09f, -0.1f));
+    // 스피커 자리와 앞면 방향 (앞면이 -Z). Tripo 라디오는 스피커 가운데에 SpeakerPoint를 둔다 (없으면 예전 코드 라디오의 그릴 자리)
+    Transform speakerPoint;
+    Vector3 GrillePos => speakerPoint != null ? speakerPoint.position : transform.TransformPoint(new Vector3(-0.085f, 0.09f, -0.1f));
     Vector3 Front => -transform.forward;
 
     // 낡은 라디오의 치지직: 스피커 그릴에서 전기가 튄다.
@@ -52,11 +53,17 @@ public class Radio : Interactable
     {
         foreach (Transform c in transform)
             if (c.name == "Grille") { grille.Add(c); grilleHome.Add(c.localPosition); }
-        // 그릴 뒤의 스피커 콘 (얇은 어두운 원판, 그릴 틈으로 보인다)
-        var disc = RuntimeVisuals.Part(PrimitiveType.Cylinder, transform, new Vector3(-0.085f, 0.097f, -0.0915f), new Vector3(0.12f, 0.0004f, 0.12f), new Color(0.06f, 0.055f, 0.05f), 0.35f, new Vector3(90, 0, 0));
-        disc.name = "SpeakerCone";
-        disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        cone = disc.transform;
+        speakerPoint = transform.Find("SpeakerPoint");
+        // Tripo 라디오: 씬에 따로 떼어 둔 종이 진동판(SpeakerCone)이 있으면 그것을 떨게 한다 (GameSceneBuilder.TripoShelterProps.cs)
+        cone = transform.Find("SpeakerCone");
+        if (cone == null)
+        {
+            // 그릴 뒤의 스피커 콘 (얇은 어두운 원판, 그릴 틈으로 보인다)
+            var disc = RuntimeVisuals.Part(PrimitiveType.Cylinder, transform, new Vector3(-0.085f, 0.097f, -0.0915f), new Vector3(0.12f, 0.0004f, 0.12f), new Color(0.06f, 0.055f, 0.05f), 0.35f, new Vector3(90, 0, 0));
+            disc.name = "SpeakerCone";
+            disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            cone = disc.transform;
+        }
         coneHome = cone.localPosition;
 
         voice = gameObject.AddComponent<AudioSource>();

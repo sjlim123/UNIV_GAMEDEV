@@ -929,6 +929,22 @@
       "source": "https://studio.tripo3d.ai/"
     },
     {
+      "kind": "3D 모델",
+      "name": "방공호 라디오 (shelter_radio_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 59,140개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 82ae4be8-3bee-4c12-8c85-3ea1b7853076, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 2,500 · 중간 3,988 · 높음 11,988 · 매우 높음 59,140 (텍스처 256 · 512 · 1024 · 2048). 종이 콘은 판마다 따로 떼어 둠"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_radio_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 탁자 위 라디오 1개 (몸통만 모델. 다이얼 불빛·바늘·초록 불·안테나는 코드 그대로, 종이 콘은 따로 떼어 Radio 스크립트가 소리에 맞춰 떨게 한다). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
       "kind": "효과음",
       "name": "근접 공격 타격음 57개 (콘크리트·벽돌·나무·쇠·유리·흙·천 × 나무 방망이·쇠 무기·맨손) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
       "items": [

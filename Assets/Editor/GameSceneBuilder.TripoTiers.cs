@@ -63,6 +63,8 @@ public static partial class GameSceneBuilder
         { "shelter_wall_lamp_01",     new[] { 2500, 4500, 10000 } }, // 3개. 가는 철망 살: 낮음 1,200(멈춘 1,444)은 철망이 판으로 무너졌고, 이음매 지키기 8,000은 테두리가 갈라졌다 → 넉넉히, 새로 굽는다
         { "shelter_carton_01",        new[] { 900, 1500, 4000 } },   // 선반 위 9개. 새로 굽기가 932에서 멈춘다 (300·800 목표가 같은 판이 됐다)
         { "shelter_fuse_box_01",      new[] { 300, 800, 4000 } },
+        // 방공호 라디오 (11-27): 매일 가까이서 보는 물건 하나라 낮은 단계도 넉넉히 (둥근 스피커 테두리·손잡이·돌리는 손잡이)
+        { "shelter_radio_01",         new[] { 2500, 4000, 12000 } }, // 낮음 1,500은 스피커 테두리가 들쭉날쭉했다 (11-27 품질 사진)
     };
 
     // 품질별 텍스처 크기 {낮음, 중간, 높음}. 없으면 256·512·512. 2차 두 모델은 매우 높음이 2048이라 1024·512·256으로 한 단계씩
@@ -70,6 +72,7 @@ public static partial class GameSceneBuilder
     {
         { "shelter_furnace_01", new[] { 256, 512, 1024 } },
         { "shelter_generator_01", new[] { 256, 512, 1024 } },
+        { "shelter_radio_01", new[] { 256, 512, 1024 } }, // 가까이서 보는 물건: 높음을 1024로 (종이 콘의 얼룩·주름)
     };
     // 방공호 2차 (화로·발전기): 메뉴가 따로다 (1차 가구 메뉴는 이 둘을 건드리지 않는다)
     static readonly HashSet<string> TtShelter2 = new HashSet<string> { "shelter_furnace_01", "shelter_generator_01" };
@@ -87,6 +90,7 @@ public static partial class GameSceneBuilder
     static readonly HashSet<string> TtShelter3 = new HashSet<string>
     {
         "shelter_ceiling_lamp_01", "shelter_wall_lamp_01", "shelter_carton_01", "shelter_fuse_box_01",
+        "shelter_radio_01",
     };
     // 도시 남은 소품 1차 (11-24): 메뉴가 따로다
     static readonly HashSet<string> TtCity1 = new HashSet<string>
@@ -116,6 +120,7 @@ public static partial class GameSceneBuilder
         "city_mattress_01", "city_counter_01", "city_bin_01", "city_water_tank_01", "city_slab_01", "city_stump_01", "city_bollard_01",
         "apt_relay_cabinet_01", "apt_guard_booth_01", "apt_slide_01", "apt_sofa_01", "apt_wardrobe_01", "apt_low_table_01",
         "shelter_ceiling_lamp_01", "shelter_wall_lamp_01", "shelter_carton_01", "shelter_fuse_box_01",
+        "shelter_radio_01",
     };
 
     // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
@@ -137,7 +142,57 @@ public static partial class GameSceneBuilder
         { "apt_guard_booth_01", new[] { 2 } }, { "apt_wardrobe_01", new[] { 2 } }, { "apt_low_table_01", new[] { 2 } },
         // 방공호 작은 소품의 상자 꼴 둘도 같다
         { "shelter_carton_01", new[] { 2 } }, { "shelter_fuse_box_01", new[] { 2 } },
-        { "shelter_ceiling_lamp_01", new[] { 1, 2 } }, { "shelter_wall_lamp_01", new[] { 1, 2 } } };
+        { "shelter_ceiling_lamp_01", new[] { 1, 2 } }, { "shelter_wall_lamp_01", new[] { 1, 2 } },
+        { "shelter_radio_01", new[] { 0, 1, 2 } } }; // 라디오 낮음: 이음매 지키기 2,500은 몸통과 스피커가 찌그러졌다 → 낮음도 새로 굽는다 (11-27 품질 사진)
+    // TtCut = 판마다 이 조건에 드는 면을 따로 뗀다 (점은 '앞 = +Z' 좌표, 모델 설정의 돌림까지 넣은 것). 뗀 면은 {id}_q{n}_part.asset, 본체 판에는 없다.
+    // 라디오 종이 콘: 소리에 맞춰 스크립트(Radio)가 그 부분만 앞뒤로 움직인다. 뗀 모델은 매우 높음도 FBX 메시 대신 만든 메시를 쓴다
+    static readonly Dictionary<string, System.Func<Vector3, bool>> TtCut = new Dictionary<string, System.Func<Vector3, bool>>
+    {
+        { "shelter_radio_01", TtRadioCone },
+    };
+
+    // 라디오 스피커 (판 좌표, 앞면이 -Z, 모델 가로 = 1): 축 x·y, 떼는 반지름, 앞판 z, 콘에서 가장 깊은 곳 z. 11-27 텍스처 색과 깊이로 잰 값 —
+    // 축 둘레 반지름 0.06 안은 먼지 덮개, 0.1925까지 황토색 종이, 0.195~0.2425는 검은 테두리(엣지), 그 밖은 쇠 테.
+    // 떼는 경계는 종이 위가 아니라 검은 테두리 안에 오게 한다: 콘이 앞으로 나올 때 경계에 생기는 어두운 틈이 종이 위에서는 선으로 보인다 (11-27 검토).
+    // 세 꼭짓점이 다 안에 든 면만 떼므로 실제 경계는 반지름보다 면 하나만큼(낮음 판에서 0.026까지) 안쪽이다 → 0.225 (판마다 경계 0.199~0.225, 쇠 테보다 0.017 안)
+    public const float RadioConeX = -0.1937f, RadioConeY = 0.3170f, RadioConeR = 0.225f, RadioFaceZ = -0.122f, RadioConeDeepZ = -0.03f;
+    static bool TtRadioCone(Vector3 p)
+    {
+        float dx = p.x - RadioConeX, dy = p.y - RadioConeY;
+        return dx * dx + dy * dy < RadioConeR * RadioConeR && p.z < 0.02f; // 뒤판(z +0.17)은 빼고 앞쪽 면만
+    }
+
+    // 쓰인 꼭짓점만 남기고 번호를 다시 매긴다 (처음 쓰인 순서)
+    static void TtCompact(ref List<Vector3> p, ref List<Vector3> n, ref List<Vector2> u, List<int> tris, out int[] outTris)
+    {
+        var map = new Dictionary<int, int>(); var cp = new List<Vector3>(); var cn = new List<Vector3>(); var cu = new List<Vector2>();
+        outTris = new int[tris.Count];
+        for (int i = 0; i < tris.Count; i++)
+        {
+            if (!map.TryGetValue(tris[i], out int w)) { w = cp.Count; map[tris[i]] = w; cp.Add(p[tris[i]]); cn.Add(n[tris[i]]); cu.Add(u[tris[i]]); }
+            outTris[i] = w;
+        }
+        p = cp; n = cn; u = cu;
+    }
+
+    // 면 목록으로 메시 파일을 쓴다 (있으면 고쳐 쓴다). 쓰인 꼭짓점만 넣는다
+    static Mesh TtSaveMesh(string path, string name, List<Vector3> p, List<Vector3> n, List<Vector2> u, List<int> tris)
+    {
+        TtCompact(ref p, ref n, ref u, tris, out var t);
+        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        bool isNew = mesh == null;
+        if (isNew) mesh = new Mesh();
+        mesh.Clear();
+        mesh.name = name;
+        mesh.indexFormat = p.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+        mesh.SetVertices(p); mesh.SetNormals(n); mesh.SetUVs(0, u); mesh.SetTriangles(t, 0);
+        mesh.RecalculateBounds();
+        mesh.UploadMeshData(false);
+        if (isNew) AssetDatabase.CreateAsset(mesh, path);
+        else { EditorUtility.SetDirty(mesh); AssetDatabase.SaveAssetIfDirty(mesh); }
+        return mesh;
+    }
+
     // TtDeform = 판을 만들기 전에 원본 꼭짓점('앞 = +Z' 좌표)을 고친다. 고친 모델은 매우 높음도 FBX 메시 대신 고친 메시({id}_q3.asset)를 쓴다
     static readonly Dictionary<string, System.Func<Vector3[], Vector3[], string>> TtDeform = new Dictionary<string, System.Func<Vector3[], Vector3[], string>>
     {
@@ -296,6 +351,7 @@ public static partial class GameSceneBuilder
         var pos = src.vertices; var nrm = src.normals; var uv = src.uv; var tri0 = src.triangles;
         for (int i = 0; i < pos.Length; i++) { pos[i] = mm.MultiplyPoint3x4(pos[i]); nrm[i] = nm.MultiplyVector(nrm[i]).normalized; }
         string deformNote = TtDeform.TryGetValue(id, out var deform) ? deform(pos, nrm) : null;
+        TtCut.TryGetValue(id, out var cut);
         var srcTex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
         srcTex.LoadImage(File.ReadAllBytes($"{q3Dir}/{id}_q3_diff.jpg"));
         srcTex.wrapMode = TextureWrapMode.Clamp; // 굽기에서 아틀라스 가장자리 색이 반대쪽과 섞이지 않게
@@ -351,6 +407,16 @@ public static partial class GameSceneBuilder
             string sub = $"{dir}/{LpTierDir[q]}";
             if (!AssetDatabase.IsValidFolder(sub)) AssetDatabase.CreateFolder(dir, LpTierDir[q]);
             string suf = "_q" + q;
+            // 떼어 내는 부분(TtCut)이 있으면: 세 꼭짓점이 다 조건에 드는 면을 {id}_q{n}_part.asset으로 따로 두고 본체에서는 뺀다
+            if (cut != null)
+            {
+                var bodyT = new List<int>(); var partT = new List<int>();
+                for (int i = 0; i < t2.Length; i += 3)
+                    (cut(p2[t2[i]]) && cut(p2[t2[i + 1]]) && cut(p2[t2[i + 2]]) ? partT : bodyT).AddRange(new[] { t2[i], t2[i + 1], t2[i + 2] });
+                TtSaveMesh($"{sub}/{id}{suf}_part.asset", id + suf + "_part", p2, n2, u2, partT);
+                TtCompact(ref p2, ref n2, ref u2, bodyT, out t2);
+                how += $", 뗀 부분 {partT.Count / 3}면";
+            }
             var mesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{sub}/{id}{suf}.asset");
             bool isNew = mesh == null;
             if (isNew) mesh = new Mesh();
@@ -406,7 +472,17 @@ public static partial class GameSceneBuilder
             // 메시 자식의 회전(Blender 설정 FBX는 X 270°)까지 넣는다. 예전 모델은 자식 회전이 없어 rootRot 그대로와 같다
             child.transform.localRotation = rootRot * Quaternion.Inverse(model.transform.rotation) * mf.transform.rotation;
             var mesh3 = src;
-            if (deformNote != null)
+            if (cut != null)
+            {
+                // 부분을 뗀 모델: 매우 높음도 본체(뗀 나머지)와 뗀 부분을 메시 파일로 둔다 (이미 '앞 = +Z' 좌표라 자식 회전 없음)
+                var bodyT = new List<int>(); var partT = new List<int>();
+                for (int i = 0; i < tri0.Length; i += 3)
+                    (cut(pos[tri0[i]]) && cut(pos[tri0[i + 1]]) && cut(pos[tri0[i + 2]]) ? partT : bodyT).AddRange(new[] { tri0[i], tri0[i + 1], tri0[i + 2] });
+                TtSaveMesh($"{q3Dir}/{id}_q3_part.asset", id + "_q3_part", new List<Vector3>(pos), new List<Vector3>(nrm), new List<Vector2>(uv), partT);
+                mesh3 = TtSaveMesh($"{q3Dir}/{id}_q3.asset", id + "_q3", new List<Vector3>(pos), new List<Vector3>(nrm), new List<Vector2>(uv), bodyT);
+                child.transform.localRotation = Quaternion.identity;
+            }
+            else if (deformNote != null)
             {
                 // 고친 모델: 고친 꼭짓점을 메시 파일로 두고 그것을 쓴다 (이미 '앞 = +Z' 좌표라 자식 회전 없음)
                 string mp = $"{q3Dir}/{id}_q3.asset";
@@ -428,7 +504,7 @@ public static partial class GameSceneBuilder
             PrefabUtility.SaveAsPrefabAsset(go, $"{q3Dir}/{id}_q3.prefab");
             Object.DestroyImmediate(go);
         }
-        parts.Add($"q3 {src.GetIndexCount(0) / 3}({(deformNote != null ? "고친 메시: " + deformNote : "FBX")})");
+        parts.Add($"q3 {src.GetIndexCount(0) / 3}({(deformNote != null ? "고친 메시: " + deformNote : cut != null ? "부분을 뗀 메시" : "FBX")})");
         return id + ": " + string.Join(", ", parts);
     }
 

@@ -10,10 +10,12 @@ using UnityEngine.Rendering;
 // 원칙은 방공호 가구·도시 소품과 같다: 방공호를 예전처럼 다 만든 뒤(난수는 이미 다 뽑았다) 길 찾기 지도를 굽기 직전에 겉모습만 바꾼다.
 // 콜라이더·이름·불빛(Light)은 그대로라 길 찾기 지도(ShelterNavMesh)·좀비 시야·방 밝기가 바뀌지 않는다.
 // 남기는 코드 겉모습: 전구 유리(Glass: ShelterLights가 찾아 깜박이게 한다), 붉게 빛나는 등(이름·재질 그대로, 모양만 둥근 유리로), 선반 깡통.
-// 탁자 위 라디오는 바꾸지 않는다 (사용자: 나머지가 다 끝난 뒤 상의)
+// 탁자 위 라디오 (11-27 뒤에 더함, 사용자 "그림을 다시 뽑되 스피커 부분 진동판으로… cone paper로" → "2번으로 생성" → "통과, 넣기 진행"):
+// 몸통은 종이 진동판 스피커가 드러난 모델, 다이얼 불빛·바늘·초록 불·안테나는 코드 그대로, 종이 콘은 따로 떼어 Radio가 소리에 맞춰 떨게 한다
 public static partial class GameSceneBuilder
 {
     const string TpCeilingLamp = "shelter_ceiling_lamp_01", TpWallLamp = "shelter_wall_lamp_01", TpCarton = "shelter_carton_01", TpFuseBox = "shelter_fuse_box_01";
+    const string TpRadio = "shelter_radio_01";
     // 천장 전등 크기: 갓 지름 약 27 cm. 소켓 아래 끝을 전구 유리 꼭대기에 맞추면 천장 받침판(두께 3 cm)이 천장 속으로 들어가 이음 고리만 천장에 보인다
     // (거실·발전기실: 전구가 천장 아래 25 cm. 복도는 20 cm라 봉도 5 cm 더 들어간다)
     const float TpCeilingLampScale = 0.30f;
@@ -29,6 +31,8 @@ public static partial class GameSceneBuilder
         var log = new List<string>();
         try { TpNewModels(root, wallT, log); }
         catch (System.Exception e) { Debug.LogError("[GameSceneBuilder] Shelter: Tripo 작은 소품(새 모델)을 넣다 멈춤 — 남은 소품은 코드 모습 그대로: " + e); log.Add("새 모델 오류"); }
+        try { log.Add("라디오 " + (TpRadioSwap(root) ? 1 : 0) + "/1"); }
+        catch (System.Exception e) { Debug.LogError("[GameSceneBuilder] Shelter: Tripo 라디오를 넣다 멈춤: " + e); log.Add("라디오 오류"); }
         try { TpReuseModels(root, log); }
         catch (System.Exception e) { Debug.LogError("[GameSceneBuilder] Shelter: Tripo 작은 소품(재사용 모델)을 넣다 멈춤 — 남은 소품은 코드 모습 그대로: " + e); log.Add("재사용 모델 오류"); }
         return string.Join(", ", log);
@@ -133,6 +137,95 @@ public static partial class GameSceneBuilder
             log.Add($"옛 통로 잔해 덩어리 {chunks}/3 · 판 {slabs}/1");
         }
         finally { kKeepMaterials = keepWas; }
+    }
+
+    // 탁자 위 라디오: 코드 라디오의 몸통·앞판·스피커 살·돌리는 손잡이·들고 다니는 손잡이를 Tripo 라디오(가로 0.38 m 그대로, 높이 0.29 m)로 바꾼다.
+    // 콜라이더·이름(Radio)·불빛(RadioGlow)·안테나는 그대로. Radio 스크립트가 움직이는 것들은 이렇게 잇는다:
+    //  - 종이 콘: 품질별 판에서 따로 뗀 면(TtCut, {id}_q{n}_part.asset)을 "SpeakerCone" 아래에 품질 4단계로 둔다. Radio가 이 물체를 소리에 맞춰 앞뒤로 2.5 mm 움직인다
+    //    (떼는 경계는 검은 테두리 안에 있다. 콘이 앞으로 나올 때 그 틈으로 라디오 속이 비쳐 보이지 않게 콘 뒤에 어두운 원판 SpeakerBack을 둔다)
+    //  - 스피커 살(Grille) 다섯 줄: 겉모습만 지운다 (물체는 남아 스크립트가 찾아도 탈이 없다). 음파 고리·전기 불꽃 자리는 "SpeakerPoint"(스피커 가운데)
+    //  - 다이얼 창(빛나는 판)·바늘·초록 불: 모델의 다이얼 창 자리로 옮기고 크기를 맞춘다. 바늘은 가로로 줄인 받침(NeedleTrack) 아래에 두어 움직이는 폭(스크립트 0.09 m)이 창 안에 들게 한다
+    // 치수는 모델 원본 좌표(가로 1, 앞면 -Z)로 잰 값이다 (11-27, Docs/맵모델링_미리보기/20_방공호_작은소품/_도구/measure_radio*.cs.txt)
+    static bool TpRadioSwap(Transform root)
+    {
+        var radio = root.Find("Table/Radio"); if (radio == null) return false;
+        if (AssetDatabase.LoadAssetAtPath<Mesh>($"{TripoModelDir}/{TpRadio}/{LpTierDir[3]}/{TpRadio}_q3_part.asset") == null)
+        {
+            Debug.LogWarning("[GameSceneBuilder] Shelter: Tripo 라디오 판(종이 콘을 뗀 것)이 없어 코드 라디오 그대로: " + TpRadio);
+            return false;
+        }
+        var holder = TripoSwapRenderers(radio, TpRadio, TsRenderers(radio, "Body", "FacePlate", "Grille", "Knob", "Handle", "HandlePost"), TripoFit.Width, TripoAlign.Bottom, 0f, null, Vector3.zero);
+        var model = holder != null ? holder.transform.Find("Model") : null;
+        var lod0 = model != null ? model.Find("LOD0_q3") : null;
+        if (lod0 == null) return false;
+        float s = model.localScale.x;
+        // 자리 (받침은 라디오와 같은 자리·방향이라 받침 기준 = 라디오 기준): 가로 가운데, 바닥은 탁자 위, 앞뒤는 몸통(앞판~뒤판)의 가운데를 예전 몸통 가운데(z 0)에
+        var nb = TripoLocalBounds(radio, new Renderer[] { lod0.GetComponent<MeshRenderer>() });
+        var mp = model.localPosition;
+        float back = nb.max.z - mp.z; // 모델 원점에서 뒤판까지
+        model.localPosition = new Vector3(mp.x - nb.center.x, mp.y - nb.min.y, -(RadioFaceZ * s + back) * 0.5f);
+        var origin = model.localPosition;
+        System.Func<float, float, float, Vector3> Pt = (x, y, z) => origin + new Vector3(x, y, z) * s; // 모델 원본 좌표 → 라디오 기준 좌표
+        var bodyLg = model.GetComponent<LODGroup>();
+
+        // 종이 콘: 뗀 면을 품질 4단계로. 몸통과 같은 거리에서 판이 바뀌게 LOD 묶음의 기준 크기를 몸통과 같게 둔다
+        var cone = new GameObject("SpeakerCone").transform;
+        cone.SetParent(radio, false);
+        cone.localPosition = origin;
+        cone.localScale = Vector3.one * s;
+        var lods = new LOD[4]; var tierR = new Renderer[4];
+        for (int l = 0; l < 4; l++)
+        {
+            int q = 3 - l;
+            var c = new GameObject($"LOD{l}_q{q}");
+            c.transform.SetParent(cone, false);
+            c.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{TripoModelDir}/{TpRadio}/{LpTierDir[q]}/{TpRadio}_q{q}_part.asset");
+            var r = c.AddComponent<MeshRenderer>();
+            r.sharedMaterial = TripoTierMat(TpRadio, q); // 그림자는 켠 채로: 끄면 손전등을 비출 때 라디오 그림자에 스피커 모양 구멍이 난다 (11-27 검토)
+            lods[l] = new LOD(TripoLodHeights[l], new Renderer[] { r });
+            tierR[q] = r;
+        }
+        var lg = cone.gameObject.AddComponent<LODGroup>();
+        lg.fadeMode = LODFadeMode.None;
+        lg.SetLODs(lods);
+        lg.RecalculateBounds();
+        if (bodyLg != null) { lg.localReferencePoint = bodyLg.localReferencePoint; lg.size = bodyLg.size; }
+        var ql = cone.gameObject.AddComponent<QualityLod>();
+        ql.tiers = tierR;
+        ql.heights = (float[])TripoLodHeights.Clone();
+        // 콘 뒤의 어두운 원판 (콘에서 가장 깊은 곳보다 2 cm 뒤, 콘보다 조금 넓게)과 스피커 가운데 표시
+        var backDisc = Prim(PrimitiveType.Cylinder, "SpeakerBack", radio, Pt(RadioConeX, RadioConeY, RadioConeDeepZ + 0.02f), new Vector3(RadioConeR * 2.1f * s, 0.0005f, RadioConeR * 2.1f * s), M["tire"], new Vector3(90, 0, 0));
+        backDisc.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        var sp = new GameObject("SpeakerPoint").transform;
+        sp.SetParent(radio, false);
+        sp.localPosition = Pt(RadioConeX, RadioConeY, RadioFaceZ);
+
+        // 다이얼 창: 모델의 유리 x 0.163~0.398, y 0.438~0.546 (메시로 다시 잰 값, 11-27 검토), 유리는 앞판에서 1.2 cm 들어가 있다. 빛나는 판을 유리 바로 앞에 창 크기로
+        const float wx0 = 0.163f, wx1 = 0.398f, wy0 = 0.438f, wy1 = 0.546f, wz = RadioFaceZ + 0.009f;
+        var dial = radio.Find("DialWindow"); var dialMf = dial != null ? dial.GetComponent<MeshFilter>() : null;
+        if (dialMf != null && dialMf.sharedMesh != null)
+        {
+            var size = dialMf.sharedMesh.bounds.size;
+            dial.localPosition = Pt((wx0 + wx1) * 0.5f, (wy0 + wy1) * 0.5f, wz);
+            dial.localScale = new Vector3((wx1 - wx0) * s * 0.97f / size.x, (wy1 - wy0) * s * 0.95f / size.y, 0.5f);
+        }
+        // 바늘: 창 왼쪽 끝에서 1.2 cm 자리에서 시작. 스크립트는 로컬 X로 -0.012~0.102 m 움직이므로 가로를 0.7배로 줄인 받침 아래에 둔다 (창 너비 8.9 cm 안)
+        var needle = radio.Find("Needle"); var needleMf = needle != null ? needle.GetComponent<MeshFilter>() : null;
+        if (needleMf != null && needleMf.sharedMesh != null)
+        {
+            var track = new GameObject("NeedleTrack").transform;
+            track.SetParent(radio, false);
+            track.localPosition = Pt(wx0, (wy0 + wy1) * 0.5f, wz) + new Vector3(0.012f, 0f, -0.0025f);
+            track.localScale = new Vector3(0.7f, 1f, 1f);
+            needle.SetParent(track, false);
+            needle.localPosition = Vector3.zero;
+            needle.localRotation = Quaternion.identity;
+            needle.localScale = new Vector3(1f, (wy1 - wy0) * s * 0.9f / needleMf.sharedMesh.bounds.size.y, 1f);
+        }
+        // 초록 불: 다이얼 창 아래 앞판의 작은 돌기 자리에 반쯤 묻히게
+        var led = radio.Find("Led");
+        if (led != null) { led.localPosition = Pt(0.305f, 0.42f, RadioFaceZ - 0.004f); led.localScale = Vector3.one * 0.011f; }
+        return true;
     }
 
     // 천장 전등: 전구 묶음(Bulb)의 소켓·줄 자리에 갓 달린 천장 전등을 단다. 전구 유리(Glass)와 불빛(Light)은 손대지 않는다.

@@ -80,6 +80,8 @@ public static partial class GameSceneBuilder
         { "shelter_wall_lamp_01",    new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.3f, 0f) },
         { "shelter_carton_01",       new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0f, 0.1f, 0f) },
         { "shelter_fuse_box_01",     new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.3f, 0f) },
+        // 방공호 탁자 위 라디오 (11-27 웹 스튜디오 H3.5 프리뷰: 종이 진동판이 드러난 스피커). 코드 라디오처럼 앞면이 -Z를 보게 180°. 재질 값은 넣을 때 사진으로 맞춘다
+        { "shelter_radio_01",        new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.3f, 0.25f, 180f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
