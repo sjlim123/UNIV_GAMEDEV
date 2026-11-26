@@ -58,6 +58,11 @@ public static partial class GameSceneBuilder
         { "apt_sofa_01",              new[] { 8000, 10000, 16000 } }, // 새로 구운 1,574는 팔걸이가 접혔고 이음매 지키기 4,500은 쿠션이 울퉁불퉁 구겨졌다 → 넉넉히 (방 하나에 하나뿐)
         { "apt_wardrobe_01",          new[] { 300, 800, 4000 } },
         { "apt_low_table_01",         new[] { 300, 800, 4000 } },
+        // 방공호 작은 소품 4종 (11-27 웹 스튜디오 H3.5 프리뷰, 원본 5.6만~5.9만). 손바닥~팔 길이의 작은 소품
+        { "shelter_ceiling_lamp_01",  new[] { 600, 2000, 8000 } },  // 5개. 둥근 갓과 가는 봉. 이음매 지키기 1,500은 갓 테두리가 깨졌다 → 중간·높음도 새로 굽는다 (11-27 품질 사진)
+        { "shelter_wall_lamp_01",     new[] { 2500, 4500, 10000 } }, // 3개. 가는 철망 살: 낮음 1,200(멈춘 1,444)은 철망이 판으로 무너졌고, 이음매 지키기 8,000은 테두리가 갈라졌다 → 넉넉히, 새로 굽는다
+        { "shelter_carton_01",        new[] { 900, 1500, 4000 } },   // 선반 위 9개. 새로 굽기가 932에서 멈춘다 (300·800 목표가 같은 판이 됐다)
+        { "shelter_fuse_box_01",      new[] { 300, 800, 4000 } },
     };
 
     // 품질별 텍스처 크기 {낮음, 중간, 높음}. 없으면 256·512·512. 2차 두 모델은 매우 높음이 2048이라 1024·512·256으로 한 단계씩
@@ -77,6 +82,11 @@ public static partial class GameSceneBuilder
     static readonly HashSet<string> TtApt1 = new HashSet<string>
     {
         "apt_relay_cabinet_01", "apt_guard_booth_01", "apt_slide_01", "apt_sofa_01", "apt_wardrobe_01", "apt_low_table_01",
+    };
+    // 방공호 작은 소품 (11-27): 메뉴가 따로다
+    static readonly HashSet<string> TtShelter3 = new HashSet<string>
+    {
+        "shelter_ceiling_lamp_01", "shelter_wall_lamp_01", "shelter_carton_01", "shelter_fuse_box_01",
     };
     // 도시 남은 소품 1차 (11-24): 메뉴가 따로다
     static readonly HashSet<string> TtCity1 = new HashSet<string>
@@ -105,6 +115,7 @@ public static partial class GameSceneBuilder
         "city_crate_01", "city_barrier_01", "city_sandbag_01",
         "city_mattress_01", "city_counter_01", "city_bin_01", "city_water_tank_01", "city_slab_01", "city_stump_01", "city_bollard_01",
         "apt_relay_cabinet_01", "apt_guard_booth_01", "apt_slide_01", "apt_sofa_01", "apt_wardrobe_01", "apt_low_table_01",
+        "shelter_ceiling_lamp_01", "shelter_wall_lamp_01", "shelter_carton_01", "shelter_fuse_box_01",
     };
 
     // 모델마다 줄이는 방법 고르기 (11-23 방공호 가구 품질 사진에서):
@@ -123,7 +134,84 @@ public static partial class GameSceneBuilder
         // 11-26 H3.5 모델: 이음매를 지키며 6천으로 줄인 높음 판이 중간(새로 구운 것)보다 찌그러져 보였다 (계산대 모서리·쓰레기통 옆면·물탱크 띠) → 높음도 새로 굽는다
         { "city_counter_01", new[] { 2 } }, { "city_bin_01", new[] { 2 } }, { "city_water_tank_01", new[] { 2 } },
         // 102동 새 모델도 같다: 경비실 지붕 모서리·옷장 옆면·밥상 상판이 이음매 지키기 높음에서 구겨졌다
-        { "apt_guard_booth_01", new[] { 2 } }, { "apt_wardrobe_01", new[] { 2 } }, { "apt_low_table_01", new[] { 2 } } };
+        { "apt_guard_booth_01", new[] { 2 } }, { "apt_wardrobe_01", new[] { 2 } }, { "apt_low_table_01", new[] { 2 } },
+        // 방공호 작은 소품의 상자 꼴 둘도 같다
+        { "shelter_carton_01", new[] { 2 } }, { "shelter_fuse_box_01", new[] { 2 } },
+        { "shelter_ceiling_lamp_01", new[] { 1, 2 } }, { "shelter_wall_lamp_01", new[] { 1, 2 } } };
+    // TtDeform = 판을 만들기 전에 원본 꼭짓점('앞 = +Z' 좌표)을 고친다. 고친 모델은 매우 높음도 FBX 메시 대신 고친 메시({id}_q3.asset)를 쓴다
+    static readonly Dictionary<string, System.Func<Vector3[], Vector3[], string>> TtDeform = new Dictionary<string, System.Func<Vector3[], Vector3[], string>>
+    {
+        { "shelter_ceiling_lamp_01", TtStraightenShade },
+    };
+
+    // 천장 전등: 봉·천장 받침·갓 목은 똑바른데 갓만 기울어져 나왔다 (그림이 아래에서 올려다본 각도라 기울기로 읽혔다, 11-27 Blender 점검 사진).
+    // 목과 갓이 만나는 곳에서 갓을 돌려 테두리가 수평이 되게 편다. 돌리는 자리는 그 이음매의 짧은 구간에 걸쳐 부드럽게 (면을 자르지 않아 UV·구멍이 그대로).
+    // 처음에는 봉 아래 끝에서 꺾었는데, 갓이 봉에서 지름의 14 % 옆으로 밀렸다 (원본은 갓이 목 이음매 둘레로 기울어 있었다, 11-27 치수 재기)
+    static string TtStraightenShade(Vector3[] p, Vector3[] n)
+    {
+        var b = new Bounds(p[0], Vector3.zero); foreach (var v in p) b.Encapsulate(v);
+        float h = b.size.y; const int bins = 50;
+        var sum = new Vector3[bins]; var cnt = new int[bins]; var rad = new float[bins];
+        System.Func<Vector3, int> bin = v => Mathf.Clamp((int)((v.y - b.min.y) / h * bins), 0, bins - 1);
+        foreach (var v in p) { int k = bin(v); sum[k] += v; cnt[k]++; }
+        foreach (var v in p) { int k = bin(v); var c = sum[k] / cnt[k]; float d = new Vector2(v.x - c.x, v.z - c.z).magnitude; if (d > rad[k]) rad[k] = d; }
+        // 천장 받침(넓음) → 봉(가늚) → 너트·갓 목(다시 넓어짐) → 갓. 봉 = 가장 가는 칸의 1.5배 안에 드는 칸이 가장 길게 이어진 구간
+        float thin = float.MaxValue; for (int k = 0; k < bins; k++) if (cnt[k] > 0 && rad[k] < thin) thin = rad[k];
+        thin *= 1.5f;
+        int top = -1, bot = -1;
+        for (int k = 0; k < bins; k++)
+        {
+            if (cnt[k] == 0 || rad[k] > thin) continue;
+            int e = k; while (e + 1 < bins && cnt[e + 1] > 0 && rad[e + 1] <= thin) e++;
+            if (e - k > top - bot) { bot = k; top = e; }
+            k = e;
+        }
+        if (top - bot < 5) return "갓 펴기 건너뜀 (봉을 찾지 못함)";
+        Vector3 rc = Vector3.zero; int rn = 0; for (int k = bot; k <= top; k++) { rc += sum[k]; rn += cnt[k]; }
+        rc /= rn;
+        // 갓이 시작하는 높이: 봉 아래로 내려가며 가로 반지름이 전체 폭의 1/4을 처음 넘는 칸 (목은 그보다 가늘다)
+        int dome = bot - 1; while (dome >= 0 && rad[dome] <= b.size.x * 0.25f) dome--;
+        if (dome < 0) return "갓 펴기 건너뜀 (갓을 찾지 못함)";
+        float yJ = b.min.y + (float)(dome + 1) / bins * h, blend = h * 0.05f;
+        var pivot = new Vector3(rc.x, yJ + blend * 0.5f, rc.z);
+        // 갓의 축: 갓 꼭짓점들의 가장 납작한 방향 → 그 축에서 가장 먼 꼭짓점들(테두리)이 이루는 평면의 법선으로 다듬는다
+        var domePts = new List<Vector3>(); foreach (var v in p) if (v.y < yJ) domePts.Add(v);
+        var a = TtFlatAxis(domePts, out var mean);
+        float rmax = 0f; foreach (var v in domePts) { var d = v - mean; rmax = Mathf.Max(rmax, (d - a * Vector3.Dot(d, a)).magnitude); }
+        var rim = new List<Vector3>(); foreach (var v in domePts) { var d = v - mean; if ((d - a * Vector3.Dot(d, a)).magnitude > rmax * 0.95f) rim.Add(v); }
+        if (rim.Count >= 50) a = TtFlatAxis(rim, out _);
+        float angle = Vector3.Angle(a, Vector3.up);
+        if (angle < 1f || angle > 40f) return $"갓 펴기 건너뜀 (기울기 {angle:F1}°)";
+        var R = Quaternion.FromToRotation(a, Vector3.up);
+        for (int i = 0; i < p.Length; i++)
+        {
+            var v = p[i]; float w;
+            if (v.y >= yJ + blend) continue;
+            if (v.y <= yJ) w = 1f;
+            else { float t = (yJ + blend - v.y) / blend; w = t * t * (3f - 2f * t); }
+            var q = Quaternion.Slerp(Quaternion.identity, R, w);
+            p[i] = pivot + q * (v - pivot); n[i] = q * n[i];
+        }
+        return $"갓을 {angle:F1}° 폄 (목과 갓이 만나는 높이 {yJ:F3}, 테두리 꼭짓점 {rim.Count})";
+    }
+
+    // 점들이 가장 납작하게 퍼진 방향 (공분산의 가장 작은 고유 방향, 위쪽을 보게). mean = 점들의 가운데
+    static Vector3 TtFlatAxis(List<Vector3> pts, out Vector3 mean)
+    {
+        mean = Vector3.zero; foreach (var v in pts) mean += v;
+        mean /= Mathf.Max(1, pts.Count);
+        double xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
+        foreach (var v in pts) { var d = v - mean; xx += d.x * d.x; yy += d.y * d.y; zz += d.z * d.z; xy += d.x * d.y; xz += d.x * d.z; yz += d.y * d.z; }
+        double tr = xx + yy + zz; // (tr·I − C)의 가장 큰 고유 방향 = C의 가장 작은 고유 방향
+        var a = Vector3.up;
+        if (tr <= 0) return a;
+        for (int it = 0; it < 300; it++)
+        {
+            var w = new Vector3((float)(((tr - xx) * a.x - xy * a.y - xz * a.z) / tr), (float)((-xy * a.x + (tr - yy) * a.y - yz * a.z) / tr), (float)((-xz * a.x - yz * a.y + (tr - zz) * a.z) / tr));
+            a = w.normalized;
+        }
+        return a.y < 0 ? -a : a;
+    }
     static readonly HashSet<string> TtKeepParts = new HashSet<string> { "shelter_bed_01" };
 
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (방공호 가구 6종)")]
@@ -131,7 +219,7 @@ public static partial class GameSceneBuilder
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
         var log = new List<string>();
-        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id) && !TtCity1.Contains(id) && !TtCity2.Contains(id) && !TtApt1.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
+        foreach (var id in TtStandUp) if (!TtShelter2.Contains(id) && !TtShelter3.Contains(id) && !TtCity1.Contains(id) && !TtCity2.Contains(id) && !TtApt1.Contains(id)) log.Add(TtMake(id, TtTargets[id]));
         log.Add(WbMakeHigh());
         log.Add(WbMakeLow());
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 가구): " + string.Join(" / ", log));
@@ -173,6 +261,15 @@ public static partial class GameSceneBuilder
         Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (102동 새 모델): " + string.Join(" / ", log));
     }
 
+    [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (방공호 작은 소품: 천장 전등 갓·벽 비상등·보급 상자·배전함)")]
+    static void TtBuildShelter3()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GameSceneBuilder] 플레이 중에는 하지 않는다"); return; }
+        var log = new List<string>();
+        foreach (var id in TtShelter3) log.Add(TtMake(id, TtTargets[id]));
+        Debug.Log("[GameSceneBuilder] Tripo 품질별 판 (방공호 작은 소품): " + string.Join(" / ", log));
+    }
+
     [MenuItem("Tools/핵폭발 생존/Tripo 품질별 판 만들기 (차·뒤집힌 차·소화전·드럼통·정류장·트럭)")]
     static void TtBuildAll()
     {
@@ -198,6 +295,7 @@ public static partial class GameSceneBuilder
         // 원본 꼭짓점을 '앞 = +Z' 좌표로
         var pos = src.vertices; var nrm = src.normals; var uv = src.uv; var tri0 = src.triangles;
         for (int i = 0; i < pos.Length; i++) { pos[i] = mm.MultiplyPoint3x4(pos[i]); nrm[i] = nm.MultiplyVector(nrm[i]).normalized; }
+        string deformNote = TtDeform.TryGetValue(id, out var deform) ? deform(pos, nrm) : null;
         var srcTex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
         srcTex.LoadImage(File.ReadAllBytes($"{q3Dir}/{id}_q3_diff.jpg"));
         srcTex.wrapMode = TextureWrapMode.Clamp; // 굽기에서 아틀라스 가장자리 색이 반대쪽과 섞이지 않게
@@ -307,12 +405,30 @@ public static partial class GameSceneBuilder
             child.transform.SetParent(go.transform, false);
             // 메시 자식의 회전(Blender 설정 FBX는 X 270°)까지 넣는다. 예전 모델은 자식 회전이 없어 rootRot 그대로와 같다
             child.transform.localRotation = rootRot * Quaternion.Inverse(model.transform.rotation) * mf.transform.rotation;
-            child.AddComponent<MeshFilter>().sharedMesh = src;
+            var mesh3 = src;
+            if (deformNote != null)
+            {
+                // 고친 모델: 고친 꼭짓점을 메시 파일로 두고 그것을 쓴다 (이미 '앞 = +Z' 좌표라 자식 회전 없음)
+                string mp = $"{q3Dir}/{id}_q3.asset";
+                mesh3 = AssetDatabase.LoadAssetAtPath<Mesh>(mp);
+                bool isNew3 = mesh3 == null;
+                if (isNew3) mesh3 = new Mesh();
+                mesh3.Clear();
+                mesh3.name = id + "_q3";
+                mesh3.indexFormat = pos.Length > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+                mesh3.vertices = pos; mesh3.normals = nrm; mesh3.uv = uv; mesh3.triangles = tri0;
+                mesh3.RecalculateBounds();
+                mesh3.UploadMeshData(false);
+                if (isNew3) AssetDatabase.CreateAsset(mesh3, mp);
+                else { EditorUtility.SetDirty(mesh3); AssetDatabase.SaveAssetIfDirty(mesh3); }
+                child.transform.localRotation = Quaternion.identity;
+            }
+            child.AddComponent<MeshFilter>().sharedMesh = mesh3;
             child.AddComponent<MeshRenderer>();
             PrefabUtility.SaveAsPrefabAsset(go, $"{q3Dir}/{id}_q3.prefab");
             Object.DestroyImmediate(go);
         }
-        parts.Add($"q3 {src.GetIndexCount(0) / 3}(FBX)");
+        parts.Add($"q3 {src.GetIndexCount(0) / 3}({(deformNote != null ? "고친 메시: " + deformNote : "FBX")})");
         return id + ": " + string.Join(", ", parts);
     }
 

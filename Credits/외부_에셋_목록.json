@@ -1,6 +1,6 @@
 {
   "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
-  "updated": "2026-11-26",
+  "updated": "2026-11-27",
   "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
   "licenses": {
     "CC0": {
@@ -861,6 +861,70 @@
       "location": "Assets/ThirdParty/Tripo/Models/apt_low_table_01/ (만든 방법: SOURCE.md)",
       "used_for": "102동 방 4곳의 낮은 밥상 (콜라이더 없음: 예전처럼 지나간다). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
       "added": "2026-11-26",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 천장 전등 (shelter_ceiling_lamp_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,342개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 8a4bd144-d786-4ce5-a0ea-02283565081c, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 600 · 중간 2,000 · 높음 8,000 · 매우 높음 58,342 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_ceiling_lamp_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 천장 전구 5개의 소켓·줄 자리 (전구 유리와 불빛은 코드 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 벽 비상등 몸통 (shelter_wall_lamp_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,674개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 fffc9a98-075d-4667-ba52-43fc4471dc8d, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 2,500 · 중간 4,500 · 높음 10,000 · 매우 높음 58,674 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_wall_lamp_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호의 붉은 등 3개 (남쪽 벽 비상등·출입 철문 위 출구등·방폭문 옆 경고등)의 몸통. 붉게 빛나는 유리는 코드 물체 그대로 (모양만 둥글게). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 보급 상자 (shelter_carton_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 58,536개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 a8ccae42-f18c-4db9-896f-bf76b88bc139, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 932 · 중간 1,500 · 높음 4,000 · 매우 높음 58,536 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_carton_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 선반 두 개 위의 장식 상자 (콜라이더 없음, 깡통은 코드 그대로). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "방공호 배전함 (shelter_fuse_box_01) — Tripo AI 웹 스튜디오로 글→그림→3D 모델",
+      "items": [
+        "H3.5 프리뷰 고정밀 (텍스처 4K · 폴리곤 6만 설정), 삼각형 56,430개, 색 텍스처 4K 원본 → 2048로 줄여 넣음",
+        "작업 f279cc25-98fe-4e2d-8d24-8e00a0ea1f33, 60크레딧 (그림은 Nano Banana Pro, 구독 무료 횟수)",
+        "품질 4단계: 낮음 300 · 중간 800 · 높음 4,000 · 매우 높음 56,430 (텍스처 256 · 512 · 512 · 2048)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 맵 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Models/shelter_fuse_box_01/ (만든 방법: SOURCE.md)",
+      "used_for": "방공호 발전기실 벽의 배전함 1개 (콜라이더 없는 장식). Max 플랜 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
     },

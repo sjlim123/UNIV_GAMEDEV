@@ -126,6 +126,9 @@ public static partial class GameSceneBuilder
         invasion.door = blastDoor;
         invasion.spawnPoints = new[] { zombieEntry };
 
+        // 작은 소품(천장 전등·벽 비상등·보급 상자·배전함·물통·옛 통로 잔해)의 겉모습을 Tripo 모델로 (콜라이더·불빛 그대로, GameSceneBuilder.TripoShelterProps.cs)
+        Debug.Log("[GameSceneBuilder] Shelter: Tripo 작은 소품 — " + TripoShelterProps(root, t));
+
         // 내비메시 굽기 (정전 때 들어온 좀비가 다닐 길). 방폭문은 빼고 구워 문간이 통로와 이어지게 한다
         var surface = root.gameObject.AddComponent<NavMeshSurface>();
         surface.collectObjects = CollectObjects.Children;

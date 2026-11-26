@@ -75,6 +75,11 @@ public static partial class GameSceneBuilder
         { "apt_sofa_01",             new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.1f, 0f) },
         { "apt_wardrobe_01",         new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.2f, 0f) },
         { "apt_low_table_01",        new TripoSpec(new Color(0.5f, 0.5f, 0.5f), 0f, 0.2f, 0f) },
+        // 방공호 작은 소품 4종 (11-27 웹 스튜디오 H3.5 프리뷰, Docs/맵모델링_미리보기/20_방공호_작은소품). 방향(yaw)·재질 값은 넣을 때 사진으로 맞춘다
+        { "shelter_ceiling_lamp_01", new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.3f, 0f) },
+        { "shelter_wall_lamp_01",    new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.3f, 0f) },
+        { "shelter_carton_01",       new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0f, 0.1f, 0f) },
+        { "shelter_fuse_box_01",     new TripoSpec(new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.3f, 0f) },
     };
 
     // 도시 씬을 만드는 동안만 켠다: 같은 함수(소화전·정류장·불 드럼통 등)를 메인 메뉴·컷씬도 쓰지만, 사용자가 정할 때까지 그 씬들은 예전 모습 그대로 둔다
