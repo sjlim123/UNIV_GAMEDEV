@@ -841,7 +841,7 @@ public class Zombie : MonoBehaviour, IDamageable
                 slingHoldK = holdK;
             }
             armR.localRotation = Quaternion.Slerp(armR.localRotation, slingHold, holdK);
-            hand = armR.TransformPoint(new Vector3(0, -0.7f, 0));
+            hand = armR.TransformPoint(new Vector3(0, -(rig != null ? rig.GripReach : 0.7f), 0));
         }
         slingDraw = draw;
         sling.Pose(hand, draw, loaded);

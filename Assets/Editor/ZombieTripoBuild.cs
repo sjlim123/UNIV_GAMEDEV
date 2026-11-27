@@ -49,6 +49,32 @@ public static class ZombieTripoBuild
         return log.ToString();
     }
 
+    // ---- 원거리 감염자 (2026-11-27): 사용자 "2와 4"(몸 a·b), "새총 4번" → 후드 쓴 마른 감염자 + Tripo Y자 새총 틀 (GameSceneBuilder.ZombieSlingshot.cs) ----
+    public const string RangedOutDir = "Assets/Resources/Enemies/ZombieRanged/";
+    public static readonly string[] RangedNames = { "zombie_ranged_a", "zombie_ranged_b" };
+
+    [MenuItem("Tools/핵폭발 생존/원거리 감염자 Tripo 모델: 몸 a·b + 새총")]
+    static void BuildRangedMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[ZombieTripoBuild] 플레이 중에는 하지 않는다"); return; }
+        Debug.Log("[ZombieTripoBuild] " + BuildRanged());
+    }
+
+    public static string BuildRanged()
+    {
+        if (!AssetDatabase.IsValidFolder(RangedOutDir.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/Resources/Enemies", "ZombieRanged");
+        var log = new System.Text.StringBuilder();
+        foreach (var n in RangedNames) log.Append(Build(n, RangedOutDir)).Append(" || ");
+        log.Append(BuildSlingshot());
+        return log.ToString();
+    }
+
+    public static string BuildSlingshot()
+    {
+        SetupImport(Base + "slingshot/slingshot.fbx", false);
+        return GameSceneBuilder.ZsBuild(RangedOutDir + "slingshot.prefab");
+    }
+
     public static string Build(string name) => Build(name, OutDir);
 
     public static string Build(string name, string outDir)

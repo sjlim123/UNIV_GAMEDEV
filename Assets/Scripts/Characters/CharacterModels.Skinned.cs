@@ -58,6 +58,28 @@ public static partial class CharacterModels
         return true;
     }
 
+    // ---- 원거리 감염자 (2026-11-27, 사용자 "2와 4", "새총 4번") ----
+    // 겨자색 후드를 쓴 마른 감염자 두 가지. 새총(Tripo Y자 틀 + 코드 고무줄)은 ZombieLooks가 왼 주먹(rig.GripL)에 꽂는다
+    public static bool UseTripoRanged = true;
+    static readonly string[] TripoRangedRes = { "Enemies/ZombieRanged/zombie_ranged_a", "Enemies/ZombieRanged/zombie_ranged_b" };
+    static readonly GameObject[] tripoRangedPrefab = new GameObject[2];
+    static bool tripoRangedLoaded;
+
+    static bool TripoRangedZombie(Builder b)
+    {
+        if (!UseTripoRanged) return false;
+        if (!tripoRangedLoaded)
+        {
+            tripoRangedLoaded = true;
+            for (int i = 0; i < 2; i++) tripoRangedPrefab[i] = Resources.Load<GameObject>(TripoRangedRes[i]);
+        }
+        int k = Random.Range(0, 2);
+        var prefab = tripoRangedPrefab[k] != null ? tripoRangedPrefab[k] : tripoRangedPrefab[1 - k];
+        if (prefab == null || TripoSkinnedBody(b, prefab, 0.7f) == null) return false;
+        b.Rig.CurlL = 1.35f; // 새총 손잡이를 꽉 쥔다 (1 = 느슨한 주먹)
+        return true;
+    }
+
     // Tripo 스킨 몸 하나를 얹고 게임 관절을 세운다. 실패하면 null
     static GameObject TripoSkinnedBody(Builder b, GameObject prefab, float curl)
     {
@@ -103,6 +125,11 @@ public static partial class CharacterModels
         rig.Shoulder = P("Right_UpperArm") - P("Spine");
         rig.AnkleH = P("Left_Foot").y;
         rig.CurlL = rig.CurlR = curl; // 할퀴려는 갈고리 손 (1 = 느슨한 주먹)
+        // 주먹 구멍 가운데 (새총 손잡이가 지나는 곳): 손목→가운뎃손가락 뿌리 길이 d의 0.85배 아래, 손바닥 쪽(+x, 손가락이 굽는 쪽)으로 0.25d.
+        // 쥔 손 뼈 자리를 플레이 중에 재어 정한 비율 (원거리 감염자 a·b, CurlL 1.35)
+        float d = (P("Left_MiddleProximal") - P("Left_Hand")).magnitude;
+        rig.GripL = new Vector3(0.25f * d, -(fore + 0.85f * d), 0f);
+        rig.GripReach = upper + fore + 0.85f * d;
         skin.AddComponent<SkinnedPlayerDriver>().Init(rig, hips, bones);
         return skin;
     }

@@ -1108,6 +1108,24 @@
       "added": "2026-11-27",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "원거리 감염자 a·b (후드 쓴 마른 감염자, zombie_ranged_a·b) + 새총 Y자 틀 — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 사용자 결정 몸 '2와 4', 새총 '4번'",
+        "몸 a (그림 2): H3.5 프리뷰 고정밀 (4K · 30만), 삼각형 290,076, 작업 6fec4f3a-decf-46c8-aee1-32223a6ea920 60크레딧 → 리토폴로지 쿼드 46,095 10 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20 (변환 7ec1020e)",
+        "몸 b (그림 4): H3.5 프리뷰, 삼각형 294,686, 작업 edab38f0-3633-44bd-b6cf-6b70de762024 60 → 리토폴로지 쿼드 46,314 10 → 자동 리깅 20 (변환 090aec3b)",
+        "새총 Y자 틀 (H3.5 프리뷰, 4K · 6만, 60크레딧): 작업 6426b8b6-9d7c-4589-bc7b-f635e572f715, 삼각형 57,262. 고무줄·가죽 주머니·돌은 코드. 합계 240크레딧",
+        "몸: 가중치를 30만 메시로 옮기고 품질 4단계 (약 6천·2.4만·9.2만·29만). 새총: 손잡이 가운데를 원점으로 27 cm에 맞추고 품질 4단계 (1.9천·1.9천·4천·1만), 고무 캡 가운데에 고무줄. Blender 점검 통과 (비침 0 px, 기본·겨누기 자세 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/zombie_ranged_a·b/, slingshot/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE_zombie_ranged.md), Assets/Resources/Enemies/ZombieRanged/",
+      "used_for": "원거리 감염자(ZombieKind.Ranged) 몸, 좀비마다 a·b 중 하나. 왼 주먹에 새총을 쥐고 겨눈다 — CharacterModels.Skinned.cs (TripoRangedZombie), ZombieLooks.BuildSlingshot, GameSceneBuilder.ZombieSlingshot.cs. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

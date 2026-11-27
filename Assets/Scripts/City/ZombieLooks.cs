@@ -26,30 +26,49 @@ public static class ZombieLooks
             default: figure = FigureKind.Zombie; variant = Random.Range(0, 4); break;
         }
         var rig = CharacterModels.Build(z.transform, figure, variant);
-        if (kind == ZombieKind.Ranged) slingshot = BuildSlingshot(rig.ForeL);
+        if (kind == ZombieKind.Ranged) slingshot = BuildSlingshot(rig.ForeL, rig.GripL);
         if (kind == ZombieKind.Raider) weapon = BuildBat(rig.ForeR);
         return rig;
     }
 
+    // Tripo 새총 Y자 틀 (2026-11-27, 사용자 "새총 4번": 나무 가지 + 검은 테이프 손잡이 + 갈래 끝 고무 캡). 없으면 예전 원기둥 새총
+    public static bool UseTripoSlingshot = true;
+    static GameObject tripoSlingshot;
+    static bool tripoSlingshotLoaded;
+
     // 왼손에 쥔 새총: Y자 나무 손잡이 + 고무줄 두 가닥 + 가죽 주머니
-    static Slingshot BuildSlingshot(Transform fore)
+    static Slingshot BuildSlingshot(Transform fore, Vector3 grip)
     {
         if (fore == null) return null;
-        // 주먹을 관통해 쥔다 (아래팔 기준 손 가운데). 팔을 앞으로 뻗으면 갈래가 위를, 주머니가 몸 쪽을 향한다
+        // 주먹을 관통해 쥔다 (아래팔 기준 주먹 가운데). 팔을 앞으로 뻗으면 갈래가 위를, 주머니가 몸 쪽을 향한다
         var fork = new GameObject("Slingshot").transform;
         fork.SetParent(fore, false);
-        fork.localPosition = new Vector3(0, -(CharacterModels.HandReach - 0.30f), 0);
+        fork.localPosition = grip;
         fork.localRotation = Quaternion.Euler(90, 0, 0);
 
-        var wood = RuntimeVisuals.Mat(new Color(0.43f, 0.29f, 0.16f), 0.3f);
         var rubber = RuntimeVisuals.Mat(new Color(0.58f, 0.32f, 0.12f), 0.55f);
         var leather = RuntimeVisuals.Mat(new Color(0.22f, 0.13f, 0.07f), 0.25f);
-        Part(PrimitiveType.Cylinder, "Grip", fork, new Vector3(0, 0.015f, 0), new Vector3(0.032f, 0.075f, 0.032f), wood);
-        Part(PrimitiveType.Cylinder, "ProngL", fork, new Vector3(-0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, 24.8f));
-        Part(PrimitiveType.Cylinder, "ProngR", fork, new Vector3(0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, -24.8f));
-        // 갈래 끝에 감은 고무 매듭
-        Part(PrimitiveType.Sphere, "WrapL", fork, Slingshot.TipL, Vector3.one * 0.032f, rubber, null, false);
-        Part(PrimitiveType.Sphere, "WrapR", fork, Slingshot.TipR, Vector3.one * 0.032f, rubber, null, false);
+        Vector3 tipL = Slingshot.TipL, tipR = Slingshot.TipR;
+        if (UseTripoSlingshot && !tripoSlingshotLoaded) { tripoSlingshotLoaded = true; tripoSlingshot = Resources.Load<GameObject>("Enemies/ZombieRanged/slingshot"); }
+        if (UseTripoSlingshot && tripoSlingshot != null)
+        {
+            // 모델 원점 = 테이프 손잡이 가운데, y = 갈래 쪽. 고무줄은 두 고무 캡 가운데에 건다
+            var model = Object.Instantiate(tripoSlingshot, fork, false);
+            model.name = "Frame";
+            var l = model.transform.Find("TipL"); var r = model.transform.Find("TipR");
+            if (l != null) tipL = l.localPosition;
+            if (r != null) tipR = r.localPosition;
+        }
+        else
+        {
+            var wood = RuntimeVisuals.Mat(new Color(0.43f, 0.29f, 0.16f), 0.3f);
+            Part(PrimitiveType.Cylinder, "Grip", fork, new Vector3(0, 0.015f, 0), new Vector3(0.032f, 0.075f, 0.032f), wood);
+            Part(PrimitiveType.Cylinder, "ProngL", fork, new Vector3(-0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, 24.8f));
+            Part(PrimitiveType.Cylinder, "ProngR", fork, new Vector3(0.03f, 0.155f, 0), new Vector3(0.028f, 0.072f, 0.028f), wood, new Vector3(0, 0, -24.8f));
+            // 갈래 끝에 감은 고무 매듭
+            Part(PrimitiveType.Sphere, "WrapL", fork, Slingshot.TipL, Vector3.one * 0.032f, rubber, null, false);
+            Part(PrimitiveType.Sphere, "WrapR", fork, Slingshot.TipR, Vector3.one * 0.032f, rubber, null, false);
+        }
 
         // 고무줄 (길이·방향은 Slingshot.Pose가 매 프레임 정한다)
         var bandL = Part(PrimitiveType.Cube, "BandL", fork, Vector3.zero, Vector3.one * 0.01f, rubber, null, false);
@@ -60,7 +79,7 @@ public static class ZombieLooks
         Part(PrimitiveType.Cube, "PouchLeather", pouch, Vector3.zero, new Vector3(0.05f, 0.034f, 0.016f), leather, null, false);
         var stone = Part(PrimitiveType.Sphere, "PouchStone", pouch, new Vector3(0, 0, 0.018f), new Vector3(0.05f, 0.042f, 0.046f), Stone, null, false);
 
-        var sling = new Slingshot(fork, pouch, bandL, bandR, stone);
+        var sling = new Slingshot(fork, pouch, bandL, bandR, stone, tipL, tipR);
         sling.Relax();
         return sling;
     }
@@ -76,21 +95,30 @@ public static class ZombieLooks
 
         public readonly Transform Fork;
         readonly Transform pouch, bandL, bandR, stone;
+        readonly Vector3 tipL, tipR, restPouch; // 이 새총의 갈래 끝 (Tripo 틀이면 고무 캡 가운데)
 
         public Slingshot(Transform fork, Transform pouch, Transform bandL, Transform bandR, Transform stone)
+            : this(fork, pouch, bandL, bandR, stone, TipL, TipR) { }
+
+        public Slingshot(Transform fork, Transform pouch, Transform bandL, Transform bandR, Transform stone, Vector3 tipL, Vector3 tipR)
         {
             Fork = fork;
             this.pouch = pouch;
             this.bandL = bandL;
             this.bandR = bandR;
             this.stone = stone;
+            this.tipL = tipL;
+            this.tipR = tipR;
+            // 쉬는 주머니: 갈래 끝 높이에서 조금 아래, 몸 쪽으로 (기본 새총과 같은 비율)
+            float y = (tipL.y + tipR.y) * 0.5f;
+            restPouch = new Vector3((tipL.x + tipR.x) * 0.5f, y + (RestPouch.y - TipL.y), (tipL.z + tipR.z) * 0.5f + RestPouch.z);
         }
 
         // 돌이 날아가기 시작하는 곳 (두 갈래 끝 사이)
-        public Vector3 Muzzle => Fork.TransformPoint((TipL + TipR) * 0.5f);
+        public Vector3 Muzzle => Fork.TransformPoint((tipL + tipR) * 0.5f);
 
         // 당기지 않았을 때 주머니가 있는 곳 (오른손이 주머니를 집으러 가는 곳)
-        public Vector3 Rest => Fork.TransformPoint(RestPouch);
+        public Vector3 Rest => Fork.TransformPoint(restPouch);
 
         // 고무줄이 느슨하게 Y자에 붙어 있는 상태 (돌 없음)
         public void Relax() => Pose(Vector3.zero, 0f, false);
@@ -100,13 +128,13 @@ public static class ZombieLooks
         public void Pose(Vector3 pullTo, float draw, bool loaded)
         {
             if (Fork == null || pouch == null) return;
-            Vector3 tipL = Fork.TransformPoint(TipL), tipR = Fork.TransformPoint(TipR);
-            Vector3 p = Vector3.LerpUnclamped(Fork.TransformPoint(RestPouch), pullTo, Mathf.Clamp(draw, -0.5f, 1f));
+            Vector3 wl = Fork.TransformPoint(tipL), wr = Fork.TransformPoint(tipR);
+            Vector3 p = Vector3.LerpUnclamped(Fork.TransformPoint(restPouch), pullTo, Mathf.Clamp(draw, -0.5f, 1f));
             pouch.position = p;
-            Vector3 face = (tipL + tipR) * 0.5f - p;
+            Vector3 face = (wl + wr) * 0.5f - p;
             if (face.sqrMagnitude > 1e-6f) pouch.rotation = Quaternion.LookRotation(face, Fork.up);
-            Stretch(bandL, tipL, p);
-            Stretch(bandR, tipR, p);
+            Stretch(bandL, wl, p);
+            Stretch(bandR, wr, p);
             if (stone != null && stone.gameObject.activeSelf != loaded) stone.gameObject.SetActive(loaded);
         }
 

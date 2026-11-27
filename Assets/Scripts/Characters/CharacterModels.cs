@@ -23,6 +23,8 @@ public class CharacterRig
     public System.Func<float, float, bool, float> TorsoSurface;      // 몸통 겉면 z (몸통 관절 기준 높이 y, 가로 x, 앞이면 true). null이면 관 몸통
     public float PalmDepth = 0.065f;                                 // 손목에서 손바닥 가운데까지 (손을 바깥 점·입에 붙일 때)
     public float CurlL = 1f, CurlR = 1f;                             // 손가락 굽힘 (모델 몸: 1 느슨한 주먹, 0.3 입을 감싸는 손, 0 편 손)
+    public Vector3 GripL = new Vector3(0f, -(CharacterModels.HandReach - 0.30f), 0f); // 왼 주먹 가운데 (아래팔 관절 기준: 새총을 쥐는 곳)
+    public float GripReach = 0.7f;                                   // 어깨 관절에서 주먹 가운데까지 (곧은 팔: 새총 주머니를 당기는 오른손)
     // 맞으면 하나씩 떨어져 나가는 가죽 갑옷 (가슴·어깨·무릎·모자)
     public readonly List<Transform> Armor = new List<Transform>();
     public Renderer[] Renderers;
@@ -49,7 +51,7 @@ public static partial class CharacterModels
         switch (kind)
         {
             case FigureKind.Leather: if (!TripoLeatherZombie(b)) LeatherZombie(b); break; // Tripo 감염된 군인 a·b + 떨어지는 장비 6개 (CharacterModels.Skinned.cs), 없으면 예전 가죽 갑옷 관 몸
-            case FigureKind.Slingshot: SlingshotZombie(b); break;
+            case FigureKind.Slingshot: if (!TripoRangedZombie(b)) SlingshotZombie(b); break;
             case FigureKind.Giant: GiantZombie(b); break;
             case FigureKind.Raider: Raider(b); break;
             case FigureKind.Dog: Dog(b); break;
