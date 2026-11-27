@@ -16,6 +16,7 @@ public partial class Generator
     static readonly Vector3 SpoutTipLocal = new Vector3(0, 0.458f, 0.10f); // 연료통(ItemVisuals.JerryCan) 주둥이 목 끝(뚜껑 아래), 통 좌표
 
     bool pouring, pourApplied;
+    GameState pourState; // 붓기를 시작한 게임. 닫는 중에 새로 만들어진 빈 게임 상태로 저장을 덮어쓰지 않게 (화로 smeltState와 같다)
     Transform pourAnchor;
     LineRenderer pourStream;
 
@@ -33,6 +34,7 @@ public partial class Generator
     {
         pouring = true;
         pourApplied = false;
+        pourState = GameManager.Instance.State;
         pc.ScriptBusy = true;
         hands.HoldForScript("fuel");
 
@@ -208,12 +210,16 @@ public partial class Generator
     void ApplyOnce(bool quiet = false)
     {
         if (pourApplied) return;
+        if (!quiet) { pourApplied = true; ApplyFuel(); return; }
+        // 닫는 중: GameManager가 먼저 지워졌으면(플레이 멈춤·게임 끄기) 아무것도 하지 않는다. Instance를 쓰면 새 게임 상태의 빈 GameManager가
+        // 만들어져, 그 상태로 저장(1일째)을 덮어쓸 수 있었다. 붓기를 시작한 그 게임일 때만 전력을 올려 저장한다
+        var gm = GameManager.Existing;
+        if (gm == null || gm.State != pourState) return;
         pourApplied = true;
-        if (!quiet) { ApplyFuel(); return; }
-        var gm = GameManager.Instance;
         var s = gm.State;
         s.Power = Mathf.Min(100, s.Power + GameBalance.Data.fuelPower);
-        if (!gm.IsGameOver && SaveSystem.Exists(SaveSystem.CurrentSlot)) SaveSystem.Save(s);
+        // 칸을 고른 진짜 게임일 때만 저장한다 (에디터에서 방공호 씬을 바로 실행한 시험 게임이 1번 칸을 덮어쓰지 않게, GameManager.SaveGame과 같다)
+        if (!gm.IsGameOver && SaveSystem.SlotChosen && SaveSystem.Exists(SaveSystem.CurrentSlot)) SaveSystem.Save(s);
     }
 
     // 끝내기 (중간에 끊겨도): 연료는 이미 썼으니 전력은 오르게 하고, 손·카메라·막음을 되돌린다.
@@ -223,7 +229,7 @@ public partial class Generator
         if (!pouring) return;
         pouring = false;
         var pc = PlayerController.Instance;
-        var gm = GameManager.Instance;
+        var gm = GameManager.Existing; // 닫는 중(OnDisable)에 빈 GameManager를 새로 만들지 않게
         bool dead = (pc != null && pc.IsDead) || (gm != null && gm.IsGameOver);
         if (!pourApplied && gm != null) ApplyOnce(quiet || dead);
         if (pc != null)

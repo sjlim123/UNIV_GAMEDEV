@@ -158,14 +158,14 @@ public class PlayerHands : MonoBehaviour
         var kind = HeldItems.Get(id).Use;
         bool hadQueued = useQueued && useItem != null;
         if (hadQueued) EffectAudio.PlayUseNow(useItem, queuedKind);
-        if (scriptItem != null || handsAway)
+        if (scriptItem != null || handsAway || stowed) // 내려놓은 동안(방공호 문 열기)도 몸짓을 시작할 수 없다
         {
             EffectAudio.PlayUseNow(id, kind);
             if (hadQueued) useItem = null; // 밀려난 아이템을 계속 들고 있지 않게 (하던 몸짓이 있으면 그대로 끝낸다)
             useQueued = false;
             return;
         }
-        if (move == Move.Use) useCues = null; // 하던 몸짓의 남은 소리는 내지 않는다 (새 아이템으로 바꿔 드는 동안 엉뚱한 소리가 나지 않게)
+        if (move == Move.Use) CutUse(); // 하던 몸짓의 남은 소리는 내지 않는다 (새 아이템으로 바꿔 드는 동안 엉뚱한 소리가 나지 않게. 한 소리도 안 났으면 첫 소리만)
         queuedKind = kind; // 몸짓 모양(useKind)은 새 아이템을 손에 들고 시작할 때 바꾼다
         useItem = id;
         useQueued = true;
@@ -173,9 +173,22 @@ public class PlayerHands : MonoBehaviour
 
     void StartMove(Move m, float seconds)
     {
+        // 쓰는 몸짓을 다른 몸짓(공격·버리기·쏘기)이 끊으면 남은 소리는 버리되, 아직 한 소리도 나기 전이면 첫 소리를 한 번 낸다
+        // (구운 고기는 첫 소리가 0.44초에 있어, 그 전에 끊기면 먹은 소리가 하나도 나지 않았다).
+        // 새 쓰기 몸짓의 시작(UpdateSwap)은 뺀다: 거기서는 useCues가 이미 새 아이템 것이라 첫 소리가 두 번 난다
+        if (m != Move.Use) CutUse();
         move = m;
         moveTime = seconds;
         moveT = 0;
+    }
+
+    // 하던 쓰기 몸짓의 남은 소리를 버린다. 첫 박자를 아직 안 지났으면 첫 소리만 바로 낸다
+    // (박자 0에 소리가 있는 아이템(물·통조림·붕대·구급상자)은 몸짓을 시작한 그 프레임에 이미 났으므로 다시 나지 않는다). 손이 감춰졌으면 내지 않는다
+    void CutUse()
+    {
+        if (move == Move.Use && moveT < 1f && useCues != null && useCues.Length > 0 && !handsAway && moveT <= useCues[0].At)
+            EffectAudio.PlayUseCue(useCues[0]);
+        useCues = null;
     }
 
     static float UseSeconds(UseGesture g) =>
@@ -641,7 +654,7 @@ public class PlayerHands : MonoBehaviour
         if (useQueued && useItem != null) EffectAudio.PlayUseNow(useItem, queuedKind);
         useQueued = false;
         useItem = null;
-        if (move == Move.Use) moveT = 1f;
+        if (move == Move.Use) { CutUse(); moveT = 1f; }
     }
     public bool ScriptItemReady => scriptItem != null && heldId == scriptItem && heldModel != null && lower <= 0.02f;
     public Transform HeldModel => heldModel != null ? heldModel.transform : null;
@@ -675,7 +688,16 @@ public class PlayerHands : MonoBehaviour
     }
 
     // 연출용: 든 물건을 내려놓는다(true) / 다시 든다(false). 손이 화면 아래로 내려갔다가 빈손으로 올라온다
-    public void SetStowed(bool on) => stowed = on;
+    public void SetStowed(bool on)
+    {
+        stowed = on;
+        // 내려놓는 동안은 기다리던 사용이 시작되지 못한다(want = null): 이미 먹은 아이템이 소리 없이 끝나지 않게 첫 소리만 바로 내고 비운다 (HoldForScript와 같다).
+        // 이미 시작한 쓰는 몸짓은 그대로 끝낸다 (남은 소리도 나고, 몸짓이 끝나면 useItem이 비워진다)
+        if (!on || !useQueued) return;
+        if (useItem != null) EffectAudio.PlayUseNow(useItem, queuedKind);
+        useQueued = false;
+        useItem = null;
+    }
 
     // 두 마디 팔의 팔꿈치 자리 (코사인 법칙): 어깨에서 위팔 0.3m, 손목까지 아래팔 길이. pole: 팔꿈치가 향할 쪽
     static Vector3 ElbowFor(Vector3 shoulder, Vector3 wrist, Vector3 pole)

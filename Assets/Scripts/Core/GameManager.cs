@@ -29,6 +29,9 @@ public class GameManager : MonoBehaviour
             return instance;
         }
     }
+    // 끄기·지우기(OnDisable/OnDestroy)에서 쓴다: 없으면 새로 만들지 않고 null.
+    // 플레이를 멈추거나 게임을 끌 때 GameManager가 먼저 지워졌을 수 있다 (Instance는 그때 빈 GameManager를 새로 만든다)
+    public static GameManager Existing => instance != null ? instance : null;
 
     public GameState State { get; private set; }
     public UIManager UI { get; private set; }

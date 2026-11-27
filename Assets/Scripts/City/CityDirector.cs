@@ -184,7 +184,9 @@ public class CityDirector : MonoBehaviour
 
     void OnDisable()
     {
-        if (GameManager.Instance != null && GameManager.Instance.UI != null) GameManager.Instance.UI.SetRedNight(0);
+        // 장면을 닫을 때 붉은 밤 화면을 지운다. GameManager.Instance는 없으면 새로 만들므로 쓰지 않는다 (플레이를 멈출 때 빈 GameManager가 남았다)
+        var gm = GameManager.Existing;
+        if (gm != null && gm.UI != null) gm.UI.SetRedNight(0);
     }
 
     AudioSource MakeLoop(AudioClip clip, float volume)

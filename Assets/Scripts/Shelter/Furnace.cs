@@ -238,7 +238,8 @@ public class Furnace : Interactable
         // (탐험 출발 직후 게임을 꺼도 완성품이 남는다. 죽어서 지운 저장은 되살리지 않는다)
         bool toStorage = destroying || gm.IsTransitioning;
         bool toHand = Workbench.StoreResult(s, recipe, toStorage);
-        if (toStorage && SaveSystem.Exists(SaveSystem.CurrentSlot)) SaveSystem.Save(s);
+        // 칸을 고른 진짜 게임일 때만 저장한다 (에디터에서 방공호 씬을 바로 실행한 시험 게임이 1번 칸을 덮어쓰지 않게, GameManager.SaveGame과 같다)
+        if (toStorage && SaveSystem.SlotChosen && SaveSystem.Exists(SaveSystem.CurrentSlot)) SaveSystem.Save(s);
         if (destroying) return;
         string where = toHand ? "" : toStorage ? " (창고에 넣었다)" : " (무거워서 창고에 넣었다)";
         gm.UI.ShowMessage($"{UIManager.ColoredName(recipe.ResultId)} x{recipe.ResultCount} 녹이기 완료" + where);
