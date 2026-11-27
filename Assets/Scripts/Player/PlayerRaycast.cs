@@ -34,7 +34,7 @@ public static class PlayerRaycast
         {
             var h = buffer[i];
             if (h.collider.transform.IsChildOf(self)) continue;
-            if (sphereCast && h.distance <= 0f && h.collider.GetComponentInParent<IDamageable>() == null) continue;
+            if (sphereCast && h.distance <= 0f && !LiveTarget(h.collider)) continue;
             if (!found || h.distance < hit.distance)
             {
                 hit = h;
@@ -42,5 +42,12 @@ public static class PlayerRaycast
             }
         }
         return found;
+    }
+
+    // 살아 있는 공격 대상 (쓰러진 몸은 아니다: 처음부터 구에 닿은 시체가 그 뒤의 좀비보다 먼저 맞거나, 맞은 자리가 (0,0,0)으로 오지 않게)
+    static bool LiveTarget(Collider c)
+    {
+        var d = c.GetComponentInParent<IDamageable>();
+        return d != null && !(d is Zombie z && z.IsDead) && !(d is Animal a && a.IsDead);
     }
 }

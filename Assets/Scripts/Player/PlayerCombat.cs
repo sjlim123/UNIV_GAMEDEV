@@ -55,6 +55,13 @@ public class PlayerCombat : MonoBehaviour
         float range = weapon == null ? 1.6f * 1.02f : weapon.Weapon == WeaponKind.Stab ? 1.9f : 2.3f;
         bool struck = PlayerRaycast.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var hit);
         var target = struck ? hit.collider.GetComponentInParent<IDamageable>() : null;
+        // 이미 쓰러진 몸(Ragdoll)은 적이 아니라 물건처럼 친다: 피해·처치 효과(마무리 소리·크게 흔들림·멈칫·느려짐·X) 없이 살 타격음과 작은 피.
+        // 때리기 전에 본다 (이번 타격으로 쓰러뜨린 것은 처치로 친다)
+        if (target != null && IsDead(target))
+        {
+            StartCoroutine(SurfaceHit(hit, weapon, range));
+            return;
+        }
         if (target != null)
         {
             bool armored = target is Zombie armoredZombie && armoredZombie.ArmorLeft; // 맞기 전에 본다 (이번 타격에 조각이 떨어질 수 있다)
@@ -86,7 +93,8 @@ public class PlayerCombat : MonoBehaviour
         // 벽·물건·바닥을 쳤다. 벽에 몸을 붙이고 휘두르면 구가 처음부터 벽에 닿아 있어 구 판정이 벽을 건너뛰므로, 그때는 조준선 한 줄로 다시 찾는다
         else if (struck || PlayerRaycast.Raycast(cam.transform.position, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out hit))
         {
-            if (hit.collider.GetComponentInParent<IDamageable>() == null) StartCoroutine(SurfaceHit(hit, weapon, range));
+            var other = hit.collider.GetComponentInParent<IDamageable>();
+            if (other == null || IsDead(other)) StartCoroutine(SurfaceHit(hit, weapon, range));
         }
     }
 
@@ -119,7 +127,9 @@ public class PlayerCombat : MonoBehaviour
         // 휘두른 방향 (긁힌 자국·홈이 이쪽으로 길다): 방망이는 오른쪽 위에서 왼쪽 아래로, 단검은 비스듬히, 주먹은 상관없다
         var along = weapon != null && weapon.Weapon == WeaponKind.Swing ? (-cam.transform.right * 0.55f - cam.transform.up * 0.85f) : (-cam.transform.right - cam.transform.up * 0.45f);
         // 렌더러 없는 투명 충돌 상자(울타리 밖 벽 등)면 먼지·조각·자국 없이 소리만 낸다 (허공에 먼지가 생기지 않게)
-        bool visible = ImpactSurface.Visible(col, point);
+        // 쓰러진 적의 몸은 뼈마디 충돌체에 렌더러가 없을 수 있다 (피부 메시는 따로 있다) → 보이는 것으로 친다
+        var victim = col.GetComponentInParent<IDamageable>();
+        bool visible = (victim != null && IsDead(victim)) || ImpactSurface.Visible(col, point);
         // 자국은 움직이지 않는 면에만, 조준선이 직접 닿은 자리에만 남긴다 (문·상자·던진 물건은 자국이 허공에 남고, 구가 스친 모서리는 자국이 삐져나간다)
         bool mark = visible && onCrosshair && hit.rigidbody == null && col.GetComponentInParent<Interactable>() == null;
 

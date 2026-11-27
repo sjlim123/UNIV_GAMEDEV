@@ -62,6 +62,8 @@ public static class ImpactSurface
         if (c == null) return Vfx.ImpactKind.Concrete;
         if (normal.y > 0.6f && PuddleFx.Inside(point)) return Vfx.ImpactKind.Water;
         if (c.GetComponentInParent<DeadBody>() != null) return Vfx.ImpactKind.Flesh;
+        var victim = c.GetComponentInParent<IDamageable>();
+        if ((victim is Zombie deadZombie && deadZombie.IsDead) || (victim is Animal deadAnimal && deadAnimal.IsDead)) return Vfx.ImpactKind.Flesh; // 쓰러진 적의 몸 (Ragdoll)
         if (c.GetComponentInParent<CharacterFigure>() != null) return Vfx.ImpactKind.Soft; // 상인 같은 산 사람 (옷을 친 둔한 소리, 피는 없다)
 
         var r = RendererFor(c, point);

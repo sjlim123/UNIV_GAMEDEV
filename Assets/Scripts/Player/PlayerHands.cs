@@ -234,9 +234,11 @@ public class PlayerHands : MonoBehaviour
             if (move == Move.Use && useCues != null && !handsAway)
                 foreach (var cue in useCues)
                     if (before <= cue.At && moveT > cue.At) EffectAudio.PlayUseCue(cue);
-            // 다 쓰면 원래 들던 것으로 돌아간다. 다음 사용이 기다리고 있으면 그 아이템을 계속 든다 (그래야 그 몸짓이 시작된다)
-            if (moveT >= 1f && move == Move.Use && !useQueued) useItem = null;
         }
+        // 다 쓰면 원래 들던 것으로 돌아간다. 쓰는 몸짓을 공격·버리기·쏘기가 끊었으면 그 몸짓이 끝날 때 돌아간다
+        // (전에는 끝나는 몸짓이 '쓰기'일 때만 풀어서, 끊긴 뒤에는 쓴 아이템을 계속 들고 핫바를 바꿔도 손이 바뀌지 않았다).
+        // 다음 사용이 기다리고 있으면 그 아이템을 계속 든다 (그래야 그 몸짓이 시작된다)
+        if (moveT >= 1f && !useQueued && useItem != null) useItem = null;
 
         PoseRight(dt);
         UpdateTrail();

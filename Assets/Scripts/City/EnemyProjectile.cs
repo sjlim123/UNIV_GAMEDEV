@@ -133,6 +133,13 @@ public class EnemyProjectile : MonoBehaviour
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
         var target = fromPlayer ? c.GetComponentInParent<IDamageable>() : null;
+        if ((target is Zombie deadZombie && deadZombie.IsDead) || (target is Animal deadAnimal && deadAnimal.IsDead))
+        {
+            // 쓰러진 몸: 피해·맞힘 소리(화면 전체에 들리는 2D) 없이 살에 맞은 둔한 소리만 내고 툭 떨어진다
+            ProceduralAudio.PlayAt3D(ProceduralAudio.FleshHit(), point, 0.5f, Random.Range(0.95f, 1.1f));
+            velocity *= -0.12f;
+            return;
+        }
         if (target != null)
         {
             target.TakeDamage(damage, velocity.sqrMagnitude > 1e-6f ? velocity.normalized : -normal);
