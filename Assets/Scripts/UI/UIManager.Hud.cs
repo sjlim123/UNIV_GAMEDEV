@@ -536,6 +536,7 @@ public partial class UIManager
     {
         int keys = 17;
         keys = keys * 31 + KeyBindings.Get(GameAction.Interact);
+        keys = keys * 31 + KeyBindings.Get(GameAction.DropItem);
         keys = keys * 31 + KeyBindings.Get(GameAction.Inventory);
         keys = keys * 31 + KeyBindings.Get(GameAction.Flashlight);
         keys = keys * 31 + KeyBindings.Get(GameAction.Run);
@@ -544,7 +545,7 @@ public partial class UIManager
         if (keys == keyHintKeys) return;
         keyHintKeys = keys;
         string K(GameAction a) => KeyBindings.Label(a);
-        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
+        keyHints.text = $"{K(GameAction.Interact)}  줍기·사용        {K(GameAction.DropItem)}  버리기        {K(GameAction.Inventory)}  소지품        {K(GameAction.Flashlight)}  손전등 켜기·끄기        {K(GameAction.Run)}  달리기        {K(GameAction.Crouch)}  앉기        {K(GameAction.Attack)}  공격";
     }
 
     void UpdateKeyHints()
