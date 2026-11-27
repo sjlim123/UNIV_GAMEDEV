@@ -206,6 +206,7 @@ public class PlayerHands : MonoBehaviour
         if (stowed) want = null; // 연출: 든 것을 내려놓는다 (내렸다가 빈손으로 올라온다)
         if (scriptItem != null) want = scriptItem;
         UpdateSwap(dt, want);
+        UpdateWall(dt);
 
         // 마우스를 돌리면 손이 살짝 늦게 따라오고, 걸으면 흔들리고, 가만히 있으면 숨쉬듯 오르내린다
         var targetSway = Vector3.ClampMagnitude(new Vector3(-look.x, -look.y, 0) * 0.0004f, 0.03f);
@@ -246,6 +247,44 @@ public class PlayerHands : MonoBehaviour
         bool wrapping = move == Move.Use && useKind == UseGesture.Bandage && moveT > 0.08f && moveT < 0.9f;
         bandage = Mathf.MoveTowards(bandage, wrapping ? 1f : 0f, dt * 5f);
         PoseLeft(dt, hasLight, lightOn, bandage);
+    }
+
+    // ---------- 벽에 붙을 때 손 당기기 ----------
+    // 벽에 바짝 붙으면 손이 벽 속으로 들어가 보였다 (몸은 벽에서 0.39 m까지 붙고, 손·든 물건은 카메라 앞 0.6~0.77 m까지 나온다).
+    // 손 쪽으로 짧게 살펴 벽·가구가 가까우면 그만큼 손을 아래·몸 쪽으로 내린다 (바꿔 들 때 내리는 것과 같은 쪽. 바짝 붙으면 손이 화면 아래로 빠진다).
+    // 뒤로만 당기면 든 물건이 카메라 바로 앞에 크게 걸렸다. 오른손은 바꿔 들 때처럼 앞으로 숙이고, 왼손은 손전등 불빛 방향이 바뀌지 않게 옮기기만 한다 (켠 손전등은 몸 쪽으로만 당긴다).
+    // 적·떨어진 물건처럼 움직이는 것(Rigidbody·NavMeshAgent)은 세지 않는다: 붙어 싸울 때 손이 빠지면 안 된다
+    float wallR, wallL; // 0 = 벽이 멀다, 1 = 다 당겼다
+    static readonly RaycastHit[] wallHits = new RaycastHit[16];
+    static readonly Vector3 WallPull = new Vector3(0.02f, -0.16f, -0.1f), WallPullLight = new Vector3(0f, -0.03f, -0.22f);
+    const float WallTilt = 30f, WallFar = 0.8f, WallSpan = 0.35f;
+
+    void UpdateWall(float dt)
+    {
+        var cam = handsRoot.parent;
+        float c = WallAmount(cam, Vector3.forward);
+        float r = Mathf.Max(c, WallAmount(cam, new Vector3(0.2f, -0.2f, 0.5f)));
+        float l = Mathf.Max(c, WallAmount(cam, new Vector3(-0.2f, -0.2f, 0.5f)));
+        float k = 1 - Mathf.Exp(-dt * 12);
+        wallR = Mathf.Lerp(wallR, r, k);
+        wallL = Mathf.Lerp(wallL, l, k);
+    }
+
+    // 카메라에서 localDir(카메라 기준) 쪽으로 가장 가까운 고정된 물체까지의 거리를 당길 양(0~1)으로
+    float WallAmount(Transform cam, Vector3 localDir)
+    {
+        var dir = cam.TransformDirection(localDir.normalized);
+        int n = Physics.SphereCastNonAlloc(cam.position, 0.06f, dir, wallHits, WallFar, ~0, QueryTriggerInteraction.Ignore);
+        float d = WallFar;
+        for (int i = 0; i < n; i++)
+        {
+            var h = wallHits[i];
+            var col = h.collider;
+            if (h.distance <= 0f || col == null) continue; // 처음부터 겹친 것 (자기 몸)
+            if (col.attachedRigidbody != null || col.transform.IsChildOf(transform) || col.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null) continue;
+            d = Mathf.Min(d, h.distance);
+        }
+        return Mathf.Clamp01((WallFar - d) / WallSpan);
     }
 
     // ---------- 스윙 궤적: 무기 끝에 달린 짧은 빛 꼬리, 휘두르거나 찌르는 동안만 남는다 ----------
@@ -549,6 +588,9 @@ public class PlayerHands : MonoBehaviour
         float pr = pump * (heldSpec == null ? 1f : 0.45f);
         wrist += new Vector3(-0.02f * pr - 0.025f * run, -0.04f * run + 0.085f * pr, 0.13f * pr - 0.02f * run) + new Vector3(0.03f, -0.2f, -0.08f) * l;
         rot = Quaternion.Euler(16f * run + 45 * l - 28f * pr, -5f * pr, 9f * pr) * rot;
+        float wr = Ease(wallR); // 벽이 가까우면 아래·몸 쪽으로 내리고 앞으로 숙인다
+        wrist += WallPull * wr;
+        rot = Quaternion.Euler(WallTilt * wr, 0f, 0f) * rot;
         // 손은 turn만큼 돌고, 팔뚝은 그 일부만 돈다
         var forearm = Quaternion.Slerp(Quaternion.identity, turn, ArmShare) * rot;
         var wristBend = Quaternion.Inverse(forearm) * turn * rot * bend;
@@ -848,6 +890,8 @@ public class PlayerHands : MonoBehaviour
             forearm = Quaternion.Slerp(forearm, BandageHand, k);
             bend = Quaternion.Slerp(bend, Quaternion.identity, k);
         }
+        // 벽이 가까우면 손을 거둔다 (불빛 방향은 그대로). 켠 손전등은 아래로 내리면 불빛이 화면 밑으로 빠져 벽을 못 비추므로 몸 쪽으로만 당긴다
+        wrist += Vector3.Lerp(WallPullLight, new Vector3(-WallPull.x, WallPull.y, WallPull.z), l) * Ease(wallL);
         ApplyLeftLock(ref wrist, ref forearm, ref bend);
         left.Place(wrist, forearm, bend);
 
@@ -877,6 +921,7 @@ public class PlayerHands : MonoBehaviour
             forearm = Quaternion.Slerp(forearm, BandageHand, k);
         }
         var bend = Quaternion.identity;
+        wrist += new Vector3(-WallPull.x, WallPull.y, WallPull.z) * Ease(wallL); // 벽이 가까우면 아래·몸 쪽으로 내린다
         ApplyLeftLock(ref wrist, ref forearm, ref bend);
         left.Place(wrist, forearm, bend);
         HandRig.Blend(HandRig.Relaxed, HandRig.Open, Mathf.Max(0.85f * run, k), leftFingers);
