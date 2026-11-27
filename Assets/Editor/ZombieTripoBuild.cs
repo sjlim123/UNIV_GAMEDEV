@@ -26,14 +26,39 @@ public static class ZombieTripoBuild
         return log.ToString();
     }
 
-    public static string Build(string name)
+    // ---- 가죽 감염자 (2026-11-27): 사용자 "갑바 정도의 군복" → 감염된 군인 몸 a·b(그림 5·7) + 떨어지는 장비 4종 (GameSceneBuilder.ZombieGear.cs) ----
+    public const string LeatherOutDir = "Assets/Resources/Enemies/ZombieLeather/";
+    public static readonly string[] LeatherNames = { "zombie_leather_a", "zombie_leather_b" };
+
+    [MenuItem("Tools/핵폭발 생존/가죽 감염자 Tripo 모델: 몸 a·b + 장비 맞춰 붙이기")]
+    static void BuildLeatherMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[ZombieTripoBuild] 플레이 중에는 하지 않는다"); return; }
+        Debug.Log("[ZombieTripoBuild] " + BuildLeather());
+    }
+
+    public static string BuildLeather()
+    {
+        if (!AssetDatabase.IsValidFolder(LeatherOutDir.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/Resources/Enemies", "ZombieLeather");
+        var log = new System.Text.StringBuilder();
+        foreach (var n in LeatherNames)
+        {
+            log.Append(Build(n, LeatherOutDir)).Append(" / 장비: ");
+            log.Append(GameSceneBuilder.ZgBuild(n, LeatherOutDir + n + ".prefab")).Append(" || ");
+        }
+        return log.ToString();
+    }
+
+    public static string Build(string name) => Build(name, OutDir);
+
+    public static string Build(string name, string outDir)
     {
         string dir = Base + name + "/";
         SetupImport(dir + name + "_tex.fbx", false);
         SetupImport(dir + "_리깅5만/" + name + "_rig50k.fbx", true);
         string t = PlayerModelTools.TransferFor(name, Base, Fit);
         string q = GameSceneBuilder.PmBuildFor(name, false, Base);
-        string src = dir + name + ".prefab", dst = OutDir + name + ".prefab";
+        string src = dir + name + ".prefab", dst = outDir + name + ".prefab";
         if (AssetDatabase.LoadAssetAtPath<GameObject>(src) == null) return $"{name}: 프리팹 없음 ({t} / {q})";
         if (AssetDatabase.LoadAssetAtPath<GameObject>(dst) != null) AssetDatabase.DeleteAsset(dst);
         AssetDatabase.CopyAsset(src, dst);

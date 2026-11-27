@@ -48,7 +48,7 @@ public static partial class CharacterModels
         var b = new Builder(owner, kind, variant);
         switch (kind)
         {
-            case FigureKind.Leather: LeatherZombie(b); break;
+            case FigureKind.Leather: if (!TripoLeatherZombie(b)) LeatherZombie(b); break; // Tripo 감염된 군인 a·b + 떨어지는 장비 6개 (CharacterModels.Skinned.cs), 없으면 예전 가죽 갑옷 관 몸
             case FigureKind.Slingshot: SlingshotZombie(b); break;
             case FigureKind.Giant: GiantZombie(b); break;
             case FigureKind.Raider: Raider(b); break;

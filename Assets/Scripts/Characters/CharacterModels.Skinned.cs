@@ -28,8 +28,39 @@ public static partial class CharacterModels
         }
         int k = Mathf.Abs(variant) % 2;
         var prefab = tripoZombiePrefab[k] != null ? tripoZombiePrefab[k] : tripoZombiePrefab[1 - k];
-        if (prefab == null) return false;
+        return prefab != null && TripoSkinnedBody(b, prefab, 0.7f) != null;
+    }
 
+    // ---- 가죽 감염자 = 감염된 군인 (2026-11-27, 사용자 "갑바 정도의 군복", 그림 5·7 두 가지) ----
+    // 장비 6개(방탄조끼·전투모·어깨 보호대 둘·무릎 보호대 둘)는 프리팹에서 뼈 아래에 붙어 있다 (편집기 '가죽 감염자 Tripo 모델: 몸 a·b + 장비 맞춰 붙이기').
+    // 이름(ChestArmor·HelmetArmor·ShoulderArmor·KneeArmor)으로 찾아 갑옷 조각 목록에 넣으면 Zombie.LoseArmor가 맞을 때마다 하나씩 떨어뜨린다
+    public static bool UseTripoLeather = true;
+    static readonly string[] TripoLeatherRes = { "Enemies/ZombieLeather/zombie_leather_a", "Enemies/ZombieLeather/zombie_leather_b" };
+    static readonly GameObject[] tripoLeatherPrefab = new GameObject[2];
+    static bool tripoLeatherLoaded;
+    static readonly HashSet<string> ArmorNames = new HashSet<string> { "ChestArmor", "HelmetArmor", "ShoulderArmor", "KneeArmor" };
+
+    static bool TripoLeatherZombie(Builder b)
+    {
+        if (!UseTripoLeather) return false;
+        if (!tripoLeatherLoaded)
+        {
+            tripoLeatherLoaded = true;
+            for (int i = 0; i < 2; i++) tripoLeatherPrefab[i] = Resources.Load<GameObject>(TripoLeatherRes[i]);
+        }
+        int k = Random.Range(0, 2);
+        var prefab = tripoLeatherPrefab[k] != null ? tripoLeatherPrefab[k] : tripoLeatherPrefab[1 - k];
+        if (prefab == null) return false;
+        var skin = TripoSkinnedBody(b, prefab, 0.7f);
+        if (skin == null) return false;
+        foreach (var t in skin.GetComponentsInChildren<Transform>(true))
+            if (ArmorNames.Contains(t.name)) b.Rig.Armor.Add(t);
+        return true;
+    }
+
+    // Tripo 스킨 몸 하나를 얹고 게임 관절을 세운다. 실패하면 null
+    static GameObject TripoSkinnedBody(Builder b, GameObject prefab, float curl)
+    {
         var rig = b.Rig;
         var skin = Object.Instantiate(prefab, rig.Model, false);
         skin.name = "Skin";
@@ -40,7 +71,7 @@ public static partial class CharacterModels
         string[] need = { "Hips", "Spine", "Neck", "Head", "Left_Eye", "Right_Eye", "Left_UpperArm", "Left_LowerArm", "Left_Hand", "Right_UpperArm", "Right_LowerArm", "Right_Hand",
             "Left_UpperLeg", "Left_LowerLeg", "Left_Foot", "Right_UpperLeg", "Right_LowerLeg", "Right_Foot", "Left_MiddleProximal", "Right_MiddleProximal" };
         foreach (var n in need)
-            if (!bones.ContainsKey(n)) { Object.Destroy(skin); return false; }
+            if (!bones.ContainsKey(n)) { Object.Destroy(skin); return null; }
         foreach (var r in skin.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
 
@@ -71,9 +102,9 @@ public static partial class CharacterModels
         rig.BodyY = P("Spine").y;
         rig.Shoulder = P("Right_UpperArm") - P("Spine");
         rig.AnkleH = P("Left_Foot").y;
-        rig.CurlL = rig.CurlR = 0.7f; // 할퀴려는 갈고리 손 (1 = 느슨한 주먹)
+        rig.CurlL = rig.CurlR = curl; // 할퀴려는 갈고리 손 (1 = 느슨한 주먹)
         skin.AddComponent<SkinnedPlayerDriver>().Init(rig, hips, bones);
-        return true;
+        return skin;
     }
 
     public static bool UseSkinnedCommonZombie = true;

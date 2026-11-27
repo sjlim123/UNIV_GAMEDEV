@@ -1090,6 +1090,24 @@
       "added": "2026-11-27",
       "status": "사용",
       "source": "https://higgsfield.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "가죽 감염자 a·b (감염된 군인, zombie_leather_a·b) + 떨어지는 장비 4종 (방탄조끼·전투모·어깨 보호대·무릎 보호대) — Tripo AI 웹 스튜디오로 글→그림→이미지 편집→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 사용자 결정 '갑바 정도의 군복' → 군복 차림 감염된 군인, 그림 5·7. 이미지 편집으로 장비를 벗긴 몸과 장비 4종을 따로 그림",
+        "몸 a (그림 5): H3.5 프리뷰 고정밀 (4K · 30만), 삼각형 293,498, 작업 35e19ec1-153e-45d3-b454-e3c110e1fdf3 60크레딧 → 리토폴로지 쿼드 47,063 10 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20 (변환 515e3994)",
+        "몸 b (그림 7): H3.5 프리뷰, 삼각형 297,574, 작업 8a72c170-445b-4aaf-bae1-44e9f7120f86 60 → 리토폴로지 쿼드 44,412 10 → 자동 리깅 20 (변환 8d0b4ac9)",
+        "장비 (H3.5 프리뷰, 4K · 6만, 각 60크레딧): 방탄조끼 d6646948 (58,358) · 전투모 9ced1e04 (55,578) · 어깨 보호대 782a643e (56,954) · 무릎 보호대 8ba3345d (57,470). 몸 b 첫 시도에서 한 번 더 생성된 모델 하나(60)는 쓰지 않음. 합계 480크레딧",
+        "몸: 가중치를 30만 메시로 옮기고 품질 4단계 (약 6천·2.4만·9만·29만). 장비: 몸마다 뼈 가중치로 몸통·머리·위팔·무릎 둘레를 재어 맞춰 뼈에 붙이고 (어깨 보호대 오른쪽은 거울), 조각마다 품질 4단계. Blender 점검 통과 (비침 0 px, 세 자세 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/zombie_leather_a·b/, soldier_gear/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE_zombie_leather.md), Assets/Resources/Enemies/ZombieLeather/",
+      "used_for": "가죽 감염자(ZombieKind.Leather) 몸, 좀비마다 a·b 중 하나. 맞을 때마다 장비 6개가 하나씩 떨어진다 (Zombie.LoseArmor) — CharacterModels.Skinned.cs (TripoLeatherZombie), GameSceneBuilder.ZombieGear.cs. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }
