@@ -446,8 +446,9 @@ public static partial class GameSceneBuilder
         var se = smoke.emission;
         se.rateOverTime = 0f;
         var ss = smoke.shape;
-        ss.shapeType = ParticleSystemShapeType.Circle;
-        ss.radius = 0.03f;
+        ss.shapeType = ParticleSystemShapeType.Cone; // Circle은 원판을 따라 옆으로 쏴서 관 밖으로 샌다. 각도 0인 Cone은 관 축(위)으로 곧게 쏜다 (모양·그림은 실행할 때 SmokeFx가 다시 맞춘다)
+        ss.angle = 0f;
+        ss.radius = 0.01f;
         ss.radiusThickness = 1f;
         var sol = smoke.sizeOverLifetime;
         sol.enabled = true;
@@ -460,7 +461,7 @@ public static partial class GameSceneBuilder
         scol.color = sgrad;
         var sn = smoke.noise;
         sn.enabled = true;
-        sn.strength = 0.025f;
+        sn.strength = 0.005f; // 0.025면 2초 사이에 옆으로 4~10 cm 밀려 관 밖으로 나간다
         sn.frequency = 1.6f;
         var sr = smokeGo.GetComponent<ParticleSystemRenderer>();
         sr.renderMode = ParticleSystemRenderMode.Billboard;

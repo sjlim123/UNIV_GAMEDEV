@@ -87,7 +87,42 @@ public static class SmokeFx
                 else if (ps.name == "Smoke" && ash) RubbleSmoke(ps, ps.transform.parent != null && ps.transform.parent.name == "Crater");
                 else if (ps.name == "Flames" && ps.transform.parent != null && ps.transform.parent.name == "FireBarrel" && ps.transform.parent.Find("BarrelSmoke") == null)
                     BarrelSmoke(ps.transform.parent, ps.transform.localPosition);
+                else if (ps.name == "ChimneySmoke") ChimneySmoke(ps);
             }
+    }
+
+    // 방공호 발전기 굴뚝 유리 구간 안에서 오르는 연기 (양은 Generator가 정한다).
+    // 예전 장면 파일은 방출 모양이 Circle이라 입자가 관 아래 이음새에서 옆으로 퍼져 방에 흰 점으로 떠다녔다 → 관 축(위)으로 곧게 쏜다.
+    // 관 지름이 8 cm라 입자를 관 지름쯤으로 두고(부드러운 가장자리가 관 밖으로 나오지 않는다) 덩어리 연기 그림을 쓴다.
+    // 관 아래(1.95 m)에서 위 유리 구간 끝(2.92 m)까지 오르는 동안만 보이게, 빠르기를 고르게 하고 그 끝에서 다 사라지게 수명을 맞춘다
+    // (그 위 이음새·천장 쪽에서 연기 가장자리가 관 옆으로 비치지 않게)
+    static void ChimneySmoke(ParticleSystem ps)
+    {
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Cone;
+        shape.angle = 0f;
+        shape.radius = 0.01f;
+        shape.radiusThickness = 1f;
+        var main = ps.main;
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 0.54f);
+        main.startLifetime = new ParticleSystem.MinMaxCurve(1.85f, 1.95f); // 0.93~1.05 m 오르고 끝난다 (투명도는 80%부터 줄어 유리 끝 2.92 m 언저리에서 거의 0)
+        main.gravityModifier = 0f; // 장면 파일의 -0.01(위로 끌림)이 있으면 0.16 m 더 올라 천장 이음새까지 진한 채로 간다
+        main.startSize = new ParticleSystem.MinMaxCurve(0.055f, 0.075f);
+        main.startRotation = Tilt;
+        var size = ps.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.85f, 1, 1f));
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+            new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.12f), new GradientAlphaKey(1, 0.8f), new GradientAlphaKey(0, 1) });
+        col.color = g;
+        // 흔들림(noise) 0.025는 초당 4~7 cm씩 옆으로 밀어 2초 사이에 반지름 4 cm 관을 벗어났다. 0.005면 관 축에서 2 cm 안쪽에 머문다
+        var noise = ps.noise;
+        noise.strength = 0.005f;
+        Apply(ps, false);
+        ps.Clear();
     }
 
     // 덩어리 연기를 조금만 기울인다 (라디안)
