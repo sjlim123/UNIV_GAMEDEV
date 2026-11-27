@@ -176,7 +176,7 @@
       "source": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
       "license": "CC0",
       "location": "Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)",
-      "used_for": "플레이어 발소리: 방공호·복도·터널·보도(돌), 흙·재(모래), 출발 연출 걸음",
+      "used_for": "플레이어 발소리: 도시 보도·콘크리트 판(돌), 흙·재(모래) — 방공호 바닥은 2026-11-27부터 bunker(군화 기준)",
       "added": "2026-11-05",
       "status": "사용 중"
     },
@@ -188,8 +188,8 @@
       "author": "Kenney (kenney.nl)",
       "source": "https://kenney.nl/assets/impact-sounds",
       "license": "CC0",
-      "location": "Assets/Resources/Audio/Footsteps/interior/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)",
-      "used_for": "플레이어 발소리: 건물 안 바닥",
+      "location": "Assets/Resources/Audio/Footsteps/interior/, bunker/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)",
+      "used_for": "플레이어 발소리: 건물 안 바닥; 방공호 바닥 발소리(bunker)에 뒤꿈치 딱 소리로 아주 약하게(세기 0.06) 섞음 (2026-11-27)",
       "added": "2026-11-05",
       "status": "사용 중"
     },
@@ -200,13 +200,14 @@
       "items": [
         "gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0",
         "boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0",
-        "water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0"
+        "water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0",
+        "bunker 0~8: 위 boots 9개 각각에 Kenney footstep_concrete를 저역을 걸러 0.035초 앞에 아주 약하게(세기 0.06) 섞어 고친 것 — CC-BY 3.0 (원본을 바꿈, 2026-11-27)"
       ],
       "author": "묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound)",
       "source": "https://opengameart.org/content/footsteps-on-different-surfaces",
       "license": "CC-BY-3.0",
-      "location": "Assets/Resources/Audio/Footsteps/gravel/, boots/, water/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)",
-      "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이; 귀환 연출 걸음(군화)",
+      "location": "Assets/Resources/Audio/Footsteps/gravel/, boots/, water/, bunker/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)",
+      "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이, 방공호·터널 바닥과 출발 연출 걸음(bunker: 군화에 건물 바닥 소리를 아주 약하게 섞음); 귀환 연출 걸음(군화)",
       "added": "2026-11-05",
       "status": "사용 중"
     },

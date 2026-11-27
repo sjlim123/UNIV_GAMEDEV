@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // 플레이어 발소리 (실제 녹음, Resources/Audio/Footsteps/<바닥>/*.ogg). 발밑 바닥에 따라 고른다:
-//  stone    방공호·복도·터널 콘크리트, 도시 보도 — Fantozzi's Footsteps (OpenGameArt, CC0)
+//  bunker   방공호·터널 콘크리트 (출발 연출 걸음도) — boots에 interior의 뒤꿈치 딱 소리를 아주 약하게(0.06) 섞어 만든 9개 (11-27 사용자: 흙소리 같다 → 군화 기준, 도각은 잔음 수준)
+//  stone    도시 보도·콘크리트 판 — Fantozzi's Footsteps (OpenGameArt, CC0)
 //  boots    도시 아스팔트 (군화) — swuing footstep-concrete (OpenGameArt 묶음, CC-BY 3.0)
 //  interior 건물 안 바닥 — Kenney Impact Sounds footstep_concrete (CC0)
 //  gravel   잔해·자갈 — Ali_6868 Gravel Footsteps (CC0)
@@ -12,9 +13,9 @@ using UnityEngine.SceneManagement;
 // 같은 소리가 연달아 나지 않게 고르고, 클립이 없으면 예전 합성 발소리로 돌아간다. 출처·라이선스는 Credits/외부_에셋_목록.json
 public static class Footsteps
 {
-    public enum Surface { Stone, Asphalt, Interior, Gravel, Sand, Water }
+    public enum Surface { Stone, Asphalt, Interior, Gravel, Sand, Water, Bunker }
 
-    static readonly string[] Folders = { "stone", "boots", "interior", "gravel", "sand", "water" };
+    static readonly string[] Folders = { "stone", "boots", "interior", "gravel", "sand", "water", "bunker" };
     static readonly Dictionary<Surface, AudioClip[]> clips = new Dictionary<Surface, AudioClip[]>();
     static readonly Dictionary<Surface, int> last = new Dictionary<Surface, int>();
     static readonly RaycastHit[] hits = new RaycastHit[16];
@@ -33,6 +34,7 @@ public static class Footsteps
     public static AudioClip Clip(Surface s)
     {
         var arr = Load(s);
+        if ((arr == null || arr.Length == 0) && s == Surface.Bunker) return Clip(Surface.Asphalt); // 방공호 소리가 없으면 그 바탕인 군화 소리로
         if (arr == null || arr.Length == 0) return s == Surface.Water ? ProceduralAudio.Splash() : ProceduralAudio.Footstep();
         int prev = last.TryGetValue(s, out var p) ? p : -1;
         int i = Random.Range(0, arr.Length);
@@ -41,12 +43,12 @@ public static class Footsteps
         return arr[i];
     }
 
-    // 발밑 바닥. 웅덩이 → 물. 탐험 씬이 아니면(방공호·터널: CityDirector가 없다) 돌. 탐험 씬(도시·102동)에서는 발밑 물체의 이름·재질로:
+    // 발밑 바닥. 웅덩이 → 물. 탐험 씬이 아니면(방공호·터널: CityDirector가 없다) 방공호 바닥(군화). 탐험 씬(도시·102동)에서는 발밑 물체의 이름·재질로:
     // Ground(아스팔트) → 군화, Sidewalk·콘크리트 바닥 → 돌, 건물 Floor → 건물 안, 잔해·자갈 조각 → 자갈, 흙·재·모래 → 모래
     public static Surface SurfaceUnder(Vector3 pos, Transform self = null)
     {
         if (PuddleFx.Inside(pos)) return Surface.Water;
-        if (CityDirector.Instance == null) return Surface.Stone;
+        if (CityDirector.Instance == null) return Surface.Bunker;
         int n = Physics.RaycastNonAlloc(pos + Vector3.up * 0.3f, Vector3.down, hits, 1.3f, ~0, QueryTriggerInteraction.Ignore);
         Collider ground = null;
         float best = float.MaxValue;

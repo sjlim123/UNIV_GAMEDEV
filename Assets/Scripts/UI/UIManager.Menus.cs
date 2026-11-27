@@ -818,7 +818,7 @@ public partial class UIManager
             Line(c, "· 텍스처 · 3D 모델: Poly Haven (CC0)");
             Line(c, "· 감염자 목소리: ianzazz, Darsycho, saturn91 — OpenGameArt (CC0)");
             Line(c, "· 발소리: Fantozzi, qubodup, Kenney, Ali_6868 (CC0)");
-            Line(c, "· 군화·물 발소리 (CC BY 3.0): 'footstep-concrete' — swuing,");
+            Line(c, "· 군화·방공호·물 발소리 (CC BY 3.0, 방공호는 섞어 고침): 'footstep-concrete' — swuing,");
             Line(c, "   'Water Footsteps' — EminYILDIRIM (Freesound 원본, OpenGameArt 묶음)");
             Line(c, "· 폰트 (SIL OFL 1.1): Pretendard — 길형진, Do Hyeon — 우아한형제들,");
             Line(c, "   Share Tech Mono — Carrois Apostrophe");
