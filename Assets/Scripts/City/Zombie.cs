@@ -53,6 +53,7 @@ public class Zombie : MonoBehaviour, IDamageable
     AudioSource stretchSound;
     Vector3 aimPoint;
     Quaternion slingHold = Quaternion.identity; // 마지막으로 당기던 오른팔 자세 (몸 기준)
+    Quaternion slingForeHold = Quaternion.identity; // 그때 오른 아래팔 (위팔 기준, 팔꿈치를 굽혀 뺨까지)
     float slingSnap = -1;                       // 고무줄을 놓은 뒤 지난 시간 (-1 = 놓지 않음)
     float slingDraw, slingAim, slingHoldK, snapDraw, snapAim, snapHoldK;
     bool slingDrawn, slingPosed;
@@ -827,21 +828,38 @@ public class Zombie : MonoBehaviour, IDamageable
             armL.localRotation = Quaternion.Slerp(armL.localRotation, ArmPose(dir), aim);
         }
 
-        // 오른팔: 주머니를 집으러 새총 쪽으로 뻗었다가(잡기) 귀 옆까지 당긴다
+        // 오른팔: 주머니를 집으러 새총 쪽으로 뻗었다가(잡기) 오른뺨까지 당긴다 (2026-11-28, 사용자: 예전엔 팔을 곧게 편 채 머리 뒤 멀리까지 당겼다).
+        // 팔꿈치를 굽히는 두 마디 IK: 손이 목표(주머니 → 뺨)에 닿게 하고, 팔꿈치는 몸 바깥·조금 아래·뒤로 뺀다 (활 당길 때처럼)
         Vector3 hand = sling.Rest;
-        if (armR != null && body != null)
+        if (armR != null && foreR != null && body != null)
         {
+            float gripLocal = rig != null ? rig.GripReach - rig.UpperArmLen : 0.7f - CharacterModels.UpperArm; // 팔꿈치에서 주먹 가운데까지 (아래팔 기준)
             if (drawing)
             {
                 float pull = Smooth((wind - SlingGrab) / (SlingFull - SlingGrab));
-                var grab = sling.Rest - armR.position;
-                // 오른쪽 귀 뒤 바깥 (고무줄이 머리를 뚫지 않고 옆을 지난다. 아래층을 겨눌 때도)
-                var anchor = body.TransformDirection(new Vector3(0.55f, 0.35f, -0.75f));
-                slingHold = ArmPose(Vector3.Slerp(grab.normalized, anchor.normalized, pull));
+                // 뺨: 머리 관절에서 위·오른쪽·앞으로 조금 (좀비 크기만큼)
+                float sc = transform.lossyScale.y;
+                var cheek = head != null ? head.position + (body.up * 0.07f + body.right * 0.1f + body.forward * 0.05f) * sc : armR.position + body.forward * 0.2f * sc;
+                var target = Vector3.Lerp(sling.Rest, cheek, pull);
+                var s = armR.position;
+                float l1 = (foreR.position - s).magnitude, l2 = foreR.lossyScale.y * gripLocal;
+                var to = target - s; float dist = Mathf.Clamp(to.magnitude, Mathf.Abs(l1 - l2) + 1e-3f, l1 + l2 - 1e-3f);
+                var dir = to.sqrMagnitude > 1e-6f ? to.normalized : body.forward;
+                float a = (l1 * l1 - l2 * l2 + dist * dist) / (2f * dist), h = Mathf.Sqrt(Mathf.Max(0f, l1 * l1 - a * a));
+                var pole = Vector3.ProjectOnPlane(body.right - body.up * 0.35f - body.forward * 0.25f, dir);
+                if (pole.sqrMagnitude < 1e-6f) pole = Vector3.ProjectOnPlane(body.right, dir);
+                var elbow = s + dir * a + pole.normalized * h;
+                slingHold = ArmPose(elbow - s);
+                // 아래팔: 팔꿈치에서 목표로 (위팔 자세를 바꾼 뒤의 위팔 기준)
+                var keep = armR.localRotation; armR.localRotation = slingHold;
+                var fd = armR.InverseTransformDirection(s + dir * dist - elbow);
+                armR.localRotation = keep;
+                slingForeHold = Quaternion.FromToRotation(Vector3.down, fd.normalized);
                 slingHoldK = holdK;
             }
             armR.localRotation = Quaternion.Slerp(armR.localRotation, slingHold, holdK);
-            hand = armR.TransformPoint(new Vector3(0, -(rig != null ? rig.GripReach : 0.7f), 0));
+            foreR.localRotation = Quaternion.Slerp(foreR.localRotation, slingForeHold, holdK);
+            hand = foreR.TransformPoint(new Vector3(0, -gripLocal, 0));
         }
         slingDraw = draw;
         sling.Pose(hand, draw, loaded);
