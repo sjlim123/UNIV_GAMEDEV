@@ -1,6 +1,6 @@
 {
   "title": "벙커랩 (BUNKER LAB) — 외부 에셋 목록",
-  "updated": "2026-11-27",
+  "updated": "2026-11-28",
   "note": "게임에 쓰인 외부(직접 만들지 않은) 에셋 전부. 이 JSON이 원본이고, 같은 폴더의 .md와 .pdf는 build_credits.py로 만든다. 새 에셋을 쓰면 여기에 한 항목을 더하고 스크립트를 다시 돌린다. CC0는 출처 표기 의무가 없고 SIL OFL은 글꼴 파일을 그대로 넣을 때 라이선스 문서를 같이 두면 된다.",
   "licenses": {
     "CC0": {
@@ -169,14 +169,14 @@
       "kind": "효과음",
       "name": "Fantozzi's Footsteps (Grass/Sand & Stone) — Fantozzi-footsteps.7z",
       "items": [
-        "Fantozzi-StoneL1~L3·R1~R3 → stone",
+        "Fantozzi-StoneL1~L3·R1~R3 → 2026-11-28부터 보도 발소리(stone)의 아주 짧은 거친 소리로만 섞임 (원본 파일은 뺌)",
         "Fantozzi-SandL1~L3·R1~R3 → sand"
       ],
       "author": "Fantozzi (Freesound 팩 10338), 잘라 올린 이 qubodup (OpenGameArt)",
       "source": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
       "license": "CC0",
-      "location": "Assets/Resources/Audio/Footsteps/stone/, sand/ (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)",
-      "used_for": "플레이어 발소리: 도시 보도·콘크리트 판(돌), 흙·재(모래) — 방공호 바닥은 2026-11-27부터 bunker(군화 기준)",
+      "location": "Assets/Resources/Audio/Footsteps/sand/, stone/(섞인 것) (메모 Assets/ThirdParty/OpenGameArt/Fantozzi-footsteps/README.txt)",
+      "used_for": "플레이어 발소리: 흙·재(모래); 도시 보도·콘크리트 판(stone)에는 2026-11-28부터 고음만 남긴 0.06초 조각을 아주 약하게(세기 0.07) 섞음 — 방공호 바닥은 2026-11-27부터 bunker(군화 기준)",
       "added": "2026-11-05",
       "status": "사용 중"
     },
@@ -188,8 +188,8 @@
       "author": "Kenney (kenney.nl)",
       "source": "https://kenney.nl/assets/impact-sounds",
       "license": "CC0",
-      "location": "Assets/Resources/Audio/Footsteps/interior/, bunker/ (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)",
-      "used_for": "플레이어 발소리: 건물 안 바닥; 방공호 바닥 발소리(bunker)에 뒤꿈치 딱 소리로 아주 약하게(세기 0.06) 섞음 (2026-11-27)",
+      "location": "Assets/Resources/Audio/Footsteps/interior/, stone/, bunker/ (섞인 것) (License.txt: Assets/ThirdParty/Kenney/impact-sounds/)",
+      "used_for": "플레이어 발소리의 뒤꿈치 딱 소리: 건물 안 바닥(interior, 2026-11-28부터 군화 소리·방 울림과 섞음), 도시 보도(stone, 2026-11-28 고음만 세기 0.32), 방공호 바닥(bunker, 세기 0.06, 2026-11-27)",
       "added": "2026-11-05",
       "status": "사용 중"
     },
@@ -201,13 +201,15 @@
         "gravel: Ali_6868 'Gravel Footsteps' (Freesound 팩 21608) 파생 — CC0",
         "boots: swuing 'footstep-concrete.wav' (Freesound 38873) 파생 — CC-BY 3.0",
         "water: EminYILDIRIM 'Water Footsteps' (Freesound 608663) + swuing footstep-concrete 파생 — CC-BY 3.0",
-        "bunker 0~8: 위 boots 9개 각각에 Kenney footstep_concrete를 저역을 걸러 0.035초 앞에 아주 약하게(세기 0.06) 섞어 고친 것 — CC-BY 3.0 (원본을 바꿈, 2026-11-27)"
+        "bunker 0~8: 위 boots 9개 각각에 Kenney footstep_concrete를 저역을 걸러 0.035초 앞에 아주 약하게(세기 0.06) 섞어 고친 것 — CC-BY 3.0 (원본을 바꿈, 2026-11-27)",
+        "stone 0~8 (도시 보도·공터·옥상): boots 9개 각각을 7% 높이고, 0.022초 앞에 Kenney footstep_concrete(900Hz 아래 거름, 세기 0.32), 뒤에 Fantozzi 돌 발소리의 2.5kHz 위 0.06초 조각(세기 0.07)을 섞어 고친 것 — CC-BY 3.0 (원본을 바꿈, 2026-11-28)",
+        "interior 0~8 (건물 안 바닥): Kenney footstep_concrete 뒤 0.018초에 1.8kHz 위를 깎은 boots를 섞고 작은 콘크리트 방 울림(0.3초)을 살짝 더해 고친 것 — CC-BY 3.0 (원본을 바꿈, 2026-11-28)"
       ],
       "author": "묶음 OpenGameArt 업로더 / 원 제작 Ali_6868, swuing, EminYILDIRIM (Freesound)",
       "source": "https://opengameart.org/content/footsteps-on-different-surfaces",
       "license": "CC-BY-3.0",
-      "location": "Assets/Resources/Audio/Footsteps/gravel/, boots/, water/, bunker/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)",
-      "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이, 방공호·터널 바닥과 출발 연출 걸음(bunker: 군화에 건물 바닥 소리를 아주 약하게 섞음); 귀환 연출 걸음(군화)",
+      "location": "Assets/Resources/Audio/Footsteps/gravel/, boots/, water/, bunker/, stone/, interior/ (폴더별 license 사본: Assets/ThirdParty/OpenGameArt/footsteps-different-surfaces/)",
+      "used_for": "플레이어 발소리: 잔해·자갈, 도시 아스팔트(군화), 웅덩이, 방공호·터널 바닥과 출발 연출 걸음(bunker: 군화에 건물 바닥 소리를 아주 약하게 섞음), 도시 보도·공터·옥상(stone)과 건물 안 바닥(interior: 군화를 섞어 고침, 2026-11-28); 귀환 연출 걸음(군화)",
       "added": "2026-11-05",
       "status": "사용 중"
     },
@@ -1178,6 +1180,22 @@
       "added": "2026-11-28",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "효과음",
+      "name": "새총 돌이 맞는 소리 21개 (콘크리트·벽돌·나무·쇠·유리·흙·천) — Higgsfield Seed Audio 1.0으로 글에서 만든 폴리 소리",
+      "items": [
+        "모델 seed_audio (ByteDance Seed Audio 1.0, Higgsfield), 44.1 kHz WAV, 한 개 0.9크레딧, 21개 약 19크레딧 (2026-11-27)",
+        "재질 7가지 × 3가지씩 ('small pebble / slingshot rock hits <재질>, one short ... isolated sound effect'). 작업 번호는 효과 세션 기록에 있음",
+        "다듬기: 모노로 합침, 가장 큰 타격 바로 앞에서 자르고 0.38초(쇠 0.5·유리 0.45초)만 남김 (뒤에 따로 튀는 소리가 있으면 그 앞까지), 끝 90 ms 동안 줄임, 크기는 예전 돌 소리(stone_hit)와 같게 (원본은 저장소 밖)"
+      ],
+      "author": "Higgsfield AI (Seed Audio 1.0)로 생성, 효과 세션",
+      "license": "Higgsfield",
+      "location": "Assets/Resources/Audio/StoneHit/",
+      "used_for": "새총 돌(플레이어·원거리 좀비)이 벽·물건·바닥에 맞거나 다시 튕길 때 맞은 재질의 소리 — ProceduralAudio.StoneHit(kind) (EnemyProjectile). 살·물이거나 파일이 없으면 예전 공통 돌 소리",
+      "added": "2026-11-27",
+      "status": "사용",
+      "source": "https://higgsfield.ai/"
     }
   ]
 }

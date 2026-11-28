@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // 플레이어 발소리 (실제 녹음, Resources/Audio/Footsteps/<바닥>/*.ogg). 발밑 바닥에 따라 고른다:
-//  bunker   방공호·터널 콘크리트 (출발 연출 걸음도) — boots에 interior의 뒤꿈치 딱 소리를 아주 약하게(0.06) 섞어 만든 9개 (11-27 사용자: 흙소리 같다 → 군화 기준, 도각은 잔음 수준)
-//  stone    도시 보도·콘크리트 판 — Fantozzi's Footsteps (OpenGameArt, CC0)
+//  bunker   방공호·터널 콘크리트 (출발 연출 걸음도) — boots에 Kenney footstep_concrete 뒤꿈치 딱 소리를 아주 약하게(0.06) 섞어 만든 9개 (11-27 사용자: 흙소리 같다 → 군화 기준, 도각은 잔음 수준)
+//  stone    도시 보도·공터·옥상·콘크리트 판 — boots를 조금 높여 단단하게 + Kenney footstep_concrete 딱 소리(고음만) + Fantozzi 돌 발소리의 아주 짧은 거친 조각을 섞은 9개 (11-28 사용자: 흙소리 같다 → S1 '단단한 보도')
 //  boots    도시 아스팔트 (군화) — swuing footstep-concrete (OpenGameArt 묶음, CC-BY 3.0)
-//  interior 건물 안 바닥 — Kenney Impact Sounds footstep_concrete (CC0)
+//  interior 건물 안 바닥·나무 판자 — Kenney footstep_concrete 딱 소리 뒤에 낮게 깎은 boots로 무게를 싣고 작은 콘크리트 방 울림을 더한 9개 (11-28 사용자: 너무 짧은 딸깍 → I2 '무게 + 방 울림')
 //  gravel   잔해·자갈 — Ali_6868 Gravel Footsteps (CC0)
 //  sand     흙·재 — Fantozzi (CC0)
 //  water    웅덩이 — EminYILDIRIM Water Footsteps (CC-BY 3.0)
