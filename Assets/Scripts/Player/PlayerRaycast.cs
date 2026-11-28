@@ -24,9 +24,20 @@ public static class PlayerRaycast
         return Closest(n, self, true, out hit);
     }
 
+    // 근접 공격용: 쓰러진 적의 몸(Ragdoll)은 없는 것처럼 건너뛰고 가장 가까운 것을 찾는다.
+    // 앞에 쓰러진 몸 너머로 휘둘러 그 뒤의 산 좀비를 칠 수 있게 (벽·물건은 그대로 막는다)
+    public static bool SphereCastPastBodies(Vector3 origin, float radius, Vector3 direction, float range, Transform self, QueryTriggerInteraction triggers, out RaycastHit hit)
+    {
+        int n;
+        while ((n = Physics.SphereCastNonAlloc(origin, radius, direction, buffer, range, ~0, triggers)) == buffer.Length)
+            buffer = new RaycastHit[buffer.Length * 2];
+        return Closest(n, self, true, out hit, skipBodies: true);
+    }
+
     // sphereCast: 처음부터 구에 닿아 있던 물체(거리 0)는 공격 대상(좀비·들개)일 때만 인정한다.
     // 그렇지 않으면 몸을 기댄 벽·잔해가 앞에 있는 좀비보다 먼저 맞는다.
-    static bool Closest(int count, Transform self, bool sphereCast, out RaycastHit hit)
+    // skipBodies: 쓰러진 적의 몸은 세지 않는다
+    static bool Closest(int count, Transform self, bool sphereCast, out RaycastHit hit, bool skipBodies = false)
     {
         hit = default;
         bool found = false;
@@ -35,6 +46,7 @@ public static class PlayerRaycast
             var h = buffer[i];
             if (h.collider.transform.IsChildOf(self)) continue;
             if (sphereCast && h.distance <= 0f && !LiveTarget(h.collider)) continue;
+            if (skipBodies && FallenEnemy(h.collider)) continue;
             if (!found || h.distance < hit.distance)
             {
                 hit = h;
@@ -49,5 +61,12 @@ public static class PlayerRaycast
     {
         var d = c.GetComponentInParent<IDamageable>();
         return d != null && !(d is Zombie z && z.IsDead) && !(d is Animal a && a.IsDead);
+    }
+
+    // 쓰러진 적(좀비·들개)의 몸
+    static bool FallenEnemy(Collider c)
+    {
+        var d = c.GetComponentInParent<IDamageable>();
+        return (d is Zombie z && z.IsDead) || (d is Animal a && a.IsDead);
     }
 }

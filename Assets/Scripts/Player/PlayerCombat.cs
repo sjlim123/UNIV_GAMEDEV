@@ -55,6 +55,14 @@ public class PlayerCombat : MonoBehaviour
         float range = weapon == null ? 1.6f * 1.02f : weapon.Weapon == WeaponKind.Stab ? 1.9f : 2.3f;
         bool struck = PlayerRaycast.SphereCast(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var hit);
         var target = struck ? hit.collider.GetComponentInParent<IDamageable>() : null;
+        // 가장 가까운 것이 쓰러진 몸이면, 몸을 건너뛰고 다시 찾아 그 너머(사거리 안)에 산 적이 있으면 그 적을 친다.
+        // (앞에 쓰러진 몸 위로 휘둘러도 뒤의 좀비가 맞는다. 벽·물건이 먼저면 그대로 몸을 친다)
+        if (target != null && IsDead(target)
+            && PlayerRaycast.SphereCastPastBodies(cam.transform.position, 0.25f, cam.transform.forward, range, transform, QueryTriggerInteraction.Ignore, out var past))
+        {
+            var behind = past.collider.GetComponentInParent<IDamageable>();
+            if (behind != null && !IsDead(behind)) { hit = past; target = behind; }
+        }
         // 이미 쓰러진 몸(Ragdoll)은 적이 아니라 물건처럼 친다: 피해·처치 효과(마무리 소리·크게 흔들림·멈칫·느려짐·X) 없이 살 타격음과 작은 피.
         // 때리기 전에 본다 (이번 타격으로 쓰러뜨린 것은 처치로 친다)
         if (target != null && IsDead(target))
