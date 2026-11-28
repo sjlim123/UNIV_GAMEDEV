@@ -425,6 +425,18 @@ public static class ProceduralAudio
         return Make("stonehit" + v, 0.3f, MakeStoneHit(v), 0.9f);
     }
 
+    // 새총 돌이 kind 재질에 맞는 소리: Resources/Audio/StoneHit/<재질>_0~2 (11-27 Higgsfield Seed Audio, 재질마다 3가지).
+    // 살·물이거나 녹음이 없으면 위의 공통 돌 소리
+    public static AudioClip StoneHit(Vfx.ImpactKind kind)
+    {
+        if (kind != Vfx.ImpactKind.Flesh && kind != Vfx.ImpactKind.Water)
+        {
+            var rec = EffectAudio.Recorded("Audio/StoneHit/", kind.ToString().ToLowerInvariant());
+            if (rec != null) return rec;
+        }
+        return StoneHit();
+    }
+
     static System.Func<float, float> MakeStoneHit(int v)
     {
         var r1 = Biquad.BandPass(1900 + v * 380, 9);

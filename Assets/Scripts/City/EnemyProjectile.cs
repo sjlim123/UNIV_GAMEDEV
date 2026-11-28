@@ -157,17 +157,21 @@ public class EnemyProjectile : MonoBehaviour
             velocity *= -0.12f;
             return;
         }
-        // 웅덩이에 떨어지면 물결·물방울과 첨벙 소리, 아니면 딱 소리와 맞은 재질의 가루
-        bool splashed = c.GetComponentInParent<IDamageable>() == null && SurfaceDust(c, point, normal, false);
-        if (!splashed) ProceduralAudio.PlayAt3D(ProceduralAudio.StoneHit(), point, 1f, Random.Range(0.9f, 1.15f));
+        // 웅덩이에 떨어지면 물결·물방울과 첨벙 소리, 아니면 맞은 재질의 딱 소리(콘크리트 딱, 쇠 팅, 나무 통, 흙 퍽...)와 가루
+        Vfx.ImpactKind? kind = null;
+        bool splashed = c.GetComponentInParent<IDamageable>() == null && SurfaceDust(c, point, normal, false, out kind);
+        if (!splashed) ProceduralAudio.PlayAt3D(kind.HasValue ? ProceduralAudio.StoneHit(kind.Value) : ProceduralAudio.StoneHit(), point, 1f, Random.Range(0.9f, 1.15f));
         Bounce(null, point, normal);
     }
 
     // 벽·바닥에 맞은 자리: 맞은 재질에 맞는 가루·부스러기 (콘크리트 먼지와 돌 부스러기, 나무 톱밥, 쇠의 녹 가루, 흙 — Vfx.Impact). 웅덩이면 물결과 낮은 물방울을 내고 true.
     // 세기는 빠르기로 정한다: 플레이어 새총(26 m/s)은 부스러기까지, 좀비가 쏜 돌과 다시 튕길 때는 가루만 조금 (좀비 여럿이 쏘아도 화면이 어지럽지 않게).
-    // 자국은 남기지 않는다 (돌이 많이 날아다녀서)
-    bool SurfaceDust(Collider c, Vector3 point, Vector3 normal, bool rebound)
+    // 자국은 남기지 않는다 (돌이 많이 날아다녀서). kind: 맞은 재질 (면을 못 찾았거나 보이지 않는 벽이면 null)
+    bool SurfaceDust(Collider c, Vector3 point, Vector3 normal, bool rebound) => SurfaceDust(c, point, normal, rebound, out _);
+
+    bool SurfaceDust(Collider c, Vector3 point, Vector3 normal, bool rebound, out Vfx.ImpactKind? kind)
     {
+        kind = null;
         if (c == null) return false;
         float speed = velocity.magnitude;
         var dir = speed > 0.01f ? velocity / speed : -normal;
@@ -177,17 +181,18 @@ public class EnemyProjectile : MonoBehaviour
         point = face.point;
         normal = face.normal;
         if (!ImpactSurface.Visible(c, point)) return false; // 렌더러 없는 투명 벽이면 허공에 먼지가 생기지 않게
-        var kind = ImpactSurface.Classify(c, point, normal, face.triangleIndex);
-        if (kind == Vfx.ImpactKind.Water)
+        var hitKind = ImpactSurface.Classify(c, point, normal, face.triangleIndex);
+        kind = hitKind;
+        if (hitKind == Vfx.ImpactKind.Water)
             return PuddleFx.Step(point, rebound ? 0.15f : 0.35f, true); // 발로 디딘 것보다 작게, 낮게 튀는 물방울
         float strength = rebound ? Mathf.Clamp(speed / 26f, 0.15f, 0.3f)
             : fromPlayer ? Mathf.Clamp(speed / 26f * 0.85f, 0.3f, 0.9f) : 0.45f;
         // 쇠·나무는 가루가 적어 작은 돌로는 거의 안 보이므로 조금 세게 (차·판자에 앉은 먼지와 녹·톱밥이 튄다)
-        if (!rebound && fromPlayer && (kind == Vfx.ImpactKind.Metal || kind == Vfx.ImpactKind.Wood)) strength *= 1.3f;
+        if (!rebound && fromPlayer && (hitKind == Vfx.ImpactKind.Metal || hitKind == Vfx.ImpactKind.Wood)) strength *= 1.3f;
         var along = Vector3.ProjectOnPlane(dir, normal);
         if (along.sqrMagnitude < 1e-4f) along = Vector3.Cross(normal, Vector3.right);
         if (along.sqrMagnitude < 1e-4f) along = Vector3.forward;
-        Vfx.Impact(kind, point, normal, dir, along.normalized, strength, false, false);
+        Vfx.Impact(hitKind, point, normal, dir, along.normalized, strength, false, false);
         return false;
     }
 
@@ -198,10 +203,11 @@ public class EnemyProjectile : MonoBehaviour
         float into = Vector3.Dot(velocity, normal);
         if (into < 0)
         {
-            // 두 번째부터 튕길 때는 작게 달각거린다 (웅덩이 안이면 달각 소리 대신 첨벙)
+            // 두 번째부터 튕길 때는 그 바닥 재질의 소리로 작게 달각거린다 (웅덩이 안이면 달각 소리 대신 첨벙)
             bool wet = normal.y > 0.6f && PuddleFx.Inside(point);
             if (bounces > 1 && -into > 1.5f && !wet)
-                ProceduralAudio.PlayAt3D(ProceduralAudio.StoneHit(), transform.position, Mathf.Clamp01(-into / 8f) * 0.6f, Random.Range(1.2f, 1.4f));
+                ProceduralAudio.PlayAt3D(c != null ? ProceduralAudio.StoneHit(ImpactSurface.Classify(c, point, normal)) : ProceduralAudio.StoneHit(),
+                    transform.position, Mathf.Clamp01(-into / 8f) * 0.6f, Random.Range(1.2f, 1.4f));
             // 세게 다시 떨어지면 그 자리에서도 가루(웅덩이면 작은 물방울)가 조금 인다
             if (bounces > 1 && -into > 2.5f) SurfaceDust(c, point, normal, true);
             velocity = (velocity - into * normal) * 0.5f - into * normal * 0.3f;
