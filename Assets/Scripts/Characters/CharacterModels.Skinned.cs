@@ -123,6 +123,68 @@ public static partial class CharacterModels
         return true;
     }
 
+    // ---- 들개 (2026-11-28, 사용자 "네 2 8로 작업하시고 유일 동물이다보니 리깅에 매우 체계적으로") ----
+    // 마른 들개 a(그림 2)·감염된 개 b(그림 8). Tripo 'Other' 자동 리깅(뼈 37개, 이름이 제멋대로) → DogRigMap이 생김새로 뼈를 찾고,
+    // 게임 관절(Body·Neck·Head·Jaw·Leg 4·Knee 4·Tail)을 그 뼈 자리에 세운 뒤 SkinnedDogDriver가 매 프레임 관절 → 뼈로 옮긴다.
+    // 크기: 뒷다리 꼭대기(엉덩이 관절) 높이를 예전 개와 같게 (래그돌 콜라이더 크기가 예전 몸 기준). 턱뼈가 없어 입은 으르렁 벌린 채로 고정
+    public static bool UseTripoDog = true;
+    const float DogHipH = 0.57f;
+    static readonly string[] TripoDogRes = { "Enemies/Dog/dog_a", "Enemies/Dog/dog_b" };
+    static readonly GameObject[] tripoDogPrefab = new GameObject[2];
+    static bool tripoDogLoaded;
+
+    static bool TripoDog(Builder b)
+    {
+        if (!UseTripoDog) return false;
+        if (!tripoDogLoaded)
+        {
+            tripoDogLoaded = true;
+            for (int i = 0; i < 2; i++) tripoDogPrefab[i] = Resources.Load<GameObject>(TripoDogRes[i]);
+        }
+        int k = Random.Range(0, 2);
+        var prefab = tripoDogPrefab[k] != null ? tripoDogPrefab[k] : tripoDogPrefab[1 - k];
+        if (prefab == null) return false;
+        var rig = b.Rig;
+        var skin = Object.Instantiate(prefab, rig.Model, false);
+        skin.name = "Skin";
+        skin.transform.localPosition = Vector3.zero; skin.transform.localRotation = Quaternion.identity; skin.transform.localScale = Vector3.one;
+        var anim = skin.GetComponent<Animator>(); if (anim != null) Object.Destroy(anim);
+        var smr = skin.GetComponentInChildren<SkinnedMeshRenderer>(true);
+        if (smr == null || smr.bones == null || smr.bones.Length == 0) { Object.Destroy(skin); return false; }
+        var map = DogRigMap.Find(smr.bones, rig.Model.up);
+        if (map.Error != null) { Debug.LogWarning("[들개] Tripo 뼈 찾기 실패: " + map.Error); Object.Destroy(skin); return false; }
+        foreach (var r in skin.GetComponentsInChildren<SkinnedMeshRenderer>(true)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
+        // 머리가 모델 앞(+z)을 보게 돌리고, 엉덩이 관절 높이를 맞춘다
+        var fwdLocal = rig.Model.InverseTransformDirection(map.Fwd); fwdLocal.y = 0;
+        skin.transform.localRotation = Quaternion.FromToRotation(fwdLocal.normalized, Vector3.forward);
+        Vector3 P(Transform t) => rig.Model.InverseTransformPoint(t.position);
+        float ground = Mathf.Min(P(map.Chains[0][map.Chains[0].Count - 1]).y, P(map.Chains[2][map.Chains[2].Count - 1]).y);
+        float hip = (P(map.Pivot[2]).y + P(map.Pivot[3]).y) * 0.5f - ground;
+        float s = DogHipH / Mathf.Max(0.05f, hip);
+        skin.transform.localScale = Vector3.one * s;
+        // 발바닥을 땅에
+        ground = float.MaxValue;
+        for (int i = 0; i < 4; i++) ground = Mathf.Min(ground, P(map.Chains[i][map.Chains[i].Count - 1]).y);
+        skin.transform.localPosition = new Vector3(0, -ground + 0.02f, 0);
+
+        // 게임 관절: 쉬는 회전은 예전 개와 같다 (Animal이 같은 각도로 돌린다)
+        var bodyPos = Vector3.zero; for (int i = 0; i < 4; i++) bodyPos += P(map.Pivot[i]); bodyPos /= 4f;
+        rig.Body = b.Joint("Body", rig.Model, bodyPos);
+        rig.Neck = b.Joint("Neck", rig.Body, P(map.Neck) - bodyPos);
+        rig.Head = b.Joint("Head", rig.Neck, P(map.Head) - P(map.Neck));
+        rig.Jaw = b.Joint("Jaw", rig.Head, Vector3.zero, new Vector3(10, 0, 0)); // 턱뼈가 없어 아무것도 움직이지 않는다
+        rig.Legs = new Transform[4]; rig.Knees = new Transform[4];
+        for (int i = 0; i < 4; i++)
+        {
+            rig.Legs[i] = b.Joint("Leg" + i, rig.Model, P(map.Pivot[i]));
+            rig.Knees[i] = b.Joint("Knee" + i, rig.Legs[i], P(map.Knee[i]) - P(map.Pivot[i]));
+        }
+        if (map.TailDrive != null) rig.Tail = b.Joint("Tail", rig.Model, P(map.TailDrive), new Vector3(-118, 0, 0));
+        skin.AddComponent<SkinnedDogDriver>().Init(rig.Model, map, rig);
+        return true;
+    }
+
     // Tripo 스킨 몸 하나를 얹고 게임 관절을 세운다. 실패하면 null
     static GameObject TripoSkinnedBody(Builder b, GameObject prefab, float curl)
     {

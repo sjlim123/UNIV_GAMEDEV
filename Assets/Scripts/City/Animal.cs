@@ -16,6 +16,7 @@ public class Animal : MonoBehaviour, IDamageable
     public Transform[] legs;
     Transform[] knees;
     Transform head, jaw, neck, tail, body;
+    Vector3 neckRest; // 목 관절의 쉬는 자리 (몸마다 다르다: 예전 관 몸 (0, 0.05, 0.3), Tripo 개는 목 뼈 자리)
     CharacterRig rig;
     // 눈이 빛나는 재질의 원본 (빌드에 발광 셰이더가 들어가게 프리팹이 들고 있는다)
     public Material eyeTemplate;
@@ -69,6 +70,7 @@ public class Animal : MonoBehaviour, IDamageable
         head = rig.Head;
         jaw = rig.Jaw;
         neck = rig.Neck;
+        if (neck != null) neckRest = neck.localPosition;
         tail = rig.Tail;
         body = rig.Body;
         flash = HitFlash.For(gameObject, rig.Renderers);
@@ -332,7 +334,7 @@ public class Animal : MonoBehaviour, IDamageable
             // 경고: 머리를 낮추고 앞으로 뺀다. 물기: 앞으로 쭉 내민다. 맞으면 움찔 젖힌다
             float pitch = (warn ? 22f : 0) - lunge * 14f + Mathf.Sin(animPhase * 0.5f) * 2f - hitReact * 18f;
             neck.localRotation = Quaternion.Euler(pitch, Mathf.Sin(animPhase * 0.23f) * (state == State.Roam ? 12f : 3f), 0);
-            neck.localPosition = new Vector3(0, 0.05f, 0.3f + lunge * 0.08f);
+            neck.localPosition = neckRest + new Vector3(0, 0, lunge * 0.08f);
         }
         if (head != null) head.localRotation = Quaternion.Euler(warn ? -12f : 0, 0, warn ? Mathf.Sin(Time.time * 18f) * 1.5f : 0);
         if (jaw != null)

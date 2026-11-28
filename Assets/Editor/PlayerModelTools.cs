@@ -50,6 +50,10 @@ public static class PlayerModelTools
         finally { Base = "Assets/ThirdParty/Tripo/Player/"; Fit = 1f; }
     }
 
+    // 옮긴 가중치를 메시로 굽기 전에 손질하는 갈고리 (들개: 엉뚱한 섞임 지우기·가중치 없는 꼭짓점 채우기). 다른 모델은 null
+    // (꼭짓점 = 리깅 메시 로컬, 가중치, 리깅 렌더러, 가중치를 하나도 못 받은 꼭짓점 번호) → 보고 글
+    public static System.Func<Vector3[], BoneWeight[], SkinnedMeshRenderer, List<int>, string> WeightFix;
+
     static string TransferCur()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -99,6 +103,7 @@ public static class PlayerModelTools
             }
 
             var outW = new BoneWeight[hv.Length];
+            var zeroW = new List<int>();
             int fallback = 0, nearUsed = 0, over5 = 0; float maxDist = 0f; double sumDist = 0;
             var acc = new Dictionary<int, float>();
             var seen = new HashSet<int>();
@@ -140,8 +145,10 @@ public static class PlayerModelTools
                     Add(acc, w.boneIndex0, w.weight0 * f); Add(acc, w.boneIndex1, w.weight1 * f);
                     Add(acc, w.boneIndex2, w.weight2 * f); Add(acc, w.boneIndex3, w.weight3 * f);
                 }
+                if (acc.Count == 0) zeroW.Add(i);
                 outW[i] = Top4(acc);
             }
+            string fixNote = WeightFix != null ? " / 가중치 손질: " + WeightFix(lv, outW, smr, zeroW) : "";
 
             // 새 메시 (리깅 메시 로컬 좌표, 원본 UV·삼각형)
             var mesh = new Mesh { name = Name + "_q3_skinned", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
@@ -179,7 +186,7 @@ public static class PlayerModelTools
             }
             PrefabUtility.SaveAsPrefabAsset(pf, Dir + Name + "_q3.prefab");
             Object.DestroyImmediate(pf);
-            return $"꼭짓점 {lv.Length:N0} · 삼각형 {hiMesh.triangles.Length / 3:N0} → 뼈 {smr.bones.Length}개 가중치, 평균 거리 {sumDist / lv.Length * 1000:F2} mm(모델 단위), 최대 {maxDist * 1000:F1}, 5 mm 넘는 꼭짓점 {over5}, 가장 가까운 면으로 바꾼 꼭짓점 {nearUsed}, 같은 쪽 면이 없던 꼭짓점 {fallback}, {sw.ElapsedMilliseconds} ms";
+            return $"꼭짓점 {lv.Length:N0} · 삼각형 {hiMesh.triangles.Length / 3:N0} → 뼈 {smr.bones.Length}개 가중치, 평균 거리 {sumDist / lv.Length * 1000:F2} mm(모델 단위), 최대 {maxDist * 1000:F1}, 5 mm 넘는 꼭짓점 {over5}, 가장 가까운 면으로 바꾼 꼭짓점 {nearUsed}, 같은 쪽 면이 없던 꼭짓점 {fallback}, {sw.ElapsedMilliseconds} ms{fixNote}";
         }
         finally { Object.DestroyImmediate(hiGo); Object.DestroyImmediate(rigGo); }
     }

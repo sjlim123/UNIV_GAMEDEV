@@ -1161,6 +1161,23 @@
       "added": "2026-11-28",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "들개 a·b (마른 들개·감염된 개, dog_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅(동물 'Other')",
+      "items": [
+        "그림: Nano Banana Pro, 구독 무료 그림 횟수 (0크레딧). 8장 중 사용자 결정 '2 8'",
+        "개 a (그림 2): H3.5 프리뷰 고정밀 (4K · 30만), 삼각형 290,568, 작업 d1cc82b9-dc8b-42fc-bce0-0e2b17be8add 60크레딧 → 리토폴로지 쿼드 46,672 10 → 자동 리깅 'Other' 뼈 37개 20 (변환 04f98370)",
+        "개 b (그림 8): H3.5 프리뷰, 삼각형 294,022, 작업 f81c26b5-63de-4637-a79c-ef7de85702f5 60 → 리토폴로지 쿼드 55,224 10 → 자동 리깅 'Other' 20 (변환 6d675cf1). 합계 180크레딧",
+        "뼈 이름이 제멋대로라 생김새로 다리·목·머리·꼬리를 찾는다 (DogRigMap). 가중치를 30만 메시로 옮기고 Tripo 리깅의 엉뚱한 섞임(개 a 꼬리의 귀 뼈 가중치)을 지운 뒤 품질 4단계. Blender 점검 통과 (비침 0 px, 서기·걷기·달리기·경고·물기·쓰러짐 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/dog_a·b/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE_dog.md), Assets/Resources/Enemies/Dog/",
+      "used_for": "들개(Animal) 몸, 한 마리마다 a·b 중 하나 — CharacterModels.Skinned.cs (TripoDog), DogRigMap, SkinnedDogDriver, DogTripoBuild. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-28",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

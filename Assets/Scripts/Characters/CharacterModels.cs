@@ -55,7 +55,7 @@ public static partial class CharacterModels
             case FigureKind.Slingshot: if (!TripoRangedZombie(b)) SlingshotZombie(b); break;
             case FigureKind.Giant: if (!TripoHeavyZombie(b)) GiantZombie(b); break; // Tripo 공사장 작업복 변이 거인 a·b (CharacterModels.Skinned.cs), 없으면 예전 관 몸
             case FigureKind.Raider: if (!TripoRaider(b)) Raider(b); break; // Tripo 가죽 조끼·반다나 습격자 a·b (CharacterModels.Skinned.cs), 없으면 예전 관 몸
-            case FigureKind.Dog: Dog(b); break;
+            case FigureKind.Dog: if (!TripoDog(b)) Dog(b); break; // Tripo 마른 들개·감염된 개 a·b (CharacterModels.Skinned.cs, DogRigMap, SkinnedDogDriver), 없으면 예전 관 몸
             case FigureKind.Merchant: Merchant(b); break;
             case FigureKind.Civilian: if (!SkinnedPlayer(b, variant)) Civilian(b, variant); break; // 플레이어 모델: 0 집 차림 얼굴 모델, 1 방독면 탐험 차림 (CharacterModels.Player.cs)
             case FigureKind.Corpse: Corpse(b, variant); break;
