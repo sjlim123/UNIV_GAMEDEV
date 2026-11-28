@@ -94,6 +94,32 @@ public static class ZombieTripoBuild
         return log.ToString();
     }
 
+    // ---- 약탈자 (2026-11-28): 사용자 "약탈자는 1번 3번으로", "방망이 3" → 가죽 조끼·반다나·고글 차림 30대 습격자 a(그림 1)·b(그림 3) + Tripo 못 박힌 야구방망이 ----
+    public const string RaiderOutDir = "Assets/Resources/Enemies/Raider/";
+    public static readonly string[] RaiderNames = { "raider_a", "raider_b" };
+
+    [MenuItem("Tools/핵폭발 생존/약탈자 Tripo 모델: 몸 a·b + 못 박힌 방망이")]
+    static void BuildRaiderMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[ZombieTripoBuild] 플레이 중에는 하지 않는다"); return; }
+        Debug.Log("[ZombieTripoBuild] " + BuildRaider());
+    }
+
+    public static string BuildRaider()
+    {
+        if (!AssetDatabase.IsValidFolder(RaiderOutDir.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/Resources/Enemies", "Raider");
+        var log = new System.Text.StringBuilder();
+        foreach (var n in RaiderNames) log.Append(Build(n, RaiderOutDir)).Append(" || ");
+        log.Append(BuildNailBat());
+        return log.ToString();
+    }
+
+    public static string BuildNailBat()
+    {
+        SetupImport(Base + "nailbat/nailbat.fbx", false);
+        return GameSceneBuilder.ZbBuild(RaiderOutDir + "nailbat.prefab");
+    }
+
     public static string Build(string name) => Build(name, OutDir);
 
     public static string Build(string name, string outDir)

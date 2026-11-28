@@ -101,6 +101,28 @@ public static partial class CharacterModels
         return prefab != null && TripoSkinnedBody(b, prefab, 0.9f) != null; // 내려치려고 쥔 큰 주먹
     }
 
+    // ---- 약탈자 (2026-11-28, 사용자 "약탈자는 1번 3번으로") ----
+    // 감염되지 않은 30대 습격자 두 가지 (가죽 조끼·붉은 반다나·이마 위 고글·팔 붕대·무릎 보호대). 오른 주먹(rig.GripR)에 Tripo 못 박힌 방망이 (ZombieLooks.BuildBat)
+    public static bool UseTripoRaider = true;
+    static readonly string[] TripoRaiderRes = { "Enemies/Raider/raider_a", "Enemies/Raider/raider_b" };
+    static readonly GameObject[] tripoRaiderPrefab = new GameObject[2];
+    static bool tripoRaiderLoaded;
+
+    static bool TripoRaider(Builder b)
+    {
+        if (!UseTripoRaider) return false;
+        if (!tripoRaiderLoaded)
+        {
+            tripoRaiderLoaded = true;
+            for (int i = 0; i < 2; i++) tripoRaiderPrefab[i] = Resources.Load<GameObject>(TripoRaiderRes[i]);
+        }
+        int k = Random.Range(0, 2);
+        var prefab = tripoRaiderPrefab[k] != null ? tripoRaiderPrefab[k] : tripoRaiderPrefab[1 - k];
+        if (prefab == null || TripoSkinnedBody(b, prefab, 0.5f) == null) return false;
+        b.Rig.CurlR = 1.35f; // 방망이 손잡이를 꽉 쥔다
+        return true;
+    }
+
     // Tripo 스킨 몸 하나를 얹고 게임 관절을 세운다. 실패하면 null
     static GameObject TripoSkinnedBody(Builder b, GameObject prefab, float curl)
     {
@@ -153,6 +175,10 @@ public static partial class CharacterModels
         float d = (P("Left_MiddleProximal") - P("Left_Hand")).magnitude;
         rig.GripL = new Vector3(0.25f * d, -(fore + 0.85f * d), 0f);
         rig.GripReach = upper + fore + 0.85f * d;
+        // 오른 주먹 가운데: 왼손과 거울 (손바닥 쪽이 -x)
+        float dR = (P("Right_MiddleProximal") - P("Right_Hand")).magnitude;
+        float foreR = (P("Right_Hand") - P("Right_LowerArm")).magnitude;
+        rig.GripR = new Vector3(-0.25f * dR, -(foreR + 0.85f * dR), 0f);
         skin.AddComponent<SkinnedPlayerDriver>().Init(rig, hips, bones);
         return skin;
     }

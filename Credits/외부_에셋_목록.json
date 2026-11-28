@@ -1143,6 +1143,24 @@
       "added": "2026-11-28",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "약탈자 a·b (가죽 조끼·붉은 반다나·고글 차림 습격자, raider_a·b) + 못 박힌 야구방망이 — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "그림: Nano Banana Pro, 구독 무료 그림 횟수 (0크레딧). 몸 8장(T 포즈 템플릿)·방망이 4장(제품 사진) 중 사용자 결정 '약탈자는 1번 3번', '방망이 3'",
+        "몸 a (그림 1): H3.5 프리뷰 고정밀 (4K · 30만), 삼각형 282,576, 작업 81d204db-66bf-4907-8a31-7f6b24152116 60크레딧 → 리토폴로지 쿼드 49,895 10 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20 (변환 05c77d39)",
+        "몸 b (그림 3): H3.5 프리뷰, 삼각형 290,516, 작업 0093f933-47e2-4ce2-91fe-07bcbfc3a4d4 60 → 리토폴로지 쿼드 46,439 10 → 자동 리깅 20 (변환 2c294da2)",
+        "못 박힌 방망이 (H3.5 프리뷰, 4K · 6만, 60크레딧): 작업 1dec2565-a163-40b5-88d5-7f7a4bae0a41, 삼각형 57,752. 합계 240크레딧",
+        "몸: 가중치를 30만 메시로 옮기고 품질 4단계 (약 6천~8천·2.4만·9만~10만·28만~29만). 방망이: 노브 위 주먹 자리를 원점으로 86 cm에 맞추고 품질 4단계. Blender 점검 통과 (비침 0 px, 기본·덮치기·내려치기 자세 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/raider_a·b/, nailbat/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE_raider.md), Assets/Resources/Enemies/Raider/",
+      "used_for": "약탈자(ZombieKind.Raider) 몸, 하나마다 a·b 중 하나. 오른 주먹에 못 박힌 방망이를 쥐고 휘두른다 — CharacterModels.Skinned.cs (TripoRaider), ZombieLooks.BuildBat, GameSceneBuilder.ZombieBat.cs. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-28",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

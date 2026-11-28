@@ -27,7 +27,7 @@ public static class ZombieLooks
         }
         var rig = CharacterModels.Build(z.transform, figure, variant);
         if (kind == ZombieKind.Ranged) slingshot = BuildSlingshot(rig.ForeL, rig.GripL);
-        if (kind == ZombieKind.Raider) weapon = BuildBat(rig.ForeR);
+        if (kind == ZombieKind.Raider) weapon = BuildBat(rig.ForeR, rig.GripR);
         return rig;
     }
 
@@ -353,11 +353,26 @@ public static class ZombieLooks
     }
 
     // 약탈자의 못 박힌 야구방망이 (#B58E58, 검은 손잡이 테이프). 손잡이 끝을 쥐고, 팔을 뒤로 젖히면 머리 뒤로 넘어간다
-    static Transform BuildBat(Transform fore)
+    // Tripo 못 박힌 방망이 (2026-11-28, 사용자 "방망이 3": 연갈색 나무 + 검은 테이프 손잡이 + 녹슨 못 + 핏자국). 없으면 아래 예전 원기둥 방망이
+    public static bool UseTripoBat = true;
+    static GameObject tripoBat;
+    static bool tripoBatLoaded;
+
+    static Transform BuildBat(Transform fore, Vector3 grip)
     {
         if (fore == null) return null;
         var bat = new GameObject("Bat").transform;
         bat.SetParent(fore, false);
+        if (UseTripoBat && !tripoBatLoaded) { tripoBatLoaded = true; tripoBat = Resources.Load<GameObject>("Enemies/Raider/nailbat"); }
+        if (UseTripoBat && tripoBat != null)
+        {
+            // 주먹 구멍을 지나도록 손목을 꺾어 쥔다: 아래팔과 45도 (쉴 때는 앞아래로 늘어뜨리고, 젖히면 머리 뒤로 넘어간다. 플레이에서 115도와 비교해 고름)
+            bat.localPosition = grip;
+            bat.localRotation = Quaternion.Euler(135, 0, 0);
+            var model = Object.Instantiate(tripoBat, bat, false);
+            model.name = "NailBat";
+            return bat;
+        }
         bat.localPosition = new Vector3(0, -(CharacterModels.HandReach - 0.30f) - 0.01f, 0.03f);
         bat.localRotation = Quaternion.Euler(150, 0, 0);
         var wood = ProcTex.Get(ProcTex.Kind.Wood, new Color(0.71f, 0.56f, 0.35f), 91);

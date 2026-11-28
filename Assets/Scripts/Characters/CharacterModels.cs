@@ -25,6 +25,7 @@ public class CharacterRig
     public float CurlL = 1f, CurlR = 1f;                             // 손가락 굽힘 (모델 몸: 1 느슨한 주먹, 0.3 입을 감싸는 손, 0 편 손)
     public Vector3 GripL = new Vector3(0f, -(CharacterModels.HandReach - 0.30f), 0f); // 왼 주먹 가운데 (아래팔 관절 기준: 새총을 쥐는 곳)
     public float GripReach = 0.7f;                                   // 어깨 관절에서 주먹 가운데까지 (곧은 팔: 새총 주머니를 당기는 오른손)
+    public Vector3 GripR = new Vector3(0f, -(CharacterModels.HandReach - 0.30f) - 0.01f, 0.03f); // 오른 주먹 가운데 (아래팔 관절 기준: 약탈자 방망이를 쥐는 곳)
     // 맞으면 하나씩 떨어져 나가는 가죽 갑옷 (가슴·어깨·무릎·모자)
     public readonly List<Transform> Armor = new List<Transform>();
     public Renderer[] Renderers;
@@ -53,7 +54,7 @@ public static partial class CharacterModels
             case FigureKind.Leather: if (!TripoLeatherZombie(b)) LeatherZombie(b); break; // Tripo 감염된 군인 a·b + 떨어지는 장비 6개 (CharacterModels.Skinned.cs), 없으면 예전 가죽 갑옷 관 몸
             case FigureKind.Slingshot: if (!TripoRangedZombie(b)) SlingshotZombie(b); break;
             case FigureKind.Giant: if (!TripoHeavyZombie(b)) GiantZombie(b); break; // Tripo 공사장 작업복 변이 거인 a·b (CharacterModels.Skinned.cs), 없으면 예전 관 몸
-            case FigureKind.Raider: Raider(b); break;
+            case FigureKind.Raider: if (!TripoRaider(b)) Raider(b); break; // Tripo 가죽 조끼·반다나 습격자 a·b (CharacterModels.Skinned.cs), 없으면 예전 관 몸
             case FigureKind.Dog: Dog(b); break;
             case FigureKind.Merchant: Merchant(b); break;
             case FigureKind.Civilian: if (!SkinnedPlayer(b, variant)) Civilian(b, variant); break; // 플레이어 모델: 0 집 차림 얼굴 모델, 1 방독면 탐험 차림 (CharacterModels.Player.cs)
