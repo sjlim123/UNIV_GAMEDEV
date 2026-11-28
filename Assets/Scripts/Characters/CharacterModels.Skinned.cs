@@ -80,6 +80,27 @@ public static partial class CharacterModels
         return true;
     }
 
+    // ---- 거대 감염자 (2026-11-28, 사용자 "5678 스타일로", "10 14번 좋네요") ----
+    // 공사장 작업복(주황 안전 조끼·공구 벨트·안전화)을 입은 변이 거인 두 가지. 오른팔이 굵고 긴 붉은 변이 팔(뼈 돌기·발톱).
+    // 키는 다른 감염자처럼 눈 높이로 맞추고, Zombie가 몸 전체를 1.35배로 키운다
+    public static bool UseTripoHeavy = true;
+    static readonly string[] TripoHeavyRes = { "Enemies/ZombieHeavy/zombie_heavy_a", "Enemies/ZombieHeavy/zombie_heavy_b" };
+    static readonly GameObject[] tripoHeavyPrefab = new GameObject[2];
+    static bool tripoHeavyLoaded;
+
+    static bool TripoHeavyZombie(Builder b)
+    {
+        if (!UseTripoHeavy) return false;
+        if (!tripoHeavyLoaded)
+        {
+            tripoHeavyLoaded = true;
+            for (int i = 0; i < 2; i++) tripoHeavyPrefab[i] = Resources.Load<GameObject>(TripoHeavyRes[i]);
+        }
+        int k = Random.Range(0, 2);
+        var prefab = tripoHeavyPrefab[k] != null ? tripoHeavyPrefab[k] : tripoHeavyPrefab[1 - k];
+        return prefab != null && TripoSkinnedBody(b, prefab, 0.9f) != null; // 내려치려고 쥔 큰 주먹
+    }
+
     // Tripo 스킨 몸 하나를 얹고 게임 관절을 세운다. 실패하면 null
     static GameObject TripoSkinnedBody(Builder b, GameObject prefab, float curl)
     {
@@ -112,9 +133,11 @@ public static partial class CharacterModels
         foreach (var s in new[] { "L", "R" })
         {
             string pre = s == "L" ? "Left_" : "Right_";
+            // 팔 길이는 쪽마다 잰다 (거대 감염자의 변이 오른팔은 왼팔보다 길다)
+            float up = (P(pre + "LowerArm") - P(pre + "UpperArm")).magnitude, fr = (P(pre + "Hand") - P(pre + "LowerArm")).magnitude;
             var arm = b.Joint("Arm" + s, rig.Body, P(pre + "UpperArm") - P("Spine"));
-            var fo = b.Joint("Fore" + s, arm, new Vector3(0, -upper, 0));
-            var hand = b.Joint("Hand" + s, fo, new Vector3(0, -fore, 0));
+            var fo = b.Joint("Fore" + s, arm, new Vector3(0, -up, 0));
+            var hand = b.Joint("Hand" + s, fo, new Vector3(0, -fr, 0));
             var leg = b.Joint("Leg" + s, rig.Model, P(pre + "UpperLeg"));
             var sh = b.Joint("Shin" + s, leg, new Vector3(0, -thigh, 0));
             if (s == "L") { rig.ArmL = arm; rig.ForeL = fo; rig.HandL = hand; rig.LegL = leg; rig.ShinL = sh; }

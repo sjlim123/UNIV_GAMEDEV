@@ -1126,6 +1126,23 @@
       "added": "2026-11-27",
       "status": "사용",
       "source": "https://studio.tripo3d.ai/"
+    },
+    {
+      "kind": "3D 모델",
+      "name": "거대 감염자 a·b (공사장 작업복을 입은 변이 거인, zombie_heavy_a·b) — Tripo AI 웹 스튜디오로 글→그림→3D 모델→리토폴로지→자동 리깅",
+      "items": [
+        "그림: Nano Banana Pro, T 포즈 템플릿, 구독 무료 그림 횟수 (0크레딧). 16장 중 사용자 결정 '10 14번' (14는 변이 팔이 몸의 오른쪽에 오도록 좌우로 뒤집어 씀)",
+        "몸 a (그림 10): H3.5 프리뷰 고정밀 (4K · 30만), 삼각형 292,668, 작업 97e7f5ef-926f-4869-9fce-8233d8f662ef 60크레딧 → 리토폴로지 쿼드 45,204 10 → 자동 리깅 Unity Humanoid Compatible 뼈 67개 20 (변환 f7b1883b)",
+        "몸 b (그림 14 반전): H3.5 프리뷰, 삼각형 296,806, 작업 06864a71-c208-44d5-ad5c-ec9121b9bb7c 60 → 리토폴로지 쿼드 45,576 10 → 자동 리깅 20 (변환 b2dd6ad7). 합계 180크레딧",
+        "가중치를 30만 메시로 옮기고 품질 4단계 (약 6천·2.4만·9만·29만). Blender 점검 통과 (비침 0 px, 기본·덮치기·내려치기 자세 찢어짐 없음)"
+      ],
+      "author": "Tripo AI (Holymolly Ltd)로 생성, 적 모델링 세션",
+      "license": "Tripo-유료",
+      "location": "Assets/ThirdParty/Tripo/Enemies/zombie_heavy_a·b/ (만든 방법: Assets/ThirdParty/Tripo/Enemies/SOURCE_zombie_heavy.md), Assets/Resources/Enemies/ZombieHeavy/",
+      "used_for": "거대 감염자(ZombieKind.Heavy) 몸, 좀비마다 a·b 중 하나 — CharacterModels.Skinned.cs (TripoHeavyZombie), ZombieTripoBuild.BuildHeavy. 유료 구독 중에 웹 스튜디오 구독 크레딧으로 만듦",
+      "added": "2026-11-28",
+      "status": "사용",
+      "source": "https://studio.tripo3d.ai/"
     }
   ]
 }

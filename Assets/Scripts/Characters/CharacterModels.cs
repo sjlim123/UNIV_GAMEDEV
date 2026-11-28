@@ -52,7 +52,7 @@ public static partial class CharacterModels
         {
             case FigureKind.Leather: if (!TripoLeatherZombie(b)) LeatherZombie(b); break; // Tripo 감염된 군인 a·b + 떨어지는 장비 6개 (CharacterModels.Skinned.cs), 없으면 예전 가죽 갑옷 관 몸
             case FigureKind.Slingshot: if (!TripoRangedZombie(b)) SlingshotZombie(b); break;
-            case FigureKind.Giant: GiantZombie(b); break;
+            case FigureKind.Giant: if (!TripoHeavyZombie(b)) GiantZombie(b); break; // Tripo 공사장 작업복 변이 거인 a·b (CharacterModels.Skinned.cs), 없으면 예전 관 몸
             case FigureKind.Raider: Raider(b); break;
             case FigureKind.Dog: Dog(b); break;
             case FigureKind.Merchant: Merchant(b); break;

@@ -75,6 +75,25 @@ public static class ZombieTripoBuild
         return GameSceneBuilder.ZsBuild(RangedOutDir + "slingshot.prefab");
     }
 
+    // ---- 거대 감염자 (2026-11-28): 사용자 "5678 스타일로", "10 14번 좋네요" → 공사장 작업복 변이 거인 a(그림 10)·b(그림 14 좌우 반전) ----
+    public const string HeavyOutDir = "Assets/Resources/Enemies/ZombieHeavy/";
+    public static readonly string[] HeavyNames = { "zombie_heavy_a", "zombie_heavy_b" };
+
+    [MenuItem("Tools/핵폭발 생존/거대 감염자 Tripo 모델: 몸 a·b")]
+    static void BuildHeavyMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[ZombieTripoBuild] 플레이 중에는 하지 않는다"); return; }
+        Debug.Log("[ZombieTripoBuild] " + BuildHeavy());
+    }
+
+    public static string BuildHeavy()
+    {
+        if (!AssetDatabase.IsValidFolder(HeavyOutDir.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/Resources/Enemies", "ZombieHeavy");
+        var log = new System.Text.StringBuilder();
+        foreach (var n in HeavyNames) log.Append(Build(n, HeavyOutDir)).Append(" || ");
+        return log.ToString();
+    }
+
     public static string Build(string name) => Build(name, OutDir);
 
     public static string Build(string name, string outDir)
