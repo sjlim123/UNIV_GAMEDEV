@@ -18,6 +18,8 @@ public class Animal : MonoBehaviour, IDamageable
     Transform head, jaw, neck, tail, body;
     Vector3 neckRest; // 목 관절의 쉬는 자리 (몸마다 다르다: 예전 관 몸 (0, 0.05, 0.3), Tripo 개는 목 뼈 자리)
     CharacterRig rig;
+    Vector3 modelRest; // 몸 전체(Model)의 쉬는 자리 — 물 때 앞으로 튀어 나간다
+    float biteT = -1;  // 물기 동작이 시작된 뒤 지난 시간 (-1 = 안 무는 중)
     // 눈이 빛나는 재질의 원본 (빌드에 발광 셰이더가 들어가게 프리팹이 들고 있는다)
     public Material eyeTemplate;
     public float walkSpeed = 1.2f;
@@ -71,6 +73,7 @@ public class Animal : MonoBehaviour, IDamageable
         jaw = rig.Jaw;
         neck = rig.Neck;
         if (neck != null) neckRest = neck.localPosition;
+        if (rig.Model != null) modelRest = rig.Model.localPosition;
         tail = rig.Tail;
         body = rig.Body;
         flash = HitFlash.For(gameObject, rig.Renderers);
@@ -213,11 +216,15 @@ public class Animal : MonoBehaviour, IDamageable
     {
         biteTimer = stats.attackDelay;
         lunge = 1;
+        biteT = 0;
         voice.pitch = Random.Range(0.9f, 1.1f);
         voice.PlayOneShot(DogAudio.Snarl(), 0.9f);
         voice.PlayOneShot(ProceduralAudio.Snap(), 1f);
         ProceduralAudio.PlayAt(ProceduralAudio.Hit(), playerPos, 0.6f, 1.1f);
         UIManager.LastHitFrom = transform.position;
+        // 물린 자리에서 피가 개 쪽으로 튄다
+        var bitePoint = Vector3.Lerp(head != null ? head.position : transform.position, playerPos + Vector3.up * 0.9f, 0.6f);
+        HitEffects.Blood(bitePoint, (transform.position - playerPos).normalized + Vector3.up * 0.3f, 7);
         GameManager.Instance.Damage(stats.damage * EnemyPace.DamageMultiplier() * (1 + 0.2f * danger), "들개에게 물어뜯겼다.");
     }
 
@@ -305,6 +312,8 @@ public class Animal : MonoBehaviour, IDamageable
         yield return Gore.FadeAway(gameObject, rig != null ? rig.Model : transform, rig != null ? rig.Renderers : new Renderer[0], parts, 6f, 4.5f, 3f);
     }
 
+    static float Smooth01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
     // 걷기·달리기(다리 4개를 엇갈려 딛고 무릎을 굽힌다), 꼬리 흔들기, 경고할 땐 머리를 낮추고 이를 드러내며, 물 때 머리를 내밀고 턱을 벌린다
     void Animate(float dt)
     {
@@ -313,6 +322,18 @@ public class Animal : MonoBehaviour, IDamageable
         animPhase += dt * (2 + speed * (running ? 2.6f : 3.5f));
         float amp = Mathf.Clamp01(speed / 2f) * (running ? 42f : 30f);
         lunge = Mathf.MoveTowards(lunge, 0, dt * 4);
+        // 물기 (2026-11-28 사용자 "물 때 더 세게"): 0.07초 만에 몸을 던져 목을 쭉 빼고 → 문 채로 고개를 좌우로 세차게 흔들어 물어뜯고 → 0.55초에 돌아온다.
+        // Tripo 개는 이빨이 위아래 턱에 붙은 한 덩어리라 턱을 벌리면 이빨이 늘어나 찢어져 보였다 (Blender·Unity 미리보기, ModelWork/Enemies/dog/tripo/check/_jaw4.jpg) → 턱 대신 머리·목·몸으로
+        float thrust = 0, shake = 0;
+        if (biteT >= 0)
+        {
+            biteT += dt;
+            thrust = biteT < 0.07f ? Smooth01(biteT / 0.07f) : 1f - Smooth01((biteT - 0.07f) / 0.48f);
+            float st = biteT - 0.07f;
+            if (st > 0 && st < 0.42f) shake = Mathf.Sin(st * Mathf.PI * 2f * 9f) * (1f - st / 0.42f);
+            if (biteT > 0.55f) biteT = -1;
+        }
+        if (rig != null && rig.Model != null) rig.Model.localPosition = modelRest + new Vector3(0, 0, thrust * 0.16f);
         hitReact = Mathf.MoveTowards(hitReact, 0, dt * 5);
         if (legs != null)
             for (int i = 0; i < legs.Length; i++)
@@ -327,19 +348,21 @@ public class Animal : MonoBehaviour, IDamageable
             }
         // 몸이 걸음마다 오르내리고, 달리면 앞뒤로 출렁인다
         if (body != null)
-            body.localRotation = Quaternion.Euler((running ? Mathf.Sin(animPhase * 2) * 4f : 0) - hitReact * 8f, 0, Mathf.Sin(animPhase) * 2f * Mathf.Clamp01(speed));
+            body.localRotation = Quaternion.Euler((running ? Mathf.Sin(animPhase * 2) * 4f : 0) - hitReact * 8f + thrust * 7f, shake * 4f, Mathf.Sin(animPhase) * 2f * Mathf.Clamp01(speed) - shake * 3f);
         bool warn = state == State.Warn;
         if (neck != null)
         {
             // 경고: 머리를 낮추고 앞으로 뺀다. 물기: 앞으로 쭉 내민다. 맞으면 움찔 젖힌다
-            float pitch = (warn ? 22f : 0) - lunge * 14f + Mathf.Sin(animPhase * 0.5f) * 2f - hitReact * 18f;
-            neck.localRotation = Quaternion.Euler(pitch, Mathf.Sin(animPhase * 0.23f) * (state == State.Roam ? 12f : 3f), 0);
-            neck.localPosition = neckRest + new Vector3(0, 0, lunge * 0.08f);
+            float pitch = (warn ? 22f : 0) - thrust * 22f + Mathf.Sin(animPhase * 0.5f) * 2f - hitReact * 18f;
+            neck.localRotation = Quaternion.Euler(pitch, Mathf.Sin(animPhase * 0.23f) * (state == State.Roam ? 12f : 3f) + shake * 22f, 0);
+            neck.localPosition = neckRest + new Vector3(0, 0, thrust * 0.12f);
         }
-        if (head != null) head.localRotation = Quaternion.Euler(warn ? -12f : 0, 0, warn ? Mathf.Sin(Time.time * 18f) * 1.5f : 0);
+        if (head != null) head.localRotation = Quaternion.Euler((warn ? -12f : 0) + thrust * 6f, shake * 10f, (warn ? Mathf.Sin(Time.time * 18f) * 1.5f : 0) + shake * 16f);
         if (jaw != null)
         {
-            float open = 10f + (warn ? 14f + Mathf.Sin(Time.time * 22f) * 2f : 0) + lunge * 32f + (running ? 8f : 0);
+            // 예전 관 몸의 턱: 달려들며 크게 벌렸다가 딱 다물고 흔드는 동안 꽉 문다
+            float biteJaw = biteT < 0 ? 0 : biteT < 0.05f ? 34f : biteT < 0.1f ? Mathf.Lerp(34f, -10f, (biteT - 0.05f) / 0.05f) : biteT < 0.45f ? -10f : -10f * (1f - (biteT - 0.45f) / 0.1f);
+            float open = 10f + (warn ? 14f + Mathf.Sin(Time.time * 22f) * 2f : 0) + biteJaw + (running && biteT < 0 ? 8f : 0);
             jaw.localRotation = Quaternion.Euler(open, 0, 0);
         }
         if (tail != null)

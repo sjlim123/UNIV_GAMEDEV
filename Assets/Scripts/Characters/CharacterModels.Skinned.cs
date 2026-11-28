@@ -181,6 +181,10 @@ public static partial class CharacterModels
             rig.Knees[i] = b.Joint("Knee" + i, rig.Legs[i], P(map.Knee[i]) - P(map.Pivot[i]));
         }
         if (map.TailDrive != null) rig.Tail = b.Joint("Tail", rig.Model, P(map.TailDrive), new Vector3(-118, 0, 0));
+        // 빛나는 노란 눈 (예전 개와 같은 색): 빌드가 텍스처의 노란 눈 칠에 맞춰 머리뼈 아래에 둔 Eye_0·Eye_1 (DogTripoBuild.MarkEyes) 위에 얇은 눈알
+        var eyeMat = ProcTex.Glow(Hex("C9A642"), new Color(1.5f, 1.1f, 0.25f));
+        foreach (var t in skin.GetComponentsInChildren<Transform>(true))
+            if (t.name.StartsWith("Eye_")) b.Part(t, Ell("dogeyeTripo", 1f, 1f, 1f), eyeMat, Vector3.zero, null, null, false);
         skin.AddComponent<SkinnedDogDriver>().Init(rig.Model, map, rig);
         return true;
     }
